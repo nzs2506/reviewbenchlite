@@ -1,0 +1,991 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Хоккейная тактическая доска</title>
+<script src="assets/vendor/fabric.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    @font-face {
+        font-family: 'Hyper Oxide';
+        src: url('assets/fonts/Hyper-Oxide-BF66b6190bb671c.ttf') format('truetype');
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+    }
+    :root {
+        --toolbar-bg: #f8f9fa;
+        --toolbar-border: #dee2e6;
+        --active-color: #0056b3;
+        --bg-color: #2b3038;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0; padding: 0;
+        display: flex; flex-direction: row;
+        height: 100vh;
+        background-color: var(--bg-color);
+        font-family: 'Segoe UI', Arial, sans-serif;
+        overflow: hidden;
+    }
+    .main-col { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+    .app-header {
+        flex: 0 0 auto;
+        padding: 16px 18px 0;
+        text-align: center;
+        pointer-events: none;
+    }
+    .app-title {
+        margin: 0;
+        font-family: 'Hyper Oxide', Impact, Haettenschweiler, 'Arial Black', sans-serif;
+        font-size: clamp(28px, 4vw, 54px);
+        line-height: 0.95;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        color: #f2f7ff;
+        text-transform: none;
+        text-shadow: 0 3px 0 #12203a, 0 10px 22px rgba(0,0,0,0.45);
+    }
+    .canvas-wrapper {
+        flex: 1 1 auto;
+        display: flex; justify-content: center; align-items: center;
+        padding: 34px 14px 14px;
+        min-height: 0;
+        position: relative;
+    }
+    .canvas-container-wrapper {
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        overflow: hidden;
+        background: white;
+        line-height: 0;
+    }
+    .bottom-toolbar {
+        flex: 0 0 auto;
+        background: var(--toolbar-bg);
+        border-top: 1px solid var(--toolbar-border);
+        display: flex; flex-wrap: wrap;
+        justify-content: center; align-items: center;
+        padding: 6px 10px;
+        gap: 4px;
+    }
+    .toolbar-group {
+        display: flex; gap: 2px;
+        padding: 0 8px;
+        border-right: 1px solid #ddd;
+        align-items: center;
+    }
+    .toolbar-group:last-child { border-right: none; }
+    .tool-btn {
+        width: 40px; height: 40px;
+        border: 1px solid transparent;
+        background: transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex; justify-content: center; align-items: center;
+        font-size: 1.15em; color: #555;
+        transition: background 0.15s;
+        flex: 0 0 auto;
+    }
+    .tool-btn:hover { background: #e2e6ea; }
+    .tool-btn.active { background: #dcebfd; color: var(--active-color); border-color: #b6d4fe; }
+    .btn-delete { color: #e74c3c; } .btn-delete:hover { background: #fadbd8; }
+    .btn-save { color: #27ae60; }
+    .custom-icon { width: 26px; height: 26px; background-size: contain; background-repeat: no-repeat; background-position: center; opacity: 0.75;}
+    .tool-btn.active .custom-icon { opacity: 1; filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(194deg) brightness(96%) contrast(101%); }
+    .icon-skate    { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 18 C 7 6, 15 6, 20 10'/%3E%3Cpolyline points='20 10 14 10 18 4'/%3E%3C/svg%3E"); }
+    .icon-back     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 l3 -4 3 8 3 -8 3 8 3 -4'/%3E%3Cpolyline points='22 12 18 9 18 15 22 12'/%3E%3C/svg%3E"); }
+    .icon-puckline { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 c2 -4 4 -4 6 0 s4 4 6 0 4 -4 6 0'/%3E%3Cpolyline points='22 12 18 9 18 15 22 12'/%3E%3C/svg%3E"); }
+    .icon-pass     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 h16' stroke-dasharray='4 3'/%3E%3Cpolyline points='22 12 18 9 18 15 22 12'/%3E%3C/svg%3E"); }
+    .icon-shot     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 10 h16 M2 14 h16'/%3E%3Cpolyline points='23 12 18 8 18 16 23 12'/%3E%3C/svg%3E"); }
+    .icon-stopline { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 h14'/%3E%3Cline x1='17' y1='7' x2='17' y2='17'/%3E%3Cline x1='21' y1='7' x2='21' y2='17'/%3E%3C/svg%3E"); }
+    .color-swatch {
+        width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff;
+        box-shadow: 0 0 0 1px #ccc; cursor: pointer; flex: 0 0 auto; margin: 0 2px;
+    }
+    .color-swatch.active { box-shadow: 0 0 0 2px var(--active-color); }
+    input[type="color"] { width: 30px; height: 30px; border: none; background: none; cursor: pointer; padding: 0; }
+
+    /* ==== Interactive Components (правая панель) ==== */
+    .side-panel {
+        flex: 0 0 128px;
+        background: #eef0f2;
+        border-left: 1px solid #cfd4d9;
+        overflow-y: auto; overflow-x: hidden;
+        padding: 8px 6px 20px;
+        display: flex; flex-wrap: wrap; gap: 5px;
+        align-content: flex-start; justify-content: center;
+    }
+    .panel-title {
+        width: 100%; font-size: 0.62em; font-weight: 600; color: #8a939c;
+        text-transform: uppercase; letter-spacing: 1px;
+        text-align: center; margin: 8px 0 2px; user-select: none;
+    }
+    .comp-item {
+        width: 50px; height: 50px;
+        background: #fff; border: 1px solid #d5d8dc; border-radius: 9px;
+        cursor: grab;
+        display: flex; justify-content: center; align-items: center;
+        transition: border-color 0.15s, box-shadow 0.15s;
+        user-select: none;
+    }
+    .comp-item:hover { border-color: var(--active-color); box-shadow: 0 2px 6px rgba(0,86,179,0.25); }
+    .comp-item.active { border-color: var(--active-color); background: #dcebfd; box-shadow: 0 0 0 2px rgba(0,86,179,0.35); }
+    .comp-item:active { cursor: grabbing; }
+    .comp-item svg, .comp-item .marker-icon, .asset-icon-img { pointer-events: none; }
+    .asset-icon-img { max-width: 34px; max-height: 34px; object-fit: contain; display: block; }
+    .marker-icon {
+        font-weight: bold; display: flex; justify-content: center; align-items: center;
+        color: white; border-radius: 50%; width: 30px; height: 30px; font-size: 0.72em;
+    }
+</style>
+</head>
+<body>
+
+<div class="main-col">
+    <header class="app-header">
+        <h1 class="app-title">BenchReview Lite</h1>
+    </header>
+    <div class="canvas-wrapper">
+        <div class="canvas-container-wrapper" id="canvasBox">
+            <canvas id="rink-canvas" width="1000" height="470"></canvas>
+        </div>
+    </div>
+
+    <div class="bottom-toolbar">
+        <!-- Линии движения -->
+        <div class="toolbar-group">
+            <button class="tool-btn line-tool" data-type="skate"    title="Катание без шайбы"><i class="custom-icon icon-skate"></i></button>
+            <button class="tool-btn line-tool" data-type="backward" title="Катание спиной вперёд"><i class="custom-icon icon-back"></i></button>
+            <button class="tool-btn line-tool" data-type="puck"     title="Ведение шайбы"><i class="custom-icon icon-puckline"></i></button>
+            <button class="tool-btn line-tool" data-type="pass"     title="Пас"><i class="custom-icon icon-pass"></i></button>
+            <button class="tool-btn line-tool" data-type="shot"     title="Бросок"><i class="custom-icon icon-shot"></i></button>
+            <button class="tool-btn line-tool" data-type="stop"     title="Движение с остановкой"><i class="custom-icon icon-stopline"></i></button>
+        </div>
+        <!-- Текст / зона / картинка -->
+        <div class="toolbar-group">
+            <button class="tool-btn" id="btnAddText" title="Текст"><i class="fa-solid fa-font"></i></button>
+            <button class="tool-btn" id="btnAddZone" title="Зона (прямоугольник)"><i class="fa-regular fa-square-full" style="opacity:0.6;"></i></button>
+            <button class="tool-btn" id="btnAddEllipse" title="Зона (овал)"><i class="fa-regular fa-circle" style="opacity:0.6; transform:scaleX(1.35);"></i></button>
+            <button class="tool-btn" id="btnAddImage" title="Вставить картинку/логотип"><i class="fa-regular fa-image"></i></button>
+            <input type="file" id="imgInput" accept="image/*" style="display:none">
+        </div>
+        <!-- Цвет -->
+        <div class="toolbar-group" id="colorGroup">
+            <div class="color-swatch active" data-color="#0056b3" style="background:#0056b3"></div>
+            <div class="color-swatch" data-color="#c0392b" style="background:#c0392b"></div>
+            <div class="color-swatch" data-color="#111111" style="background:#111111"></div>
+            <div class="color-swatch" data-color="#1e8449" style="background:#1e8449"></div>
+            <input type="color" id="colorPicker" value="#0056b3" title="Свой цвет">
+        </div>
+        <!-- Режимы -->
+        <div class="toolbar-group">
+            <button class="tool-btn" id="btnFreeDraw" title="Свободное рисование"><i class="fa-solid fa-paintbrush"></i></button>
+            <button class="tool-btn active" id="btnSelectMode" title="Перемещение / выделение"><i class="fa-solid fa-arrow-pointer"></i></button>
+            <button class="tool-btn" id="btnRink" title="Полная / половина площадки"><i class="fa-solid fa-table-columns"></i></button>
+        </div>
+        <!-- Действия -->
+        <div class="toolbar-group">
+            <button class="tool-btn" id="btnUndo" title="Отменить (Ctrl+Z)"><i class="fa-solid fa-arrow-rotate-left"></i></button>
+            <button class="tool-btn" id="btnRedo" title="Повторить (Ctrl+Y)"><i class="fa-solid fa-arrow-rotate-right"></i></button>
+            <button class="tool-btn btn-delete" id="btnDelete" title="Удалить выделенное (Del)"><i class="fa-regular fa-trash-can"></i></button>
+            <button class="tool-btn btn-delete" id="btnClear" title="Ластик: провести по объектам. Shift+клик — очистить всё"><i class="fa-solid fa-broom"></i></button>
+            <button class="tool-btn btn-save" id="btnSavePng" title="Скачать PNG"><i class="fa-solid fa-download"></i></button>
+            <button class="tool-btn" id="btnSaveJson" title="Сохранить упражнение (файл)"><i class="fa-regular fa-floppy-disk"></i></button>
+            <button class="tool-btn" id="btnLoadJson" title="Открыть упражнение"><i class="fa-regular fa-folder-open"></i></button>
+            <input type="file" id="jsonInput" accept=".json" style="display:none">
+        </div>
+    </div>
+</div>
+
+<!-- ==== Interactive Components ==== -->
+<div class="side-panel" id="sidePanel">
+    <div class="panel-title">Игроки</div>
+    <div class="comp-item" draggable="true" data-comp="mF1" title="Форвард 1"><div class="marker-icon" style="background:#2980b9">F1</div></div>
+    <div class="comp-item" draggable="true" data-comp="mF2" title="Форвард 2"><div class="marker-icon" style="background:#2980b9">F2</div></div>
+    <div class="comp-item" draggable="true" data-comp="mF3" title="Форвард 3"><div class="marker-icon" style="background:#2980b9">F3</div></div>
+    <div class="comp-item" draggable="true" data-comp="mD1" title="Защитник 1"><div class="marker-icon" style="background:#c0392b">D1</div></div>
+    <div class="comp-item" draggable="true" data-comp="mD2" title="Защитник 2"><div class="marker-icon" style="background:#c0392b">D2</div></div>
+    <div class="comp-item" draggable="true" data-comp="mC"  title="Тренер"><div class="marker-icon" style="background:#111">C</div></div>
+    <div class="comp-item" draggable="true" data-comp="mG"  title="Вратарь"><div class="marker-icon" style="background:#7d3c98">G</div></div>
+    <div class="comp-item" draggable="true" data-comp="oppX" title="Соперник (X)"><b style="color:#c0392b; font-size:1.3em;">X</b></div>
+    <div class="comp-item" draggable="true" data-comp="mNum" title="Игрок с номером (1, 2, 3...)"><b style="font-size:1.05em; color:#555;">№</b></div>
+
+    <div class="panel-title">Оборудование</div>
+    <div class="comp-item" draggable="true" data-comp="barrierH" title="Борт / барьер (горизонтальный)">
+        <svg width="34" height="34" viewBox="0 0 34 34"><line x1="5" y1="17" x2="29" y2="17" stroke="#333" stroke-width="4" stroke-linecap="round"/></svg>
+    </div>
+    <div class="comp-item" draggable="true" data-comp="barrierV" title="Борт / барьер (вертикальный)">
+        <svg width="34" height="34" viewBox="0 0 34 34"><line x1="17" y1="5" x2="17" y2="29" stroke="#333" stroke-width="4" stroke-linecap="round"/></svg>
+    </div>
+    <div class="comp-item" draggable="true" data-comp="stand" title="Стойка (тренировочная)">
+        <svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"><line x1="17" y1="12" x2="17" y2="29"/><line x1="17" y1="12" x2="10" y2="4"/><line x1="17" y1="12" x2="24" y2="4"/></svg>
+    </div>
+    <div class="comp-item" draggable="true" data-comp="stickPuck" title="Клюшка с шайбой">
+        <svg width="34" height="34" viewBox="0 0 34 34"><circle cx="7" cy="17" r="4" fill="#111"/><line x1="12" y1="17" x2="30" y2="17" stroke="#333" stroke-width="3" stroke-linecap="round"/></svg>
+    </div>
+    <div class="comp-item" draggable="true" data-comp="pole" title="Шест / палка">
+        <svg width="34" height="34" viewBox="0 0 34 34"><line x1="8" y1="28" x2="26" y2="6" stroke="#333" stroke-width="3.5" stroke-linecap="round"/></svg>
+    </div>
+    <div class="comp-item" draggable="true" data-comp="stick" title="Клюшка">
+        <svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="#333" stroke-width="3.5" stroke-linecap="round"><path d="M 8 4 L 20 24 Q 21 26 24 27 L 30 28"/></svg>
+    </div>
+    <div class="comp-item" draggable="true" data-comp="tire" title="Покрышка">
+        <svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="10" fill="none" stroke="#222" stroke-width="5"/><circle cx="17" cy="17" r="2.5" fill="#222"/></svg>
+    </div>
+    <div class="comp-item" draggable="true" data-comp="cone" title="Конус">
+        <img class="asset-icon-img" alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEoAAABhCAYAAABxuzeEAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAAA7pJREFUeAHtnEFOFEEUhl/1DEZ3eANcGRIwww3GEzgJkLhzPIF4Ar0BZ3CNJtxAbwBRArqCI7DEMN1l10SQEKrrVXfVe6/b962AmcXk56+ar+v1DICiKAwYEMTZ7ua8fkn79Y+XRQUfn3/5/gmEICao89lk9epRdQTWrrnfbR3W7+vRs63D40sQQAFCuFopZzchOer/4OqTlcUbEIKYoMCYD/f/ZKHYAyGICGq5N91p0z/s2tnOxhQEIKVR/iX2QNM4YN/Mz15P1qAszxufZO3L9c8n34AR/kaVZbgxxrBv6qyNQrUJZKgCb6Oqao55mlOFx+PFO2CEe+mhl5Q1Zu+ollJggi0ovxI8DLeA8jWqxdu+BTMDJliCWkpkRJvuMOUSUJagDJj2GzOTgJLrAVYJmiih3No4OD0GQugbhRHMAIUdkW/qpI1K0SYHh4DSNqosp5AADgGlDSrhRuwEFAghCypWMEO4Vv3c2XwFRJAF1UkJPFgDZK0iCcpJogU7gfSQCShNo3KeJxEJaHY9SKUETVxdj57mVoX8jUogmCEoVCFro+4PNXNBIaBZG3V/qJkLCgHNu/Qor/RNMYeMZAsqtWCGyTsszdko+mPbjA3OsplTKIGXTMPSPI0iUAIvmeQ2eaNY2/SXHAKavFGmKlkHlY4cqpA8KM6R0u1ryDAsTRoUvRI8TI5hadpGCbmXyZG62cmC6jDUzEXSs6p0jRLUplsSvqYkeiBBCXykGpamaRSnYAZINSzt3CjJbXKkOqvq3Ci7qNi9qYlUZ1WdgzIFsJt4iBTD0k5BSRHMEK5Vv7ZfdNqrujVKohJ4qAo7hw60DkqgYIboJKDtGyXgJvloOqyAVnogXQkaqVVh/fD4AiJp1yjBghlk3O5UIbpRyzZV1dee7U+3tBXQ+Ea5u+Z6GpKjrYDGB9UjJfDRRkCjguqLYIZwrYpVhdhG9U8JfESuDPRmfrI7mYygPIIhETEsRTeqDkn8xW8sNuK+UlSjei2YAbDDUlyj+iyYAbCqgAvKmCkMFOywNBjUUJTAB3ZYGm7UAAQzRAXhu/Uagzrd3pwNuU03GLCTkIA2BtWH8/BkBFaOVw+GrAReGgTU36gBK4GPWkC9n9ZqWnqi53VZMDD3PdQUFOmHm2VgL3yPjH0PwOj6rVmM9+sTQbav+aCk3qwvYbF4D4qiSGLpUfX1nAXFy/rBDyPn6yWFo0Eh0aCQaFBINCgkGhQSDQqJBoVEg0KiQSHRoJBoUEg0KCQaFBINSlEURfl/+AMszWdOA4FMAwAAAABJRU5ErkJggg==">
+    </div>
+    <div class="comp-item" draggable="true" data-comp="puck" title="Шайба">
+        <svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="6" fill="#111"/></svg>
+    </div>
+    <div class="comp-item" draggable="true" data-comp="pucks" title="Горка шайб">
+        <svg width="34" height="34" viewBox="0 0 34 34"><circle cx="10" cy="14" r="4" fill="#111"/><circle cx="20" cy="14" r="4" fill="#111"/><circle cx="15" cy="22" r="4" fill="#111"/></svg>
+    </div>
+    <div class="comp-item" draggable="true" data-comp="net" title="Ворота">
+        <img class="asset-icon-img" alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAA2CAYAAAA25uK9AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAAAYxJREFUeAHtmNFtgzAQhn0heUciRHlkBDYoG7QbtN2gG4RMkGyQsAGdIIzABuExUhKV90S53hmoUIsKRqFSpTsJbFk//vxjP1g/oOuiuk+lCjFTADEcj1GTAO4Iq80KGYHDH1CGtQFxOn0gzQZnsz3O516jxnV9dJwXavfVnKQPjWE16EIDbdtu0b3RnB/l3KtesFK/Y2gHnf8FdJwnHhsp00Jc0p4EbTLar1RrNWW04b9hDrteU3oHXaRwOq2pSeix1WTybAyDPM+VWcX6jRiYOzMty3rXLYA/OAwOh6zsesM7q5XABCYwgQlMYAPVWPWsPpfb/+GMrmrQVVv9BTmNAhOYwAQmMIF1KA5fym72F84KGGI6PAxgUcLiQWEcmBHEo24G53NkfOHRoRdi0qor9qpwdbuF3Bg509GfZa0Itv1Vx46U2inOrDjkJFc83smZhozHPqdrtMpt9fE3jUdh2CN1Oe4LikFcU1i2rDTDxLZK5bSoV1pUXB/sfUltKM6FUzp9ibpcoqb07hPKLKqeiCmoAwAAAABJRU5ErkJggg==">
+    </div>
+</div>
+
+<script>
+// ================= ЛОГОТИП (оригинальный SVG ХК «Адмирал», встроен base64) =================
+const ADMIRAL_LOGO = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTMiIGhlaWdodD0iODgiIHZpZXdCb3g9IjAgMCA5MyA4OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGcgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwXzEzMThfMTM2MDMpIj4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik01My41NjgxIDc2LjY2NkM1MC40ODEyIDc4LjQ2NjkgNDguNTg5MyA3OS4zNTEyIDQ2LjUwMjcgODAuMzY1MkM0NC41MDg3IDc5LjM5OTMgNDIuNTk2NyA3OC41MDgzIDM5LjQzNDYgNzYuNjYzM0wxNy43NjQzIDg4LjAwMTNMMjEuODk5OSA2My45ODk0QzE5LjE4ODkgNjEuNTk2OCAxNy43MDI1IDYwLjAyMTcgMTYuMTc3MiA1OC40NDU0QzE2LjQ2MDUgNTYuNDM3NSAxNi43NDY1IDU0LjE2MSAxNy41MzA3IDUwLjYxNjhMMCAzMy42MTMyTDI0LjIyODIgMzAuMTA5MUMyNS42NDc0IDI2Ljg3NzUgMjYuNjUwNSAyNS4wNjE5IDI3Ljc2MDkgMjIuOTc5MkMzMC4wOTk5IDIyLjU3MDQgMzIuMDc5MSAyMi4xOTM3IDM1LjY2ODIgMjEuODQxTDQ2LjUgMEw1Ny4zMzU4IDIxLjg0MUM2MC45MzE2IDIyLjE5NSA2Mi45MDE0IDIyLjU3MDQgNjUuMjQxOCAyMi45NzkyQzY2LjI5OTkgMjQuOTYwNCA2Ny4zMjk3IDI2LjgyMTQgNjguNzc0NSAzMC4xMDkxTDkzIDMzLjYxMzJMNzUuNDcwNyA1MC42MTQyQzc2LjI0ODEgNTQuMTMwMyA3Ni41MDU5IDU2LjE5MyA3Ni44MjU1IDU4LjQ0NTRDNzUuMjQxMSA2MC4wNzkyIDczLjg1MTQgNjEuNTU5NCA3MS4xMDAxIDYzLjk5MjFMNzUuMjQxMSA4OC4wMDEzTDUzLjU2OTUgNzYuNjY3NEw1My41NjgxIDc2LjY2NloiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNNTMuNTI5MiA3NS4xNTI1QzUxLjIyMSA3Ni41MjMxIDQ4LjkxNDIgNzcuNzI1NSA0Ni41MDQgNzguODk1N0M0NC4wOTExIDc3LjcyMjggNDEuNzg0MyA3Ni41MjMxIDM5LjQ3MzUgNzUuMTQ5OEwxOS41MjczIDg1LjU4NkwyMy4zMzc5IDYzLjQ4NzJDMjEuMzExNyA2MS43MjUxIDE5LjQ0OTQgNTkuOTE0OSAxNy41ODcgNTcuOTkyNUMxNy45NjAzIDU1LjM0NjEgMTguMzk0IDUyLjc5ODQgMTguOTkyOSA1MC4xODU0TDIuODU4NjQgMzQuNTM3N0wyNS4xNTQ2IDMxLjMxNDFDMjYuMjE0IDI4Ljg1MiAyNy4zNjYxIDI2LjUyNzUgMjguNjMyMyAyNC4xNjk2QzMxLjI3ODggMjMuNzA3NCAzMy44NDg4IDIzLjMyOTMgMzYuNTMyOSAyMy4wODg4TDQ2LjUgMi45ODU4NEw1Ni40NzM4IDIzLjA4ODhDNTkuMTU3OSAyMy4zMjkzIDYxLjcyNzggMjMuNzA4NyA2NC4zNzQ0IDI0LjE2OTZDNjUuNjMzOCAyNi41MzE1IDY2Ljc5MTMgMjguODQ4IDY3Ljg0OCAzMS4zMTQxTDkwLjE0OCAzNC41Mzc3TDc0LjAxMjUgNTAuMTgyN0M3NC42MSA1Mi43OTMxIDc1LjA0NzcgNTUuMzQ2MSA3NS40MTgzIDU3Ljk5MjVDNzMuNTU3MyA1OS45MTc2IDcxLjY5MzYgNjEuNzIzOCA2OS42Njg3IDYzLjQ4NzJMNzMuNDc0IDg1LjU4Nkw1My41Mjc4IDc1LjE1MjVINTMuNTI5MloiIGZpbGw9ImJsYWNrIi8+CjxwYXRoIGQ9Ik01Ny41NTMzIDQ5LjQwMzhDNTcuMjUzOSA1MC44MDI1IDU2LjcyNzYgNTIuNDk3OCA1NS44MzA2IDUzLjkyODVDNTUuMzIzMSA1My4zMzY3IDU0LjczNjMgNTMuMjY3MiA1NC40MjM0IDUzLjI2NzJDNTMuMzM5OSA1My4yNjcyIDUyLjY2OTggNTQuMDk1NSA1Mi4zMDA2IDU0LjQ4MDNDNTEuNzU2OCA1NC41NjQ0IDUxLjA2MTIgNTQuODQ1IDUwLjUxNjEgNTYuMzcxOUM1MC4zNzc4IDU2LjQxNiA1MC4yNTU2IDU2LjQ3ODggNTAuMTQxNSA1Ni41NDgzQzQ5LjY0ODcgNTYuMTQ3NSA0OS4zNjY3IDU1LjQyMzQgNDkuMzE5NyA1NC4zNjU0TDQ5LjA3NjcgNDguOTc0OUM1MC4yMzY4IDQ5LjA4MTggNTAuODMwMyA0OC4zMTIzIDUxLjQxMDQgNDcuNDU4NkM1Mi41MDA3IDQ3LjIzMTUgNTIuODk1NCA0Ni4yNTc2IDUzLjA4NjEgNDUuMTkwMkM1My45NTM1IDQ0LjYxMDUgNTMuOTE4NiA0My41ODg1IDUzLjkyMTMgNDMuNDQ4Mkw1NS40ODI4IDQzLjMzMDZWMzkuOTE2SDUzLjY2ODhDNTQuMTY5NyAzOC40OTQ2IDUyLjY5OCAzNy4yNDgyIDUyLjYxNjEgMzcuMTYxM0M1Mi41NjUxIDM1LjY1NDQgNTAuODcwNiAzNS4xNjI4IDUwLjY1MzEgMzUuMDk2QzUwLjY1ODQgMzUuMDExOCA1MC42NjExIDM0LjkyNjMgNTAuNjYxMSAzNC44NDIyQzUwLjY2MTEgMzIuNTYwNCA0OC43OTIgMzAuNzAyMSA0Ni41MDI3IDMwLjcwMjFDNDQuMjEzMyAzMC43MDIxIDQyLjQ2MjQgMzIuNDQ5NSA0Mi4zNTM3IDM0LjYzNjRDNDEuNjc5NiAzNC45MTMgNDEuMjE5MSAzNS41ODkgNDAuOTg1NCAzNi4xNDM0QzM5LjkzMTQgMzYuMzYxMSAzOS41MzEyIDM3LjYwMjIgMzkuNDM0NiAzOC41NzQ3QzM5Ljk3MDMgMzguMzE5NiA0MC41MjA4IDM4LjQ3ODYgNDAuNTU0NCAzOC43NjE4QzQxLjA4MDggMzguMzg5MSA0MS42MDA0IDM4LjQzNTggNDEuNTgwMiAzOC43NTkxQzQyLjIwNDYgMzguNTg2OCA0Mi42NzQ2IDM3Ljg2NjcgNDMuMDczNCAzNy4xOEM0My40MTcxIDM3LjY4MSA0My44Njk2IDM4LjEwNzIgNDQuNDEwNyAzOC40MTcxTDQ0LjMzOTYgMzkuOTE2SDM3LjUyMTJWNDMuMzMwNkw0NC4xNTk2IDQzLjgyNzZMNDMuOTc0MyA0Ny45MzgyQzQzLjI4NDIgNDguMDk3MiA0Mi43MDI4IDQ4LjYwMDkgNDIuNDE0MSA0OS4wMjE3QzQxLjIyODUgNDkuMTM2NiA0MC40NjcxIDUwLjA2NSA0MC4yNjcxIDUwLjg0MTJDMzguOTY3MyA1MS40NzQ0IDM4Ljg1ODUgNTIuNzE4MiAzOC45MDY5IDUzLjM3OTVDMzguNzUzOCA1My41NTU4IDM4LjE2NTcgNTQuMjU5OCAzOC40NDkgNTUuNDk0MkMzNi43MzcgNTMuOTEzOCAzNS44NjY5IDUxLjM2NzYgMzUuNDQ4IDQ5LjQwNTFDMzIuODEyMiA1Mi4xMzA0IDMzLjAyMTcgNTcuMzU3OCAzNC43OTE0IDYwLjE0OTlMMzYuMjEwNyA1OS4xMTA2QzM5LjI0OTMgNjMuNjIwNyA0Mi44ODk0IDYyLjUxODUgNDYuNTAxMyA2Ny4wNjZDNTAuMTEzMyA2Mi41MTg1IDUzLjc1MzQgNjMuNjIwNyA1Ni43OTIgNTkuMTEwNkw1OC4yMTEzIDYwLjE0OTlDNTkuOTgxIDU3LjM1NzggNjAuMTkwNSA1Mi4xMzA0IDU3LjU1NDcgNDkuNDA1MUw1Ny41NTMzIDQ5LjQwMzhaTTQzLjY4MTYgNTQuMzYyN0M0My42MDExIDU2LjE2NDkgNDIuODQ2NCA1Ny4wMDI1IDQxLjUxMDQgNTYuOTExNkw0MS4zOTA5IDU2Ljg5OTZDNDEuNTgwMiA1Ni4zMzE5IDQxLjUxODUgNTUuNTg1MSA0MS4yMjg1IDU1LjA1ODdDNDEuNjYzNSA1NC42MDg1IDQxLjcxNDUgNTQuMjAyNCA0MS43NzM2IDUzLjI3MzlDNDIuMzY4NCA1My4wMDQxIDQyLjU2ODUgNTIuNjEyNiA0Mi45NTM5IDUxLjgyNThDNDMuNDA2NCA1MS43ODk3IDQzLjY5MjQgNTEuNjE4NyA0My44MDc4IDUxLjU0MzlMNDMuNjgwMyA1NC4zNjRMNDMuNjgxNiA1NC4zNjI3Wk00OC41OTIgMzguNDE0NEM0OC45NTcyIDM4LjIwNiA0OS4yODA4IDM3Ljk0MjkgNDkuNTU4NyAzNy42NDA5QzQ5LjY0MzMgMzcuNjc5NyA0OS43Mjc5IDM3LjcxNzEgNDkuODE2NSAzNy43NTQ1QzQ5Ljk0ODEgMzguNDk3MyA1MC40MDYgMzguOTkxNiA1MC44MDg4IDM5LjMzMjJDNTAuNzUzOCAzOS42NjQ5IDUwLjc2ODUgMzkuODYxMiA1MC43NzI2IDM5LjkxMkg0OC42NjMxTDQ4LjU5MiAzOC40MTMxVjM4LjQxNDRaTTQ4Ljg0MTcgNDMuODIzNkw1MC42NzcyIDQzLjY4NkM1MC40ODkyIDQzLjk5ODYgNTAuNDEyNyA0NC4zMDQ1IDUwLjI5NTkgNDQuODMyMkM0OS43MDc4IDQ1LjA1OCA0OS4zNTMzIDQ1LjQ1NzQgNDguOTQzOCA0Ni4wODI2TDQ4Ljg0MTcgNDMuODI0OVY0My44MjM2WiIgZmlsbD0iI0I5OTc1QiIvPgo8cGF0aCBkPSJNNTUuNDg2OSAyNy4wNjczTDQ2LjUwMjcgOC45NTc1MlYyNi43MDI2QzQ5LjU5NjMgMjYuNzAyNiA1Mi42MjgyIDI2LjgyNjggNTUuNDg2OSAyNy4wNjczWiIgZmlsbD0iI0I5OTc1QiIvPgo8cGF0aCBkPSJNMjUuNTE5OSA0MS44NjI2TDguNTYyNjIgMzYuMzgxM0wyMy4wOTYzIDUwLjQ3OEMyMy43NTgzIDQ3LjY1NjUgMjQuNTggNDQuNzQxNiAyNS41MTk5IDQxLjg2NFY0MS44NjI2WiIgZmlsbD0iI0I5OTc1QiIvPgo8cGF0aCBkPSJNNjQuMzU0MiAzMy40NzU2QzY1LjQ4NjIgMzYuMTQ2MSA2Ni41NDI5IDM4Ljk4NDkgNjcuNDgyOCA0MS44NjI1TDg0LjQ0MDEgMzYuMzgxMkw2NC4zNTQyIDMzLjQ3NTZaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNDYuNTAxNCAyNi43MDM3VjguOTU3MjZMNDYuNDk4NyA4Ljk1NDU5TDM3LjUxNTkgMjcuMDY3MUM0MC4zNzQ1IDI2LjgyNzkgNDMuNDA2NCAyNi43MDIzIDQ2LjUwMDEgMjYuNzAyM0w0Ni41MDE0IDI2LjcwMzdaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNMjYuNDg1NCA2MC44NDcyTDIzLjA1MzMgODAuNzU2NEwzMy41MzYgNjYuNDAwNkMzMS4wNzQ4IDY0LjYyMTIgMjguNjg3NCA2Mi43NDI4IDI2LjQ4NTQgNjAuODQ3MloiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0yOC42NDg1IDMzLjQ3NTZMOC41NjI2MiAzNi4zODEyTDI1LjUxOTkgNDEuODYyNUMyNi40NTk4IDM4Ljk4NDkgMjcuNTE3OSAzNi4xNDYxIDI4LjY0ODUgMzMuNDc1NloiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNNTUuNTg3NSA3My4yNDM0TDY5Ljk0OCA4MC43NTY3TDYwLjI5MzggNjcuNTMzN0w1NS41ODc1IDczLjI0MzRaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTY3LjIyNzcgNjQuOTc2Nkw2MC4yOTM4IDY3LjUzMzVMNjkuOTQ4IDgwLjc1NjVMNjcuMjI3NyA2NC45NzY2WiIgZmlsbD0iI0I5OTc1QiIvPgo8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTY4LjgyMTUgNDEuNDMxMUw3Mi45Mjc2IDQ3LjU0N0w4NC40NDAxIDM2LjM4MTNMNjguODIxNSA0MS40MzExWiIgZmlsbD0iI0I5OTc1QiIvPgo8cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTMyLjcwNzYgNjcuNTMzN0wyMy4wNTMzIDgwLjc1NjdMMzcuNTI5MyA3My4xODMzTDMyLjcwNzYgNjcuNTMzN1oiIGZpbGw9IiNCOTk3NUIiLz4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik00Ni41MDI2IDI3LjkzNjlDNTEuNjE0NCAyNy45MzY5IDU2LjY2NzEgMjguMjg5NiA2MC44OTEzIDI4LjkzODlMNjIuNjM1NSAyNi41NDg5QzUzLjEwMzUgMjQuODc1IDM5Ljg5OTEgMjQuODc1IDMwLjM2NTcgMjYuNTQ4OUMyNS44MTkzIDM1LjA1MzQgMjEuNzM4NyA0Ny41NDQzIDIwLjM4OTMgNTcuMDgxNEwyMy4yMTg0IDU2LjE2OUMyNC42MTg5IDQ3LjU0NyAyOC4xNTE2IDM2LjczNTMgMzIuMTEgMjguOTM4OUMzNi4zMzQyIDI4LjI4OTYgNDEuMzg2OSAyNy45MzY5IDQ2LjUwMTMgMjcuOTM2OUg0Ni41MDI2WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik02Mi42MzY5IDI2LjU0ODhMNjAuODkyNyAyOC45Mzg4QzY0Ljg1MSAzNi43MzM5IDY4LjM4MzcgNDcuNTQ2OSA2OS43ODQyIDU2LjE2ODlDNjMuNTU2NiA2Mi4zMjYyIDU0LjMxMiA2OS4wMDg1IDQ2LjUwMjYgNzIuOTk4OUMzOC42OTMzIDY5LjAwODUgMjkuNDQ2IDYyLjMyNjIgMjMuMjE5OCA1Ni4xNjg5TDIwLjM5MDYgNTcuMDgxNEMyNy4xMjA0IDY0LjAxMDggMzcuODAwNCA3MS43MzI1IDQ2LjUwMjYgNzUuOTU0QzU1LjIwMjIgNzEuNzMyNSA2NS44ODM2IDY0LjAxMDggNzIuNjA5MyA1Ny4wODE0QzcxLjI2MTIgNDcuNTQ0MiA2Ny4xODA3IDM1LjA1MzMgNjIuNjM2OSAyNi41NDg4WiIgZmlsbD0iI0I5OTc1QiIvPgo8cGF0aCBkPSJNNDQuMzE5NCA2MS45NzU5QzQzLjE3MjggNjIuMDc2MSA0Mi4xNzUxIDYxLjc3MDIgNDEuNjkxNyA2MC45NDQ2QzQwLjc4IDYwLjc3NzYgMzkuNzY4OSA2MC4xNzI0IDM5LjU5OTggNTkuMDI0OEMzOS4wMjc4IDU4LjY0NDEgMzguMzUxIDU3Ljc3MTcgMzguNDg4IDU2LjU5NjFDMzcuMTg5NiA1NS42OTA0IDM1LjkzMTQgNTQuMTM0IDM1LjEwNyA1MS4zOTRDMzQuMDU4MyA1My42MDUgMzQuMjk0NiA1Ny4xMzMyIDM1LjE5NyA1OC43OTY0QzM1LjQyMzkgNTguMTc5MiAzNS43MjYgNTcuNjU5NSAzNi4wNjcgNTcuMTgyNkMzOC45OTU1IDYyLjk3MzggNDMuMjcyMSA2MS41ODQ1IDQ2LjUxNjEgNjUuNjYxN0w0Ni41MTA4IDYyLjI2MDVDNDUuOTM3NCA2Mi40ODg5IDQ1LjA2MiA2Mi41MTU2IDQ0LjMyMDggNjEuOTc1OUg0NC4zMTk0WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTQ4LjMyNDkgMzYuNjYxNkM0OC4xMDQ3IDM2LjY2NDIgNDcuMzc1NSAzNi43MjE3IDQ2LjY5MjEgMzYuMzIwOUM0Ni42MzQ0IDM2LjMyNzYgNDYuNTc1MyAzNi4zMzI5IDQ2LjUxNDkgMzYuMzMyOUM0NS43MjI3IDM2LjMzMjkgNDUuMDc5NSAzNS42OTE3IDQ1LjA3OTUgMzQuOTA0OEM0NS4wNzk1IDM0LjExOCA0NS43MjEzIDMzLjQ3NjcgNDYuNTE0OSAzMy40NzY3QzQ2LjU2MzIgMzMuNDc2NyA0Ni42MTE1IDMzLjQ3OTQgNDYuNjU4NSAzMy40ODM0QzQ3LjAzNzIgMzMuNDY2IDQ3LjUxNzkgMzMuNTU0MiA0OC4xMTk0IDMzLjg2MTVDNDguMjE2MSAzMy44NjQxIDQ4Ljk5NzYgMzMuODE0NyA0OS42NTI4IDM0LjA3NzlDNDkuMjgzNiAzMi42OTUyIDQ4LjAxNzQgMzEuNjcxOSA0Ni41MTQ5IDMxLjY3MTlDNDQuNzE5NiAzMS42NzE5IDQzLjI2NTUgMzMuMTIgNDMuMjY1NSAzNC45MDQ4QzQzLjI2NTUgMzYuMjUwMSA0NC4xMDQ3IDM3LjQ0NDQgNDUuMzU3NCAzNy45MjUzTDQ1LjIyMDUgNDAuODg1N0gzOC40NDc4VjQyLjU0NzZMMzkuMDQ1MyA0MS42Nzc5TDQ1LjE3ODggNDEuODg1TDQ0LjU5MzQgNTQuNjY0NUM0NC41MDA4IDU2LjY5NjQgNDMuNTY0OSA1Ny42NjkgNDIuMjI4OSA1Ny43ODkyQzQyLjI5MDYgNTcuOTIxNCA0Mi4zMzYzIDU4LjA2MTcgNDIuMzYxOCA1OC4yMTI3QzQzLjEyNTggNTguNDI3OCA0My42MjQgNTguNjU3NSA0My45NTQzIDU5LjE4NTJDNDQuNzMzMSA1OS4xMTcxIDQ1LjMwMzcgNTkuMTQ2NSA0NS44MDE5IDU5LjUyNTlDNDYuMjI0OCA1OS4zMzQ5IDQ2LjE3OTIgNTkuMzMwOCA0Ni41MDk1IDU5LjIxODZMNDYuNTE0OSAzNy4yMDUzTDQ3LjY2OTYgMzcuOTI1M0M0OC4wOTc5IDM3Ljc2MzcgNDguNDgwNiAzNy41MTI1IDQ4LjgwMDIgMzcuMTk4NkM0OC42MjcgMzcuMDU4MyA0OC40NjcyIDM2Ljg4NzMgNDguMzI0OSAzNi42NjI5VjM2LjY2MTZaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNTMuNzMzMyA1Ny4xNjI2QzUzLjY3NDIgNTcuNjIwOSA1My41NjE0IDU4LjA1NjQgNTMuNDIzMSA1OC40NTE4QzU2LjE3MyA1Ny4wNDkxIDU3Ljk4MTcgNTQuNDQ5NCA1Ny45MjY2IDUxLjM4NDhDNTcuMzY5NCA1My43OTYxIDU1LjkwMTggNTUuOTU5IDUzLjczMzMgNTcuMTYyNloiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik00Mi41NDg0IDM2Ljg0MjJDNDIuMDMyOCAzNi44MDM0IDQxLjU3NjIgMzYuNjYwNSA0MS4xNiAzNi43MzEzQzQwLjk0NjUgMzYuNzYzNCA0MC43NjI2IDM2Ljg2NjIgNDAuNTc3MyAzNy4wNTczQzQwLjQ5MjcgMzcuMTU3NSA0MC40MTIxIDM3LjI4NDQgNDAuMzM2OSAzNy40MzhDNDAuMjY0NCAzNy41OTMgNDAuMjA5MyAzNy43ODI3IDQwLjE1ODMgMzguMDAwNEM0MC41NjY1IDM3LjkxNDkgNDEuMDUxMiAzOC4wNTY1IDQxLjUwMjQgMzcuOTkxMUM0MS45NTM2IDM3LjkyNTYgNDIuMjAyIDM3LjQ0MDcgNDIuNTQ5NyAzNi44NDIySDQyLjU0ODRaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNTAuNzgyIDM3LjkzMjZDNTAuODI3NiAzOC4wMzU0IDUwLjg4NCAzOC4xNDIzIDUwLjk2ODYgMzguMjQ2NUM1MS4wMTAyIDM4LjI5ODYgNTEuMDU3MiAzOC4zNTIxIDUxLjExMjMgMzguNDA1NUM1MS4xNjQ2IDM4LjQ2MDMgNTEuMjE0MyAzOC41MjE3IDUxLjI3NjEgMzguNTgwNUM1MS4zNzAxIDM4LjMzNDcgNTEuNDY4MSAzOC4xMTk2IDUxLjU1NTQgMzcuOTA5OUM1MS42NDQgMzcuNzAwMSA1MS43MjE5IDM3LjQ5NTcgNTEuNzQ2IDM3LjI4NkM1MS43NTgxIDM3LjA4NDMgNTEuNzEzOCAzNi44NzU5IDUxLjU3MTUgMzYuNjU1NEM1MS41MDE3IDM2LjU0MzIgNTEuMzg4OSAzNi40NDU3IDUxLjI1NTkgMzYuMzM4OEM1MS4xMjE3IDM2LjIzMzMgNTAuOTU5MiAzNi4xMjY0IDUwLjc0NTcgMzYuMDQ0OUM1MC43NTc4IDM2LjQ0NDQgNTAuNjIzNSAzNi45MTE5IDUwLjY0NzcgMzcuMzE2N0M1MC42NDc3IDM3LjUzMDUgNTAuNjc3MiAzNy43Mzc1IDUwLjc4MiAzNy45MzI2WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTUwLjQ3NzEgNDYuNTYzOEM1MC43IDQ2LjYwNzkgNTAuOTEzNSA0Ni42NDI2IDUxLjEyMyA0Ni42MjUzQzUxLjMzNTEgNDYuNjEwNiA1MS41MjE4IDQ2LjUxNyA1MS43MTM4IDQ2LjMzOEM1MS44MTE4IDQ2LjI1MTIgNTEuODg5NyA0Ni4xMjE2IDUxLjk2ODkgNDUuOTcwN0M1Mi4wNDY4IDQ1LjgxODQgNTIuMTIyIDQ1LjYzOCA1Mi4xNjIzIDQ1LjQxMzZDNTEuNzY4OSA0NS41MDMxIDUxLjI4NTUgNDUuNDY1NyA1MC44ODggNDUuNTYxOUM1MC40NTk3IDQ1LjY0NDcgNTAuMTM0OCA0NS44NDc3IDQ5Ljc1NzQgNDYuNDIzNUM1MC4wMDk5IDQ2LjQ1MjkgNTAuMjU1NiA0Ni41MjExIDUwLjQ3NzEgNDYuNTY1MVY0Ni41NjM4WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTQ5LjIwOTcgNDcuMDA4N0M0OS4xMzQ1IDQ2Ljk5OCA0OS4wNTkzIDQ2Ljk5NjYgNDguOTg1NSA0Ni45OThMNDkuMDMzOCA0OC4wNzYxQzQ5LjA1NjYgNDguMDgyOCA0OS4wNzk1IDQ4LjA5MDggNDkuMTAyMyA0OC4wOTYxQzQ5LjQ5MyA0OC4xNzYzIDQ5Ljk1NzYgNDguMDUyIDUwLjQ1ODQgNDcuMzE0NkM1MC4zNTkxIDQ3LjI5NzIgNTAuMjU3IDQ3LjI3MzIgNTAuMTU1IDQ3LjI0NjVDNTAuMDUxNiA0Ny4yMTU3IDQ5Ljk0NjkgNDcuMTgzNyA0OS44NDA4IDQ3LjE1MTZDNDkuNjMgNDcuMDg3NSA0OS40MjE5IDQ3LjAzNDEgNDkuMjA5NyA0Ny4wMTEzVjQ3LjAwODdaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNDguMTU5NiAzNS44MDAyQzQ4LjA1NDkgMzUuNTY2NSA0Ny45NzgzIDM1LjMzMTMgNDcuODkyNCAzNS4xMjU2QzQ3LjgwNzggMzQuOTE1OSA0Ny43MjA1IDM0LjcxMDEgNDcuNTg0OSAzNC41NTI1QzQ2LjkwMTUgMzMuODAxNyA0NS44MzUzIDM0LjM5NDkgNDYuODM0MyAzNS4zNTE0QzQ3LjE0MzIgMzUuNjM4NiA0Ny40ODI5IDM1LjgwODMgNDguMTU4MyAzNS44MDAySDQ4LjE1OTZaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNDkuMjg3NiAzNi40NzIxQzQ5LjQ0NiAzNi42MzM3IDQ5LjY3NDMgMzYuNzUxMyA0OS45ODU4IDM2Ljg4NjJDNDkuOTY5NyAzNi4zNzE5IDUwLjA1MDIgMzUuOTE5IDQ5LjkzNjEgMzUuNTE0MkM0OS44Nzg0IDM1LjMxMjUgNDkuNzUyMiAzNS4xNDU1IDQ5LjUzNzMgMzQuOTkzMkM0OS40MzI2IDM0LjkxMyA0OS4yODg5IDM0Ljg2NjMgNDkuMTI1MSAzNC44MTY4QzQ5LjA0MzIgMzQuNzk0MSA0OC45NTMyIDM0Ljc3MjggNDguODU3OSAzNC43NTU0QzQ4Ljc1OTkgMzQuNzQyIDQ4LjY1MjUgMzQuNzM4IDQ4LjUzOTcgMzQuNzM1NEM0OC43MDIxIDM1LjEwNDEgNDguNzU4NSAzNS41ODEgNDguOTMxOCAzNS45NDk3QzQ5LjAwOTYgMzYuMTUxNCA0OS4xMjI0IDM2LjMyMTEgNDkuMjg2MiAzNi40NzIxSDQ5LjI4NzZaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNTEuNDIzOCA1Ni40MDU3QzUxLjgyNCA1Ni4zOTc2IDUyLjI4NTkgNTYuNDY4NCA1Mi43MDYxIDU2LjQwNDNDNTIuODEyMiA1Ni4zODk2IDUyLjkxNTYgNTYuMzY2OSA1My4wMTUgNTYuMzI5NUM1My4xMTU3IDU2LjI5ODggNTMuMjEyMyA1Ni4yNTIgNTMuMzA2MyA1Ni4xOTE5QzUzLjQ5NyA1Ni4wODEgNTMuNjY0OCA1NS45MDYgNTMuODYzNiA1NS42NjU2QzUzLjc0OTQgNTUuNjI4MiA1My42MzUzIDU1LjU4NTQgNTMuNTE5OCA1NS41NDI3QzUzLjQwNDMgNTUuNTAzOSA1My4yOTI5IDU1LjQ2NzggNTMuMTg2OCA1NS40MzE4QzUyLjk2MjYgNTUuMzU5NiA1Mi43NTcyIDU1LjMxNjkgNTIuNTQzNyA1NS4zMjIyQzUyLjEzMjggNTUuMzM4MyA1MS43MTI1IDU1LjYwMjggNTEuNDI1MiA1Ni40MDU3SDUxLjQyMzhaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNTQuNjgxMiA1NS4zNzMxQzU0LjkwNDEgNTUuMTU1MyA1NS4xMTM2IDU0LjkyMTYgNTUuMzA2OSA1NC42NzQ0QzU1LjIxNTYgNTQuNTM0MSA1NS4xMTIyIDU0LjQwOTkgNTQuOTgzMyA1NC4zMTM3QzU0LjgxMTUgNTQuMTgwMSA1NC41ODcyIDU0LjEwOCA1NC4yOTMyIDU0LjEzNzRDNTQuMDA0NSA1NC4xNzYxIDUzLjY0MDYgNTQuMzMxMSA1My4zMDkgNTQuNjc3MUM1My43MTk4IDU0LjgwNjcgNTQuMTAxMiA1NS4wNjcyIDU0LjQ1MDMgNTUuMjYyMkM1NC41MjU1IDU1LjI5OTYgNTQuNjAyIDU1LjMzOTcgNTQuNjc5OSA1NS4zNzMxSDU0LjY4MTJaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNTIuNTc1OCA0MC45NDM4QzUyLjQxMiA0MS4wOTM0IDUyLjI1MjIgNDEuMjQ3IDUyLjEyNzQgNDEuNDE4QzUyLjA2NDMgNDEuNTAzNSA1Mi4wMTA1IDQxLjU5NDQgNTEuOTcwMyA0MS42OTA1QzUxLjkyNzMgNDEuNzg4MSA1MS44ODMgNDEuODkwOSA1MS44NjE1IDQyLjAwMzFDNTEuODM3MyA0Mi4xMTY3IDUxLjgzMDYgNDIuMjM5NiA1MS44NCA0Mi4zNzcyQzUxLjgzNzMgNDIuNTEyMSA1MS44NTM0IDQyLjY2MTggNTEuODg5NyA0Mi44MzI4QzUyLjA5NTEgNDIuNjgxOCA1Mi4zMTEzIDQyLjU2MjkgNTIuNTE0MSA0Mi40NDUzQzUyLjcwNzQgNDIuMzI2NCA1Mi44ODMzIDQyLjIwNzUgNTMuMDIxNiA0Mi4wNTUyQzUzLjE1OTkgNDEuOTAyOSA1My4yNjMzIDQxLjcxNTkgNTMuMjY4NyA0MS40NjM0QzUzLjI3MjcgNDEuMjEyMyA1My4yMzc4IDQwLjg5MTcgNTMuMDIzIDQwLjQ5NzZDNTIuODg4NyA0MC42NTEyIDUyLjczODMgNDAuNzk1NSA1Mi41NzcyIDQwLjk0MzhINTIuNTc1OFoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik01MS42NTc1IDM5LjUzMDFDNTEuNjQ0MSAzOS42MzMgNTEuNjI5MyAzOS43NDUyIDUxLjY0IDM5Ljg1ODhDNTEuNjQ4MSAzOS45NzM3IDUxLjY3NSA0MC4wOTI2IDUxLjcyMzMgNDAuMjIwOEM1MS43NjM2IDQwLjM1MDQgNTEuODE0NiA0MC40OTMzIDUxLjg5NjUgNDAuNjQ4M0M1Mi4wNTIzIDQwLjQ0NTMgNTIuMjMyMiA0MC4yNjg5IDUyLjM5MDYgNDAuMTAwNkM1Mi41NDEgMzkuOTMzNiA1Mi42NzggMzkuNzY5MyA1Mi43Njc5IDM5LjU4MzZDNTIuODU3OSAzOS4zOTc5IDUyLjkwNjIgMzkuMTg2OCA1Mi44MzM3IDM4LjkzODNDNTIuODAxNSAzOC44MTQxIDUyLjc0NjUgMzguNjc3OCA1Mi42NjQ2IDM4LjUzMDlDNTIuNTgxMyAzOC4zODUzIDUyLjQ0NyAzOC4yMzcgNTIuMjk1MyAzOC4wNzY3QzUyLjIxNzQgMzguMjY3NyA1Mi4xMTI3IDM4LjQ1NjEgNTIuMDE0NyAzOC42NDU4QzUxLjkxNjcgMzguODM0MSA1MS43OTk4IDM5LjAzMTggNTEuNzMyNyAzOS4yMjk2QzUxLjY5NzggMzkuMzI4NCA1MS42NzIzIDM5LjQyODYgNTEuNjYwMiAzOS41MzE1TDUxLjY1NzUgMzkuNTMwMVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik01Mi45NTU5IDQ0LjAyMDJDNTMuMDEzNiA0My45MDEzIDUzLjAzMjQgNDMuNzU0MyA1My4wNDU4IDQzLjU4NkM1My4wNTM5IDQzLjQxNjMgNTMuMDYxOSA0My4yMjQgNTMuMDEwOSA0My4wMDQ5QzUyLjg0NzEgNDMuMTE3MSA1Mi42NDcgNDMuMjEwNiA1Mi40NDgzIDQzLjMwNjhDNTIuMjQ5NiA0My40MDMgNTIuMDYwMyA0My41MDMyIDUxLjg5MTEgNDMuNjI0N0M1MS43MDg1IDQzLjc0MjMgNTEuNTYzNSA0My44ODUzIDUxLjQ1MDcgNDQuMDc3NkM1MS4zMjE4IDQ0LjI2MzMgNTEuMjU2IDQ0LjUwOTEgNTEuMTgzNSA0NC44MzY0QzUxLjY4NyA0NC43MjI5IDUyLjE0NjIgNDQuNzA4MiA1Mi41MjQ5IDQ0LjUxNThDNTIuNzEwMiA0NC40MTcgNTIuODQ5OCA0NC4yNjA3IDUyLjk1NTkgNDQuMDIwMloiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik00MC44NDMxIDUxLjUzNDdDNDAuNzM0MyA1MS41Njk1IDQwLjYyNjkgNTEuNjE3NSA0MC41MjA5IDUxLjY4M0M0MC40MTM0IDUxLjc0NzEgNDAuMzExNCA1MS44MzEzIDQwLjIyODEgNTEuOTQzNUM0MC4xNDA5IDUyLjA1MzEgNDAuMDYwMyA1Mi4xODQgMzkuOTg5MSA1Mi4zMzYzQzM5LjkyNzQgNTIuNDkyNiAzOS44ODU3IDUyLjY3NTYgMzkuODU2MiA1Mi44NzZDNDAuMTE1MyA1Mi43NTE3IDQwLjM1ODQgNTIuNjk3IDQwLjU4MjYgNTIuNjU5NkM0MC44MTYzIDUyLjYyNzUgNDEuMDI3MSA1Mi42MTE1IDQxLjIwOTcgNTIuNTYyQzQxLjM4NTYgNTIuNTA4NiA0MS41NTc0IDUyLjQ0MDUgNDEuNjk3MSA1Mi4yODgyQzQxLjc2NTYgNTIuMjEwNyA0MS44MyA1Mi4xMTQ1IDQxLjkwNTIgNTEuOTk5NkM0MS45NzkxIDUxLjg4NDcgNDIuMDM2OCA1MS43Mjk4IDQyLjEyMTQgNTEuNTU4OEM0MS45MjQgNTEuNTI1NCA0MS43MjggNTEuNDk2IDQxLjUwOTEgNTEuNDc4NkM0MS4yOTcgNTEuNDY2NiA0MS4wNTUzIDUxLjQ1OTkgNDAuODQ0NSA1MS41MzQ3SDQwLjg0MzFaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNDcuNTc2OSA2MC4wNTY4QzQ3LjM5OTYgNTkuOTcyNyA0Ny4yMzQ1IDU5Ljk1MTMgNDcuMDI5IDU5Ljk3MTRDNDYuOTI3IDU5Ljk4NDcgNDYuODE5NiA2MC4wMjQ4IDQ2LjY5MDcgNjAuMDY3NUM0Ni41NjMxIDYwLjExNTYgNDYuNDIyMSA2MC4xOTMxIDQ2LjI1MTYgNjAuMjcwNkM0Ni4zNzkxIDYwLjQxNDkgNDYuNTE2MSA2MC41ODA1IDQ2LjY3NDUgNjAuNzIyMUM0Ni44MzMgNjAuODY2NCA0Ny4wMTY5IDYxLjAxMDcgNDcuMjMxOCA2MS4wODY4QzQ3LjMzOTIgNjEuMTI2OSA0Ny40NTYgNjEuMTYwMyA0Ny41ODA5IDYxLjE3MUM0Ny43MDQ0IDYxLjE3NzcgNDcuODM3MyA2MS4xNjk3IDQ3Ljk3NyA2MS4xNDAzQzQ4LjExNjYgNjEuMTA5NiA0OC4yNTkgNjEuMDQ2OCA0OC40MDk0IDYwLjk2NjZDNDguNTU1NyA2MC44Nzk4IDQ4LjcwMzQgNjAuNzYzNiA0OC44NDcxIDYwLjYxNjZDNDguNTY1MSA2MC41NjQ1IDQ4LjMzNDIgNjAuNDU5IDQ4LjEzMjcgNjAuMzUyMUM0Ny45MjczIDYwLjIzNzIgNDcuNzUyOCA2MC4xMzAzIDQ3LjU3ODIgNjAuMDU1NUw0Ny41NzY5IDYwLjA1NjhaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNDUuNDM3OSA2MC4zNjI2QzQ1LjMwNzcgNjAuMjI1IDQ1LjE2NTQgNjAuMTA3NCA0NC45NjEzIDYwLjA2NDdDNDQuODU5MiA2MC4wNDYgNDQuNzQ1MSA2MC4wMTY2IDQ0LjYwNTUgNjAuMDE2NkM0NC41MzU2IDYwLjAxNjYgNDQuNDYwNCA2MC4wMTc5IDQ0LjM3ODUgNjAuMDI2QzQ0LjI5NjYgNjAuMDMgNDQuMjA5MyA2MC4wMyA0NC4xMTI3IDYwLjAzOTNDNDQuMjQ0MyA2MC40MDggNDQuMzc4NSA2MC44MzE1IDQ0LjcwMjEgNjEuMTcyMkM0NC44NjU5IDYxLjMyMzEgNDUuMDc4MSA2MS40NTU0IDQ1LjM1MzMgNjEuNTE1NUM0NS42MyA2MS41NTgzIDQ1Ljk2ODMgNjEuNTU2OSA0Ni4zNTUgNjEuMzk5M0M0NS44OTA0IDYxLjA3ODcgNDUuNjk5OCA2MC42Mjg1IDQ1LjQzOTMgNjAuMzYzOUw0NS40Mzc5IDYwLjM2MjZaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNDkuNDA4NCA1OC44ODI2QzQ5LjIxMjQgNTguODc4NiA0OS4wMzkyIDU4LjkyNCA0OC44NTkyIDU5LjAzMzVDNDguNzcyIDU5LjA5MjMgNDguNjgyIDU5LjE2ODUgNDguNTg2NyA1OS4yNjZDNDguNDk0IDU5LjM3MDIgNDguMzg5MyA1OS40ODUxIDQ4LjI3NTEgNTkuNjRDNDguNjI0MyA1OS43ODQzIDQ5LjA0NTkgNTkuOTkxNCA0OS41MDY0IDU5Ljk2ODdDNDkuOTYzIDU5Ljk1MTMgNTAuNDY1MSA1OS42ODY4IDUwLjc5MjggNTguOTc0N0M1MC4yNDM2IDU5LjAzNjIgNDkuNzk1MSA1OC44Nzg2IDQ5LjQxMTEgNTguODgyNkg0OS40MDg0WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTUwLjkyMjkgNTcuMTU3OUM1MC41MjY4IDU3LjIyODcgNTAuMjIwNyA1Ny40NzU4IDQ5Ljk0MjcgNTguMjIxM0M1MC4zMzA4IDU4LjI0NCA1MC43OTE0IDU4LjMyMDEgNTEuMjIyNCA1OC4yMDc5QzUxLjY1NjEgNTguMDk4NCA1Mi4wNDgxIDU3Ljc5OTEgNTIuMzA0NiA1Ny4xMTkxQzUxLjc3ODMgNTcuMTgzMyA1MS4zMTUgNTcuMDg1NyA1MC45MjI5IDU3LjE1NjVWNTcuMTU3OVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik00My45MDMyIDQ5LjQ3MUw0My45MyA0OC44NzY1QzQzLjc1MTUgNDguOTY2IDQzLjU2NzUgNDkuMDk0MiA0My4zODA5IDQ5LjI3OTlDNDMuNTc1NiA0OS4zMjggNDMuNzQ2MSA0OS4zOTc1IDQzLjkwMzIgNDkuNDcxWiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTQwLjYyMjkgNTYuMjM3MkM0MC42MjgzIDU2LjEzOTcgNDAuNjE0OSA1Ni4wMzE1IDQwLjU3ODYgNTUuOTA1OUM0MC41MzgzIDU1Ljc4MyA0MC41MTI4IDU1LjYxMzMgNDAuNDQ0MyA1NS40MzE2QzQwLjI4NzIgNTUuNTQyNSA0MC4xMDYgNTUuNjUzNCAzOS45MzAxIDU1Ljc4NTdDMzkuNzU4MiA1NS45MTY2IDM5LjYwOTIgNTYuMDc1NiAzOS40ODk3IDU2LjI4MTNDMzkuMzU5NCA1Ni40ODg0IDM5LjMyNDUgNTYuNzM0MiAzOS4zNDczIDU3LjAyODFDMzkuMzUyNyA1Ny4xNzc3IDM5LjQxNDUgNTcuMzI0NiAzOS40ODU2IDU3LjQ4MzZDMzkuNTIzMiA1Ny41NjI0IDM5LjU2NjIgNTcuNjQyNiAzOS42MTQ1IDU3LjcyNDFDMzkuNjY1NSA1Ny44MDQyIDM5LjczNTQgNTcuODc5MSAzOS44MDY1IDU3Ljk1NjVDMzkuODQwMSA1Ny44MTYzIDM5Ljg3NzcgNTcuNjk2IDM5LjkzODEgNTcuNTc5OEMzOS45OTcyIDU3LjQ2MzYgNDAuMDYxNyA1Ny4zNTk0IDQwLjEyNjEgNTcuMjYzMkM0MC4xOTA2IDU3LjE2OTcgNDAuMjUyMyA1Ny4wODE1IDQwLjMxMTQgNTYuOTk0N0M0MC4zNjc4IDU2LjkwOTIgNDAuNDIxNSA1Ni44MjkgNDAuNDc1MiA1Ni43NDg5QzQwLjU4MTMgNTYuNTg0NSA0MC42MjI5IDU2LjQzMDkgNDAuNjI2OSA1Ni4yMzU5TDQwLjYyMjkgNTYuMjM3MloiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0zOS45MTI2IDU0LjkyMjdDNDAuMTE1NCA1NC44MDc4IDQwLjMwMiA1NC43MTI5IDQwLjQ0OTcgNTQuNTk1NEM0MC41OTg3IDU0LjQ3OTEgNDAuNzMxNyA1NC4zNDgyIDQwLjc5NzUgNTQuMTUwNUM0MC44MjcgNTQuMDUwMyA0MC44NTc5IDUzLjkzODEgNDAuODc4IDUzLjgwMzJDNDAuODg3NCA1My43MzUgNDAuODkyOCA1My42NjE2IDQwLjg5NDEgNTMuNTgwMUM0MC44OTQxIDUzLjUzODcgNDAuODk0MSA1My40OTU5IDQwLjg5NDEgNTMuNDUxOEM0MC44OTY4IDUzLjQwOTEgNDAuODk5NSA1My4zNjM3IDQwLjkwMjIgNTMuMzE2OUM0MC43MDg5IDUzLjM1OTYgNDAuNTExNSA1My40MDc3IDQwLjMwNzQgNTMuNDc3MkM0MC4xMDYgNTMuNTQ4IDM5Ljg4ODQgNTMuNjM4OCAzOS43MTUyIDUzLjc4NThDMzkuNTQ3NCA1My45MzI4IDM5LjM5MTYgNTQuMTI5MSAzOS4zMDU3IDU0LjM5MjNDMzkuMjY5NSA1NC41MjQ2IDM5LjI0NjYgNTQuNjcxNSAzOS4yNDEzIDU0LjgzNThDMzkuMjM5OSA1NC45MTczIDM5LjIzODYgNTUuMDA0MiAzOS4yNDkzIDU1LjA5MjNDMzkuMjYyNyA1NS4xODE4IDM5LjI4MjkgNTUuMjc0IDM5LjMwNyA1NS4zNzE1QzM5LjQwMzcgNTUuMjcxNCAzOS41MDMxIDU1LjE4ODUgMzkuNjAyNCA1NS4xMTVDMzkuNzA0NSA1NS4wNDE2IDM5LjgxMTkgNTQuOTc4OCAzOS45MTI2IDU0LjkyMTNWNTQuOTIyN1oiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik00MS4zODI5IDU4LjA0NkM0MS4yOTMgNTcuODYzIDQxLjA5NDIgNTcuNzA0IDQwLjgyMyA1Ny40NTU2QzQwLjczOTggNTcuNjE5OSA0MC42Mjk3IDU3LjgwOTYgNDAuNTUzMSA1OC4wMUM0MC40ODIgNTguMjA3NyA0MC40MjgyIDU4LjQyNjggNDAuNDI5NiA1OC42NjE5QzQwLjQzNSA1OC44OTQ0IDQwLjUxNTUgNTkuMTI2OCA0MC42NzEzIDU5LjM2NzNDNDAuODQ4NSA1OS41ODI0IDQxLjEwMSA1OS44MTYxIDQxLjQ4OSA1OS45NTM3QzQxLjM2NjggNTkuNDEgNDEuNTMzMyA1OC45NDI1IDQxLjUxODUgNTguNTc3N0M0MS41MjUzIDU4LjM4NCA0MS40OTcxIDU4LjIxMDQgNDEuMzgxNiA1OC4wNDM0TDQxLjM4MjkgNTguMDQ2WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTQyLjk2NiA1OS4zNzc5QzQyLjg3NiA1OS4zMjMxIDQyLjc4MDcgNTkuMjU3NiA0Mi42NDkxIDU5LjIwOTZDNDIuNTg0NyA1OS4xODQyIDQyLjUxMzUgNTkuMTYxNSA0Mi40MzI5IDU5LjEzODhDNDIuMzU2NCA1OS4xMTM0IDQyLjI3NDUgNTkuMDg0IDQyLjE4MTkgNTkuMDU4NkM0Mi4xNzExIDU5LjQ0NzMgNDIuMTQ5NiA1OS44OTM1IDQyLjMzMzYgNjAuMzIzN0M0Mi40MzI5IDYwLjUyNDEgNDIuNTg2IDYwLjcxNzggNDIuODE5NiA2MC44NzE0QzQzLjA2IDYxLjAwNjQgNDMuMzcyOSA2MS4xMjUzIDQzLjc4MjQgNjEuMTE4NkM0My40Nzg5IDYwLjY1MjQgNDMuNDYxNSA2MC4xNjM0IDQzLjMwODQgNTkuODIyN0M0My4yMzU5IDU5LjY0NjQgNDMuMTQwNiA1OS40ODg4IDQyLjk2NDcgNTkuMzc1Mkw0Mi45NjYgNTkuMzc3OVoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik00Mi4wMDE5IDUwLjAzODhDNDEuODgzOCA1MC4xMDgyIDQxLjc2MTYgNTAuMTkzNyA0MS42NDYxIDUwLjMxQzQxLjUzNDcgNTAuNDMyOSA0MS40MjU5IDUwLjU3OTggNDEuMzIzOSA1MC43NTIyQzQxLjYwODUgNTAuNzM4OCA0MS44NTU2IDUwLjc4MTUgNDIuMDc3MSA1MC44Mjk2QzQyLjMwMjcgNTAuODgxNyA0Mi41MDk1IDUwLjk0NTkgNDIuNzAwMSA1MC45NjE5QzQyLjc5NTUgNTAuOTcxMiA0Mi44ODgxIDUwLjk2OTkgNDIuOTc5NCA1MC45NTEyQzQzLjA3NDggNTAuOTM3OCA0My4xNzAxIDUwLjkwOTggNDMuMjY2OCA1MC44NTlDNDMuMzY0OCA1MC44MDk2IDQzLjQ1ODggNTAuNzMzNCA0My41Njc1IDUwLjYzOTlDNDMuNjYxNSA1MC41NjExIDQzLjg2OTcgNTAuMjUxMiA0My44Njk3IDUwLjI1MTJDNDMuNTMgNTAuMTA1NiA0My4xMzUyIDQ5Ljg4MjUgNDIuNzA4MiA0OS44NzE4QzQyLjQ4MjYgNDkuODYzOCA0Mi4yMzgyIDQ5Ljg5NDUgNDIuMDAzMyA1MC4wMzg4SDQyLjAwMTlaIiBmaWxsPSJ3aGl0ZSIvPgo8cGF0aCBkPSJNNDIuMzczOCAzNS4zNDYxQzQyLjMxMDcgMzUuMzkxNSA0Mi4yNDc1IDM1LjQ0NjMgNDIuMTgzMSAzNS41MDlDNDIuMDUyOCAzNS42Mjc5IDQxLjkyOTMgMzUuNzg4MyA0MS44MDg1IDM1Ljk4MzNDNDIuMDUwMiAzNi4wMSA0Mi4zMDEzIDM2LjA3ODEgNDIuNTUyMyAzNi4xMzgzQzQyLjQ2NjQgMzUuODgxOCA0Mi40MDYgMzUuNjE1OSA0Mi4zNzI0IDM1LjM0NDdMNDIuMzczOCAzNS4zNDYxWiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik01MS4xNzU0IDQxLjM0MjZDNTEuMTkwMSA0MS4zMDY2IDUxLjIwNzYgNDEuMjcxOCA1MS4yMjUxIDQxLjIzNThMNTEuMTI3IDQxLjA0ODdDNTEuMDk3NSA0MC45OTI2IDUxLjA3MiA0MC45Mzc4IDUxLjA0NzggNDAuODg1N0g0Ny44MDY1TDQ2LjUxNDggNDEuOTMxOEw1MS4wMjM2IDQxLjc3OTVDNTEuMDYzOSA0MS41OTkxIDUxLjEzMjQgNDEuNDQxNSA1MS4xNzU0IDQxLjM0NFY0MS4zNDI2WiIgZmlsbD0id2hpdGUiLz4KPC9nPgo8ZGVmcz4KPGNsaXBQYXRoIGlkPSJjbGlwMF8xMzE4XzEzNjAzIj4KPHJlY3Qgd2lkdGg9IjkzIiBoZWlnaHQ9Ijg4IiBmaWxsPSJ3aGl0ZSIvPgo8L2NsaXBQYXRoPgo8L2RlZnM+Cjwvc3ZnPgo=';
+
+const NET_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAA2CAYAAAA25uK9AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAAAYxJREFUeAHtmNFtgzAQhn0heUciRHlkBDYoG7QbtN2gG4RMkGyQsAGdIIzABuExUhKV90S53hmoUIsKRqFSpTsJbFk//vxjP1g/oOuiuk+lCjFTADEcj1GTAO4Iq80KGYHDH1CGtQFxOn0gzQZnsz3O516jxnV9dJwXavfVnKQPjWE16EIDbdtu0b3RnB/l3KtesFK/Y2gHnf8FdJwnHhsp00Jc0p4EbTLar1RrNWW04b9hDrteU3oHXaRwOq2pSeix1WTybAyDPM+VWcX6jRiYOzMty3rXLYA/OAwOh6zsesM7q5XABCYwgQlMYAPVWPWsPpfb/+GMrmrQVVv9BTmNAhOYwAQmMIF1KA5fym72F84KGGI6PAxgUcLiQWEcmBHEo24G53NkfOHRoRdi0qor9qpwdbuF3Bg509GfZa0Itv1Vx46U2inOrDjkJFc83smZhozHPqdrtMpt9fE3jUdh2CN1Oe4LikFcU1i2rDTDxLZK5bSoV1pUXB/sfUltKM6FUzp9ibpcoqb07hPKLKqeiCmoAwAAAABJRU5ErkJggg==';
+const CONE_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEoAAABhCAYAAABxuzeEAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAAA7pJREFUeAHtnEFOFEEUhl/1DEZ3eANcGRIwww3GEzgJkLhzPIF4Ar0BZ3CNJtxAbwBRArqCI7DEMN1l10SQEKrrVXfVe6/b962AmcXk56+ar+v1DICiKAwYEMTZ7ua8fkn79Y+XRQUfn3/5/gmEICao89lk9epRdQTWrrnfbR3W7+vRs63D40sQQAFCuFopZzchOer/4OqTlcUbEIKYoMCYD/f/ZKHYAyGICGq5N91p0z/s2tnOxhQEIKVR/iX2QNM4YN/Mz15P1qAszxufZO3L9c8n34AR/kaVZbgxxrBv6qyNQrUJZKgCb6Oqao55mlOFx+PFO2CEe+mhl5Q1Zu+ollJggi0ovxI8DLeA8jWqxdu+BTMDJliCWkpkRJvuMOUSUJagDJj2GzOTgJLrAVYJmiih3No4OD0GQugbhRHMAIUdkW/qpI1K0SYHh4DSNqosp5AADgGlDSrhRuwEFAghCypWMEO4Vv3c2XwFRJAF1UkJPFgDZK0iCcpJogU7gfSQCShNo3KeJxEJaHY9SKUETVxdj57mVoX8jUogmCEoVCFro+4PNXNBIaBZG3V/qJkLCgHNu/Qor/RNMYeMZAsqtWCGyTsszdko+mPbjA3OsplTKIGXTMPSPI0iUAIvmeQ2eaNY2/SXHAKavFGmKlkHlY4cqpA8KM6R0u1ryDAsTRoUvRI8TI5hadpGCbmXyZG62cmC6jDUzEXSs6p0jRLUplsSvqYkeiBBCXykGpamaRSnYAZINSzt3CjJbXKkOqvq3Ci7qNi9qYlUZ1WdgzIFsJt4iBTD0k5BSRHMEK5Vv7ZfdNqrujVKohJ4qAo7hw60DkqgYIboJKDtGyXgJvloOqyAVnogXQkaqVVh/fD4AiJp1yjBghlk3O5UIbpRyzZV1dee7U+3tBXQ+Ea5u+Z6GpKjrYDGB9UjJfDRRkCjguqLYIZwrYpVhdhG9U8JfESuDPRmfrI7mYygPIIhETEsRTeqDkn8xW8sNuK+UlSjei2YAbDDUlyj+iyYAbCqgAvKmCkMFOywNBjUUJTAB3ZYGm7UAAQzRAXhu/Uagzrd3pwNuU03GLCTkIA2BtWH8/BkBFaOVw+GrAReGgTU36gBK4GPWkC9n9ZqWnqi53VZMDD3PdQUFOmHm2VgL3yPjH0PwOj6rVmM9+sTQbav+aCk3qwvYbF4D4qiSGLpUfX1nAXFy/rBDyPn6yWFo0Eh0aCQaFBINCgkGhQSDQqJBoVEg0KiQSHRoJBoUEg0KCQaFBINSlEURfl/+AMszWdOA4FMAwAAAABJRU5ErkJggg==';
+
+// ================= ПЛОЩАДКА (SVG, рисуется кодом — без внешних файлов) =================
+const RINK = {
+    full: { w: 1000, h: 470 },
+    half: { w: 505,  h: 470 }
+};
+let rinkMode = 'full';
+
+function rinkSVG(mode) {
+    const H = 470, R = 90;
+    const navy = '#24304d', pink = '#d49aa6', blue = '#9db6c9', crease = '#d6ecf5';
+    const fullW = 1000;
+    const clipId = 'rinkclip';
+
+    function endCircle(cx, cy) {
+        let s = `<circle cx="${cx}" cy="${cy}" r="80" fill="none" stroke="${pink}" stroke-width="3"/>`;
+        s += `<circle cx="${cx}" cy="${cy}" r="6" fill="${pink}"/>`;
+        for (const dx of [-22, 22]) {
+            s += `<line x1="${cx+dx}" y1="${cy-92}" x2="${cx+dx}" y2="${cy-80}" stroke="${pink}" stroke-width="3"/>`;
+            s += `<line x1="${cx+dx}" y1="${cy+80}" x2="${cx+dx}" y2="${cy+92}" stroke="${pink}" stroke-width="3"/>`;
+        }
+        for (const [sx, sy] of [[-1,-1],[1,-1],[-1,1],[1,1]]) {
+            s += `<path d="M ${cx + sx*10} ${cy + sy*22} L ${cx + sx*10} ${cy + sy*10} L ${cx + sx*34} ${cy + sy*10}" fill="none" stroke="${pink}" stroke-width="2.5"/>`;
+        }
+        return s;
+    }
+    function dot(cx, cy) { return `<circle cx="${cx}" cy="${cy}" r="6" fill="${pink}"/>`; }
+    function creaseArc(x, dir) {
+        return `<path d="M ${x} ${235-34} A 34 34 0 0 ${dir===1?1:0} ${x} ${235+34} Z" fill="${crease}" stroke="${pink}" stroke-width="2.5"/>`;
+    }
+    // логотип клуба в центральном круге (opacity 0.7)
+    function centerLogo() {
+        const w = 116, h = w * 88 / 93;
+        return `<image x="${500 - w/2}" y="${235 - h/2}" width="${w}" height="${h}" opacity="0.7" href="${ADMIRAL_LOGO}"/>`;
+    }
+
+    let inner = '';
+    inner += `<line x1="55" y1="0" x2="55" y2="${H}" stroke="${pink}" stroke-width="3"/>`;
+    inner += creaseArc(55, 1);
+    inner += `<line x1="377" y1="0" x2="377" y2="${H}" stroke="${blue}" stroke-width="10"/>`;
+    inner += `<line x1="500" y1="0" x2="500" y2="${H}" stroke="${pink}" stroke-width="10"/>`;
+    inner += `<circle cx="500" cy="235" r="80" fill="white" stroke="${pink}" stroke-width="3"/>`;
+    inner += centerLogo();
+    inner += endCircle(212, 133) + endCircle(212, 337);
+    inner += dot(390, 133) + dot(390, 337);
+
+    if (mode === 'full') {
+        inner += `<line x1="623" y1="0" x2="623" y2="${H}" stroke="${blue}" stroke-width="10"/>`;
+        inner += `<line x1="945" y1="0" x2="945" y2="${H}" stroke="${pink}" stroke-width="3"/>`;
+        inner += creaseArc(945, 0);
+        inner += endCircle(788, 133) + endCircle(788, 337);
+        inner += dot(610, 133) + dot(610, 337);
+    }
+
+    let outline, clip, W;
+    if (mode === 'full') {
+        W = fullW;
+        clip = `<rect x="4" y="4" width="${W-8}" height="${H-8}" rx="${R}"/>`;
+        outline = `<rect x="4" y="4" width="${W-8}" height="${H-8}" rx="${R}" fill="none" stroke="${navy}" stroke-width="8"/>`;
+    } else {
+        W = RINK.half.w;
+        const p = `M ${W} 4 L ${R+4} 4 Q 4 4 4 ${R+4} L 4 ${H-R-4} Q 4 ${H-4} ${R+4} ${H-4} L ${W} ${H-4}`;
+        clip = `<path d="${p} Z"/>`;
+        outline = `<path d="${p}" fill="none" stroke="${navy}" stroke-width="8"/>`;
+    }
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
+        `<defs><clipPath id="${clipId}">${clip}</clipPath></defs>` +
+        `<rect width="${W}" height="${H}" fill="white"/>` +
+        `<g clip-path="url(#${clipId})">${inner}</g>` + outline + `</svg>`;
+}
+
+// ================= ИНИЦИАЛИЗАЦИЯ =================
+const canvas = new fabric.Canvas('rink-canvas', { isDrawingMode: false, selection: true, preserveObjectStacking: true });
+const EXTRA_PROPS = ['customType', 'selectable', 'evented'];
+
+let currentMode = 'select';
+let currentLineType = null;
+let currentComponent = null;
+let currentColor = '#0056b3';
+let numCounter = 1;
+
+canvas.freeDrawingBrush.color = currentColor;
+canvas.freeDrawingBrush.width = 3;
+
+function designSize() { return RINK[rinkMode]; }
+function designCenter() { const d = designSize(); return { x: d.w / 2, y: d.h / 2 }; }
+
+function setBackground(cb) {
+    const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(rinkSVG(rinkMode));
+    fabric.Image.fromURL(url, function (img) {
+        canvas.setBackgroundImage(img, () => { canvas.renderAll(); if (cb) cb(); });
+    });
+}
+
+function fitCanvas() {
+    const wrap = document.querySelector('.canvas-wrapper');
+    const d = designSize();
+    const s = Math.max(0.2, Math.min((wrap.clientWidth - 28) / d.w, (wrap.clientHeight - 28) / d.h));
+    canvas.setDimensions({ width: Math.round(d.w * s), height: Math.round(d.h * s) });
+    canvas.setZoom(s);
+    const r = Math.round(90 * s) + 'px';
+    document.getElementById('canvasBox').style.borderRadius = (rinkMode === 'half') ? `${r} 0 0 ${r}` : r;
+    canvas.renderAll();
+}
+window.addEventListener('resize', fitCanvas);
+
+// ================= ИСТОРИЯ =================
+let stateHistory = [], historyIndex = -1, suspendHistory = true, saveTimer = null;
+
+function snapshotNow() {
+    if (restoring) return;
+    stateHistory = stateHistory.slice(0, historyIndex + 1);
+    stateHistory.push(JSON.stringify(canvas.toJSON(EXTRA_PROPS)));
+    historyIndex++;
+    if (stateHistory.length > 100) { stateHistory.shift(); historyIndex--; }
+}
+function scheduleSnapshot() {
+    if (suspendHistory) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(snapshotNow, 80);
+}
+canvas.on('object:added',   e => { if (!e.target || !e.target.__temp) scheduleSnapshot(); });
+canvas.on('object:removed', e => { if (!e.target || !e.target.__temp) scheduleSnapshot(); });
+canvas.on('object:modified', scheduleSnapshot);
+
+let restoring = false;
+function restoreState(json) {
+    suspendHistory = true;
+    restoring = true;
+    canvas.loadFromJSON(json, () => {
+        canvas.forEachObject(applyModeToObject);
+        canvas.renderAll();
+        suspendHistory = false;
+        restoring = false;
+    });
+}
+function undo() { if (!restoring && historyIndex > 0) { historyIndex--; restoreState(stateHistory[historyIndex]); } }
+function redo() { if (!restoring && historyIndex < stateHistory.length - 1) { historyIndex++; restoreState(stateHistory[historyIndex]); } }
+
+function applyModeToObject(o) {
+    applyComponentLocks(o);
+    o.selectable = (currentMode === 'select');
+    o.evented = (currentMode === 'select');
+}
+
+// ================= РЕЖИМЫ =================
+function setMode(mode, lineType = null, compId = null) {
+    if (mode !== 'erase') {
+        isErasing = false;
+        hideEraserPreview();
+    }
+    currentMode = mode;
+    currentLineType = lineType;
+    currentComponent = compId;
+    canvas.isDrawingMode = (mode === 'freedraw');
+    canvas.selection = (mode === 'select');
+    canvas.defaultCursor = (mode === 'line' || mode === 'place' || mode === 'erase') ? 'crosshair' : 'default';
+    canvas.forEachObject(applyModeToObject);
+    canvas.discardActiveObject();
+    canvas.renderAll();
+    updateToolbarUI();
+}
+function updateToolbarUI() {
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.comp-item').forEach(b => b.classList.remove('active'));
+    if (currentMode === 'select') document.getElementById('btnSelectMode').classList.add('active');
+    if (currentMode === 'freedraw') document.getElementById('btnFreeDraw').classList.add('active');
+    if (currentMode === 'erase') document.getElementById('btnClear').classList.add('active');
+    if (currentMode === 'line' && currentLineType) {
+        const b = document.querySelector(`.line-tool[data-type="${currentLineType}"]`);
+        if (b) b.classList.add('active');
+    }
+    if (currentMode === 'place' && currentComponent) {
+        const c = document.querySelector(`.comp-item[data-comp="${currentComponent}"]`);
+        if (c) c.classList.add('active');
+    }
+}
+document.getElementById('btnSelectMode').addEventListener('click', () => setMode('select'));
+document.getElementById('btnFreeDraw').addEventListener('click', () => setMode('freedraw'));
+document.querySelectorAll('.line-tool').forEach(b =>
+    b.addEventListener('click', e => setMode('line', e.currentTarget.dataset.type)));
+
+function setColor(c) {
+    currentColor = c;
+    canvas.freeDrawingBrush.color = c;
+    document.querySelectorAll('.color-swatch').forEach(s =>
+        s.classList.toggle('active', s.dataset.color === c));
+}
+document.querySelectorAll('.color-swatch').forEach(s =>
+    s.addEventListener('click', () => setColor(s.dataset.color)));
+document.getElementById('colorPicker').addEventListener('input', e => setColor(e.target.value));
+
+// ================= ГЕОМЕТРИЯ ЛИНИЙ =================
+function resample(pts, step) {
+    if (pts.length < 2) return pts.slice();
+    const out = [pts[0]];
+    let prev = pts[0], carry = 0;
+    for (let i = 1; i < pts.length; i++) {
+        let cur = pts[i];
+        let seg = Math.hypot(cur.x - prev.x, cur.y - prev.y);
+        while (carry + seg >= step) {
+            const t = (step - carry) / seg;
+            prev = { x: prev.x + (cur.x - prev.x) * t, y: prev.y + (cur.y - prev.y) * t };
+            out.push(prev);
+            seg = Math.hypot(cur.x - prev.x, cur.y - prev.y);
+            carry = 0;
+        }
+        carry += seg; prev = cur;
+    }
+    const last = pts[pts.length - 1], tail = out[out.length - 1];
+    if (Math.hypot(last.x - tail.x, last.y - tail.y) > 0.5) out.push(last);
+    return out;
+}
+function smoothPts(pts, iter) {
+    for (let k = 0; k < iter; k++) {
+        const s = [pts[0]];
+        for (let i = 1; i < pts.length - 1; i++)
+            s.push({ x: (pts[i-1].x + 2*pts[i].x + pts[i+1].x) / 4, y: (pts[i-1].y + 2*pts[i].y + pts[i+1].y) / 4 });
+        s.push(pts[pts.length - 1]);
+        pts = s;
+    }
+    return pts;
+}
+function pathLen(pts) {
+    let L = 0;
+    for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y);
+    return L;
+}
+function trimEnd(pts, cut) {
+    let L = pathLen(pts), acc = 0;
+    if (L <= cut) return pts.slice();
+    for (let i = pts.length - 1; i > 0; i--) {
+        const seg = Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y);
+        if (acc + seg >= cut) {
+            const t = (cut - acc) / seg;
+            const p = { x: pts[i].x + (pts[i-1].x - pts[i].x) * t, y: pts[i].y + (pts[i-1].y - pts[i].y) * t };
+            return pts.slice(0, i).concat([p]);
+        }
+        acc += seg;
+    }
+    return pts.slice();
+}
+function waveAlong(pts, amp, lambda, shape) {
+    const total = pathLen(pts);
+    const out = []; let s = 0;
+    for (let i = 0; i < pts.length; i++) {
+        if (i > 0) s += Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y);
+        const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+        let tx = b.x - a.x, ty = b.y - a.y;
+        const L = Math.hypot(tx, ty) || 1; tx /= L; ty /= L;
+        const nx = -ty, ny = tx;
+        const ph = s * 2 * Math.PI / lambda;
+        let off = (shape === 'tri')
+            ? amp * (2 / Math.PI) * Math.asin(Math.sin(ph))
+            : amp * Math.sin(ph);
+        const taper = Math.min(1, s / (lambda * 0.7), (total - s) / (lambda * 0.7));
+        out.push({ x: pts[i].x + nx * off * Math.max(0, taper), y: pts[i].y + ny * off * Math.max(0, taper) });
+    }
+    return out;
+}
+function ptsToPath(pts, color, extra) {
+    let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+    for (let i = 1; i < pts.length; i++) d += ` L ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)}`;
+    return new fabric.Path(d, Object.assign({
+        stroke: color, strokeWidth: 3, fill: '', strokeLineCap: 'round', strokeLineJoin: 'round'
+    }, extra || {}));
+}
+function arrowHead(pt, dir, color) {
+    const ang = Math.atan2(dir.y, dir.x) * 180 / Math.PI;
+    return new fabric.Triangle({
+        width: 13, height: 16, fill: color,
+        left: pt.x, top: pt.y, originX: 'center', originY: 'center', angle: ang + 90
+    });
+}
+function stopBars(pt, dir, color) {
+    const ang = Math.atan2(dir.y, dir.x);
+    const nx = -Math.sin(ang), ny = Math.cos(ang);
+    const bars = [];
+    for (const off of [0, 7]) {
+        const cx = pt.x + Math.cos(ang) * off, cy = pt.y + Math.sin(ang) * off;
+        bars.push(new fabric.Line([cx - nx * 10, cy - ny * 10, cx + nx * 10, cy + ny * 10],
+            { stroke: color, strokeWidth: 3, strokeLineCap: 'round' }));
+    }
+    return bars;
+}
+
+function addStyledLine(rawPts, type, color) {
+    color = color || currentColor;
+    if (!rawPts || rawPts.length < 2) return null;
+    const straight = (type === 'pass' || type === 'shot');
+    let pts = straight
+        ? resample([rawPts[0], rawPts[rawPts.length - 1]], 3)
+        : resample(smoothPts(resample(rawPts, 6), 3), 2.5);
+    if (pathLen(pts) < 18) return null;
+
+    const endPt = pts[pts.length - 1];
+    const beforeEnd = pts[Math.max(0, pts.length - 4)];
+    const dir = { x: endPt.x - beforeEnd.x, y: endPt.y - beforeEnd.y };
+
+    const items = [];
+    switch (type) {
+        case 'skate':
+            items.push(ptsToPath(trimEnd(pts, 8), color));
+            items.push(arrowHead(endPt, dir, color));
+            break;
+        case 'backward':
+            items.push(ptsToPath(waveAlong(trimEnd(pts, 8), 6, 26, 'tri'), color));
+            items.push(arrowHead(endPt, dir, color));
+            break;
+        case 'puck':
+            items.push(ptsToPath(waveAlong(trimEnd(pts, 8), 5, 22, 'sin'), color));
+            items.push(arrowHead(endPt, dir, color));
+            break;
+        case 'pass':
+            items.push(ptsToPath(trimEnd(pts, 8), color, { strokeDashArray: [10, 7] }));
+            items.push(arrowHead(endPt, dir, color));
+            break;
+        case 'shot': {
+            const body = trimEnd(pts, 10);
+            const a = Math.atan2(dir.y, dir.x);
+            const nx = -Math.sin(a) * 2.6, ny = Math.cos(a) * 2.6;
+            items.push(ptsToPath(body.map(p => ({ x: p.x + nx, y: p.y + ny })), color));
+            items.push(ptsToPath(body.map(p => ({ x: p.x - nx, y: p.y - ny })), color));
+            items.push(arrowHead(endPt, dir, color));
+            break;
+        }
+        case 'stop':
+            items.push(ptsToPath(trimEnd(pts, 4), color));
+            items.push(...stopBars(endPt, dir, color));
+            break;
+        default:
+            items.push(ptsToPath(pts, color));
+            items.push(arrowHead(endPt, dir, color));
+    }
+    const g = new fabric.Group(items, { customType: 'line-' + type });
+    g.selectable = (currentMode === 'select'); g.evented = (currentMode === 'select');
+    canvas.add(g);
+    return g;
+}
+
+// ================= РИСОВАНИЕ МЫШЬЮ =================
+let isDown = false, dragPts = [], previewObj = null;
+let isErasing = false, eraseDirty = false, eraserPreview = null;
+const ERASER_RADIUS = 18;
+
+function updateEraserPreview(p) {
+    if (!eraserPreview) {
+        eraserPreview = new fabric.Circle({
+            radius: ERASER_RADIUS,
+            fill: 'rgba(231,76,60,0.12)',
+            stroke: '#e74c3c',
+            strokeWidth: 1.5,
+            originX: 'center',
+            originY: 'center',
+            selectable: false,
+            evented: false,
+            objectCaching: false,
+            excludeFromExport: true,
+            __temp: true
+        });
+        canvas.add(eraserPreview);
+    }
+    eraserPreview.set({ left: p.x, top: p.y });
+    eraserPreview.setCoords();
+    canvas.requestRenderAll();
+}
+
+function hideEraserPreview() {
+    if (!eraserPreview) return;
+    canvas.remove(eraserPreview);
+    eraserPreview = null;
+    canvas.requestRenderAll();
+}
+
+function eraserHitsObject(obj, p) {
+    if (!obj || obj.__temp) return false;
+    const pt = new fabric.Point(p.x, p.y);
+    if (obj.containsPoint && obj.containsPoint(pt)) return true;
+    const b = obj.getBoundingRect(true, true);
+    return (
+        p.x >= b.left - ERASER_RADIUS &&
+        p.x <= b.left + b.width + ERASER_RADIUS &&
+        p.y >= b.top - ERASER_RADIUS &&
+        p.y <= b.top + b.height + ERASER_RADIUS
+    );
+}
+
+function eraseAt(p) {
+    const targets = canvas.getObjects().slice().reverse().filter(o => eraserHitsObject(o, p));
+    if (!targets.length) return;
+    canvas.discardActiveObject();
+    targets.forEach(o => canvas.remove(o));
+    eraseDirty = true;
+    canvas.requestRenderAll();
+}
+
+canvas.on('mouse:down', o => {
+    if (currentMode === 'erase') {
+        isErasing = true;
+        eraseDirty = false;
+        suspendHistory = true;
+        const p = canvas.getPointer(o.e);
+        updateEraserPreview(p);
+        eraseAt(p);
+        return;
+    }
+    if (currentMode === 'place' && currentComponent) {
+        const p = canvas.getPointer(o.e);
+        addComponent(currentComponent, p.x, p.y, true);
+        return;
+    }
+    if (currentMode !== 'line') return;
+    isDown = true;
+    const p = canvas.getPointer(o.e);
+    dragPts = [{ x: p.x, y: p.y }];
+});
+canvas.on('mouse:move', o => {
+    if (currentMode === 'erase') {
+        const p = canvas.getPointer(o.e);
+        updateEraserPreview(p);
+        if (isErasing) eraseAt(p);
+        return;
+    }
+    if (!isDown || currentMode !== 'line') return;
+    const p = canvas.getPointer(o.e);
+    const last = dragPts[dragPts.length - 1];
+    if (Math.hypot(p.x - last.x, p.y - last.y) < 3) return;
+    dragPts.push({ x: p.x, y: p.y });
+    if (previewObj) canvas.remove(previewObj);
+    const straight = (currentLineType === 'pass' || currentLineType === 'shot');
+    const pv = straight ? [dragPts[0], dragPts[dragPts.length - 1]] : dragPts;
+    previewObj = new fabric.Polyline(pv, {
+        stroke: currentColor, strokeWidth: 2, fill: '', opacity: 0.5,
+        strokeDashArray: straight ? [8, 6] : null,
+        selectable: false, evented: false, objectCaching: false, __temp: true
+    });
+    canvas.add(previewObj);
+    canvas.renderAll();
+});
+canvas.on('mouse:up', () => {
+    if (currentMode === 'erase') {
+        isErasing = false;
+        hideEraserPreview();
+        suspendHistory = false;
+        if (eraseDirty) snapshotNow();
+        eraseDirty = false;
+        return;
+    }
+    if (!isDown || currentMode !== 'line') return;
+    isDown = false;
+    if (previewObj) { canvas.remove(previewObj); previewObj = null; }
+    addStyledLine(dragPts, currentLineType);
+    dragPts = [];
+});
+
+// ================= INTERACTIVE COMPONENTS =================
+function makeMarker(text, color) {
+    const circle = new fabric.Circle({ radius: 16, fill: color, originX: 'center', originY: 'center', stroke: 'rgba(0,0,0,0.25)', strokeWidth: 1 });
+    const label = new fabric.Text(text, { fontSize: text.length > 1 ? 13 : 15, fontWeight: 'bold', fill: 'white', originX: 'center', originY: 'center', fontFamily: 'Arial' });
+    return new fabric.Group([circle, label], { customType: 'marker' });
+}
+
+function makeImageComponent(src, targetW, targetH, customType, done) {
+    fabric.Image.fromURL(src, img => {
+        const s = Math.min(targetW / (img.width || targetW), targetH / (img.height || targetH));
+        img.set({ scaleX: s, scaleY: s, customType });
+        done(img);
+    });
+}
+
+// фабрики компонентов: id -> fabric-объект
+const COMPONENTS = {
+    mF1: () => makeMarker('F1', '#2980b9'),
+    mF2: () => makeMarker('F2', '#2980b9'),
+    mF3: () => makeMarker('F3', '#2980b9'),
+    mD1: () => makeMarker('D1', '#c0392b'),
+    mD2: () => makeMarker('D2', '#c0392b'),
+    mC:  () => makeMarker('C',  '#111111'),
+    mG:  () => makeMarker('G',  '#7d3c98'),
+    mNum: () => { const m = makeMarker(String(numCounter), '#6c7a89'); numCounter = numCounter % 12 + 1; return m; },
+    oppX: () => new fabric.Text('X', { fontSize: 26, fontWeight: 'bold', fill: '#c0392b', fontFamily: 'Arial', customType: 'opponent' }),
+
+    puck: () => new fabric.Circle({ radius: 5, fill: '#111', customType: 'obj-puck' }),
+    pucks: () => {
+        const items = [];
+        for (let i = 0; i < 5; i++)
+            items.push(new fabric.Circle({ left: (i % 3) * 11 + (i > 2 ? 5 : 0), top: Math.floor(i / 3) * 10, radius: 5, fill: '#111' }));
+        return new fabric.Group(items, { customType: 'obj-pucks' });
+    },
+    cone: done => makeImageComponent(CONE_PNG, 28, 37, 'obj-cone', done),
+    net: done => makeImageComponent(NET_PNG, 27, 54, 'obj-net', done),
+    tire: () => new fabric.Group([
+        new fabric.Circle({ radius: 12, fill: '', stroke: '#222', strokeWidth: 6, originX: 'center', originY: 'center' }),
+        new fabric.Circle({ radius: 3, fill: '#222', originX: 'center', originY: 'center' })
+    ], { customType: 'obj-tire' }),
+    barrierH: () => new fabric.Line([0, 0, 70, 0], { stroke: '#333', strokeWidth: 6, strokeLineCap: 'round', customType: 'obj-barrier' }),
+    barrierV: () => new fabric.Line([0, 0, 0, 70], { stroke: '#333', strokeWidth: 6, strokeLineCap: 'round', customType: 'obj-barrier' }),
+    stand: () => new fabric.Group([
+        new fabric.Line([0, 0, 0, 34], { stroke: '#333', strokeWidth: 4, strokeLineCap: 'round' }),
+        new fabric.Line([0, 0, -13, -15], { stroke: '#333', strokeWidth: 4, strokeLineCap: 'round' }),
+        new fabric.Line([0, 0, 13, -15], { stroke: '#333', strokeWidth: 4, strokeLineCap: 'round' })
+    ], { customType: 'obj-stand' }),
+    pole: () => new fabric.Line([0, 0, 22, -28], { stroke: '#333', strokeWidth: 4, strokeLineCap: 'round', customType: 'obj-pole' }),
+    stick: () => new fabric.Path('M 15 -1 L 5 13 Q 3.8 15 1.2 15.3 L -4 15.9',
+        { stroke: '#222', strokeWidth: 3, fill: '', strokeLineCap: 'round', strokeLineJoin: 'round', customType: 'obj-stick' }),
+    stickPuck: () => new fabric.Group([
+        new fabric.Circle({ radius: 3.2, fill: '#111', left: 0, top: 0, originX: 'center', originY: 'center' }),
+        new fabric.Line([5, 0, 21, 0], { stroke: '#333', strokeWidth: 2.8, strokeLineCap: 'round' })
+    ], { customType: 'obj-stickpuck' })
+};
+
+// у игроков и оборудования размер фиксированный: масштабирование выключено,
+// поворот оставлен только там, где он имеет смысл
+const NO_ROTATE = new Set(['marker', 'opponent', 'obj-puck', 'obj-pucks', 'obj-tire', 'obj-cone']);
+function applyComponentLocks(o) {
+    const t = o.customType || '';
+    if (t !== 'marker' && t !== 'opponent' && !t.startsWith('obj-')) return;
+    o.lockScalingX = true;
+    o.lockScalingY = true;
+    o.lockScalingFlip = true;
+    o.lockSkewingX = true;
+    o.lockSkewingY = true;
+    const rot = !NO_ROTATE.has(t);
+    o.lockRotation = !rot;
+    o.setControlsVisibility({ tl: false, tr: false, bl: false, br: false, ml: false, mt: false, mr: false, mb: false, mtr: rot });
+    o.hasBorders = true;
+    o.transparentCorners = false;
+}
+
+function addComponent(id, x, y, keepMode = false) {
+    const factory = COMPONENTS[id];
+    if (!factory) return null;
+    let created = null;
+    const finish = obj => {
+        if (!obj) return null;
+        obj.set({ left: x, top: y, originX: 'center', originY: 'center', selectable: true, evented: true });
+        applyComponentLocks(obj);
+        canvas.add(obj);
+        if (!keepMode) {
+            if (currentMode !== 'select') setMode('select');
+            canvas.setActiveObject(obj);
+        } else {
+            obj.selectable = false;
+            obj.evented = false;
+        }
+        obj.setCoords();
+        canvas.renderAll();
+        created = obj;
+        return obj;
+    };
+    const maybeObj = factory(finish);
+    if (maybeObj) finish(maybeObj);
+    return created;
+}
+
+// клик по компоненту — режим "штампа": каждый клик по льду ставит новый объект;
+// drag&drop — разовое размещение в точке сброса
+document.querySelectorAll('.comp-item').forEach(el => {
+    el.addEventListener('click', () => {
+        const id = el.dataset.comp;
+        if (currentMode === 'place' && currentComponent === id) {
+            setMode('select'); // повторный клик по тому же элементу выключает штамп
+        } else {
+            setMode('place', null, id);
+        }
+    });
+    el.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', el.dataset.comp);
+        e.dataTransfer.effectAllowed = 'copy';
+    });
+});
+const canvasBox = document.getElementById('canvasBox');
+canvasBox.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+canvasBox.addEventListener('drop', e => {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/plain');
+    if (!id || !COMPONENTS[id]) return;
+    const rect = canvas.upperCanvasEl.getBoundingClientRect();
+    const z = canvas.getZoom();
+    addComponent(id, (e.clientX - rect.left) / z, (e.clientY - rect.top) / z);
+});
+
+// текст и зоны
+function dropPos() {
+    const c = designCenter();
+    return { x: c.x + (Math.random() - 0.5) * 60, y: c.y + (Math.random() - 0.5) * 60 };
+}
+function addToBoard(obj) {
+    obj.selectable = true; obj.evented = true;
+    canvas.add(obj);
+    if (currentMode !== 'select') setMode('select');
+    canvas.setActiveObject(obj);
+    canvas.renderAll();
+}
+document.getElementById('btnAddText').addEventListener('click', () => {
+    const p = dropPos();
+    addToBoard(new fabric.IText('Текст', { left: p.x, top: p.y, originX: 'center', originY: 'center', fontSize: 22, fontFamily: 'Arial', fill: currentColor }));
+});
+document.getElementById('btnAddZone').addEventListener('click', () => {
+    const p = dropPos();
+    addToBoard(new fabric.Rect({ left: p.x, top: p.y, width: 120, height: 90, fill: hexA(currentColor, 0.15), stroke: currentColor, strokeWidth: 1.5, strokeDashArray: [6, 5], originX: 'center', originY: 'center', customType: 'zone' }));
+});
+document.getElementById('btnAddEllipse').addEventListener('click', () => {
+    const p = dropPos();
+    addToBoard(new fabric.Ellipse({ left: p.x, top: p.y, rx: 70, ry: 45, fill: hexA(currentColor, 0.15), stroke: currentColor, strokeWidth: 1.5, strokeDashArray: [6, 5], originX: 'center', originY: 'center', customType: 'zone' }));
+});
+function hexA(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+document.getElementById('btnAddImage').addEventListener('click', () => document.getElementById('imgInput').click());
+document.getElementById('imgInput').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = ev => {
+        fabric.Image.fromURL(ev.target.result, img => {
+            const c = designCenter();
+            const s = Math.min(1, 120 / img.width);
+            img.set({ left: c.x, top: c.y, originX: 'center', originY: 'center', scaleX: s, scaleY: s });
+            addToBoard(img);
+        });
+    };
+    rd.readAsDataURL(f);
+    e.target.value = '';
+});
+
+// ================= УДАЛЕНИЕ / ОЧИСТКА / КЛАВИШИ =================
+function deleteSelected() {
+    const ao = canvas.getActiveObject();
+    if (ao && ao.isEditing) return;
+    const list = canvas.getActiveObjects();
+    if (list.length) {
+        canvas.discardActiveObject();
+        list.forEach(o => canvas.remove(o));
+        canvas.requestRenderAll();
+    }
+}
+document.getElementById('btnDelete').addEventListener('click', deleteSelected);
+function clearBoard() {
+    const objects = canvas.getObjects().filter(o => !o.__temp);
+    if (!objects.length) return;
+    if (!confirm('Очистить всю доску?')) return;
+    suspendHistory = true;
+    objects.forEach(o => canvas.remove(o));
+    suspendHistory = false;
+    snapshotNow();
+    canvas.requestRenderAll();
+}
+document.getElementById('btnClear').addEventListener('click', e => {
+    if (e.shiftKey) {
+        clearBoard();
+        return;
+    }
+    setMode(currentMode === 'erase' ? 'select' : 'erase');
+});
+window.addEventListener('keydown', e => {
+    const ao = canvas.getActiveObject();
+    const editing = ao && ao.isEditing;
+    if (e.key === 'Escape' && currentMode !== 'select') { setMode('select'); return; }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && !editing &&
+        !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault(); deleteSelected();
+    }
+    if (e.ctrlKey && !editing) {
+        if (e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
+        if (e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+    }
+});
+document.getElementById('btnUndo').addEventListener('click', undo);
+document.getElementById('btnRedo').addEventListener('click', redo);
+
+// ================= СОХРАНЕНИЕ =================
+function download(name, href) {
+    const a = document.createElement('a');
+    a.download = name; a.href = href;
+    document.body.appendChild(a); a.click(); a.remove();
+}
+document.getElementById('btnSavePng').addEventListener('click', () => {
+    canvas.discardActiveObject(); canvas.renderAll();
+    const mult = 2 / canvas.getZoom();
+    download('drill.png', canvas.toDataURL({ format: 'png', multiplier: mult }));
+});
+document.getElementById('btnSaveJson').addEventListener('click', () => {
+    const data = { rinkMode, numCounter, canvas: canvas.toJSON(EXTRA_PROPS) };
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    download('drill.json', URL.createObjectURL(blob));
+});
+document.getElementById('btnLoadJson').addEventListener('click', () => document.getElementById('jsonInput').click());
+document.getElementById('jsonInput').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = ev => {
+        try {
+            const data = JSON.parse(ev.target.result);
+            rinkMode = data.rinkMode || 'full';
+            numCounter = data.numCounter || 1;
+            suspendHistory = true;
+            canvas.loadFromJSON(data.canvas, () => {
+                setBackground(() => {
+                    fitCanvas();
+                    canvas.forEachObject(applyModeToObject);
+                    suspendHistory = false;
+                    stateHistory = []; historyIndex = -1; snapshotNow();
+                    setMode('select');
+                });
+            });
+        } catch (err) { alert('Не удалось открыть файл: ' + err.message); }
+    };
+    rd.readAsText(f);
+    e.target.value = '';
+});
+
+document.getElementById('btnRink').addEventListener('click', () => {
+    rinkMode = (rinkMode === 'full') ? 'half' : 'full';
+    setBackground(() => {
+        fitCanvas();
+        stateHistory = []; historyIndex = -1;
+        snapshotNow();
+    });
+});
+
+// ================= СТАРТ =================
+setBackground(() => {
+    fitCanvas();
+    suspendHistory = false;
+    snapshotNow();
+});
+
+window.board = { canvas, addStyledLine, addComponent, setMode, undo, redo, get history() { return { len: stateHistory.length, idx: historyIndex }; } };
+</script>
+</body>
+</html>
