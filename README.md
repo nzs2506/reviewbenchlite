@@ -16,12 +16,11 @@ http://localhost:8734/
 
 ## Font
 
-The UI is prepared for the Hyper Oxide font:
+The title uses Black Ops One:
 
 ```text
-assets/fonts/Hyper-Oxide-BF66b6190bb671c.ttf
+assets/fonts/BlackOpsOne-Regular.ttf
 ```
 
-Do not commit that font file unless the project has a valid commercial license.
-Without the file, the app falls back to system display fonts.
-
+Black Ops One is included under the SIL Open Font License 1.1.
+The old Hyper Oxide reference was removed because its free download is personal-use-only.

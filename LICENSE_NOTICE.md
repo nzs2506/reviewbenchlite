@@ -1,13 +1,18 @@
 # License Notice
 
-This repository includes the BenchReview Lite prototype code and local Fabric.js runtime.
+This repository includes the BenchReview Lite prototype code, local Fabric.js runtime,
+and the Black Ops One font.
 
-The Hyper Oxide font referenced by `index.html` is not included. The source page marks it as
-personal-use-only and says commercial use requires a paid license from Afkari Studio.
-
-For company or public use, buy the appropriate license first, then place the licensed font file at:
+Black Ops One is distributed under the SIL Open Font License 1.1. The license text is included at:
 
 ```text
-assets/fonts/Hyper-Oxide-BF66b6190bb671c.ttf
+assets/fonts/OFL-BlackOpsOne.txt
 ```
 
+The previous Hyper Oxide candidate is not included. Its free download is marked as
+personal-use-only, so do not add it to this repository unless the project has a valid
+commercial license.
+
+```text
+assets/fonts/Hyper-Oxide-*.ttf
+```

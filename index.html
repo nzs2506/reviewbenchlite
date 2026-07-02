@@ -8,9 +8,9 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
     @font-face {
-        font-family: 'Hyper Oxide';
-        src: url('assets/fonts/Hyper-Oxide-BF66b6190bb671c.ttf') format('truetype');
-        font-weight: 700;
+        font-family: 'Black Ops One';
+        src: url('assets/fonts/BlackOpsOne-Regular.ttf') format('truetype');
+        font-weight: 400;
         font-style: normal;
         font-display: swap;
     }
@@ -38,14 +38,15 @@
     }
     .app-title {
         margin: 0;
-        font-family: 'Hyper Oxide', Impact, Haettenschweiler, 'Arial Black', sans-serif;
-        font-size: clamp(28px, 4vw, 54px);
-        line-height: 0.95;
-        font-weight: 700;
-        letter-spacing: 0.02em;
+        font-family: 'Black Ops One', Impact, Haettenschweiler, 'Arial Black', sans-serif;
+        font-size: 52px;
+        line-height: 0.9;
+        font-weight: 400;
+        letter-spacing: 0;
         color: #f2f7ff;
         text-transform: none;
-        text-shadow: 0 3px 0 #12203a, 0 10px 22px rgba(0,0,0,0.45);
+        transform: skewX(-3deg);
+        text-shadow: 0 2px 0 #0d182b, 0 6px 0 #102954, 0 13px 24px rgba(0,0,0,0.45);
     }
     .canvas-wrapper {
         flex: 1 1 auto;
@@ -64,16 +65,20 @@
         flex: 0 0 auto;
         background: var(--toolbar-bg);
         border-top: 1px solid var(--toolbar-border);
-        display: flex; flex-wrap: wrap;
-        justify-content: center; align-items: center;
+        display: flex; flex-wrap: nowrap;
+        justify-content: flex-start; align-items: center;
         padding: 6px 10px;
         gap: 4px;
+        min-height: 54px;
+        overflow-x: auto; overflow-y: hidden;
+        scrollbar-width: thin;
     }
     .toolbar-group {
         display: flex; gap: 2px;
         padding: 0 8px;
         border-right: 1px solid #ddd;
         align-items: center;
+        flex: 0 0 auto;
     }
     .toolbar-group:last-child { border-right: none; }
     .tool-btn {
@@ -137,6 +142,39 @@
     .marker-icon {
         font-weight: bold; display: flex; justify-content: center; align-items: center;
         color: white; border-radius: 50%; width: 30px; height: 30px; font-size: 0.72em;
+    }
+
+    @media (max-width: 1300px), (max-height: 760px) {
+        .app-header { padding: 10px 12px 0; }
+        .app-title { font-size: 42px; line-height: 0.92; }
+        .canvas-wrapper { padding: 14px 10px 8px; }
+        .bottom-toolbar { min-height: 48px; padding: 5px 8px; }
+        .toolbar-group { padding: 0 6px; }
+        .tool-btn { width: 34px; height: 34px; border-radius: 5px; font-size: 1em; }
+        .custom-icon { width: 23px; height: 23px; }
+        .color-swatch { width: 20px; height: 20px; }
+        input[type="color"] { width: 26px; height: 26px; }
+        .side-panel { flex-basis: 104px; padding: 6px 5px 14px; gap: 4px; }
+        .panel-title { font-size: 10px; letter-spacing: 0.8px; margin: 6px 0 1px; }
+        .comp-item { width: 44px; height: 44px; border-radius: 8px; }
+        .marker-icon { width: 27px; height: 27px; font-size: 11px; }
+        .asset-icon-img { max-width: 30px; max-height: 30px; }
+    }
+
+    @media (max-width: 980px), (max-height: 620px) {
+        .app-header { padding-top: 8px; }
+        .app-title { font-size: 34px; }
+        .canvas-wrapper { padding: 8px 8px 6px; }
+        .bottom-toolbar { min-height: 42px; padding: 4px 8px; }
+        .toolbar-group { padding: 0 5px; }
+        .tool-btn { width: 30px; height: 30px; font-size: 0.9em; }
+        .custom-icon { width: 20px; height: 20px; }
+        .color-swatch { width: 18px; height: 18px; }
+        input[type="color"] { width: 24px; height: 24px; }
+        .side-panel { flex-basis: 86px; padding: 5px 4px 12px; }
+        .comp-item { width: 38px; height: 38px; }
+        .marker-icon { width: 24px; height: 24px; font-size: 10px; }
+        .asset-icon-img { max-width: 26px; max-height: 26px; }
     }
 </style>
 </head>
@@ -351,7 +389,10 @@ function setBackground(cb) {
 function fitCanvas() {
     const wrap = document.querySelector('.canvas-wrapper');
     const d = designSize();
-    const s = Math.max(0.2, Math.min((wrap.clientWidth - 28) / d.w, (wrap.clientHeight - 28) / d.h));
+    const wrapStyle = getComputedStyle(wrap);
+    const padX = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight);
+    const padY = parseFloat(wrapStyle.paddingTop) + parseFloat(wrapStyle.paddingBottom);
+    const s = Math.max(0.2, Math.min((wrap.clientWidth - padX) / d.w, (wrap.clientHeight - padY) / d.h));
     canvas.setDimensions({ width: Math.round(d.w * s), height: Math.round(d.h * s) });
     canvas.setZoom(s);
     const r = Math.round(90 * s) + 'px';
@@ -359,6 +400,8 @@ function fitCanvas() {
     canvas.renderAll();
 }
 window.addEventListener('resize', fitCanvas);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fitCanvas);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCanvas);
 
 // ================= ИСТОРИЯ =================
 let stateHistory = [], historyIndex = -1, suspendHistory = true, saveTimer = null;
