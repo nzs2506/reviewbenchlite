@@ -15,89 +15,231 @@
         font-display: swap;
     }
     :root {
-        --toolbar-bg: #f8f9fa;
-        --toolbar-border: #dee2e6;
-        --active-color: #0056b3;
-        --bg-color: #2b3038;
+        --active-color: #3b82f6;
+        --bg-color: #16181d;
+        --panel-bg: #1a1d23;
+        --panel-soft: #1c1f26;
+        --panel-raised: #22252c;
+        --panel-border: #262a32;
+        --text-soft: #8b8f98;
+        --text-main: #e4e4e7;
+        --rink-fit: 0.965;
     }
     * { box-sizing: border-box; }
+    html, body { height: 100%; }
     body {
         margin: 0; padding: 0;
-        display: flex; flex-direction: row;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 164px;
+        grid-template-rows: auto minmax(0, 1fr) auto;
         height: 100vh;
         background-color: var(--bg-color);
+        color: var(--text-main);
         font-family: 'Segoe UI', Arial, sans-serif;
         overflow: hidden;
     }
-    .main-col { flex: 1 1 auto; display: flex; flex-direction: column; min-width: 0; }
+    button { font: inherit; }
+    .main-col { display: contents; }
     .app-header {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        position: relative;
         flex: 0 0 auto;
-        padding: 16px 18px 0;
+        padding: 12px 18px 8px;
         text-align: center;
-        pointer-events: none;
+        background: #16181d;
     }
     .app-title {
         margin: 0;
         font-family: 'Black Ops One', Impact, Haettenschweiler, 'Arial Black', sans-serif;
-        font-size: 52px;
-        line-height: 0.9;
+        font-size: 30px;
+        line-height: 0.95;
         font-weight: 400;
         letter-spacing: 0;
-        color: #f2f7ff;
+        color: #f4f8ff;
         text-transform: none;
         transform: skewX(-3deg);
-        text-shadow: 0 2px 0 #0d182b, 0 6px 0 #102954, 0 13px 24px rgba(0,0,0,0.45);
+        text-shadow: 0 2px 0 #0d182b, 0 6px 14px rgba(0,0,0,0.45);
     }
+    .app-title .lite-accent { color: #60a5fa; }
+    .mainnav {
+        height: 34px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 54px;
+        margin-top: 8px;
+    }
+    .mainnav button {
+        height: 34px;
+        border: 0;
+        background: transparent;
+        color: var(--text-soft);
+        cursor: default;
+        font-weight: 700;
+        font-size: 13px;
+        line-height: 1;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        transition: color .18s, transform .18s;
+    }
+    .mainnav button.current { color: var(--text-main); }
+    .mainnav button:hover { color: #fff; transform: translateY(-1px); }
+    .version-help {
+        position: absolute;
+        top: 12px;
+        right: 16px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid #34383f;
+        background: #1c1f26;
+        color: #9ca0a8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        cursor: help;
+        z-index: 5;
+    }
+    .version-help:hover { color: #fff; border-color: var(--active-color); }
+    .version-tooltip {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        min-width: 92px;
+        padding: 6px 9px;
+        border-radius: 7px;
+        border: 1px solid #34383f;
+        background: #22252c;
+        color: #e4e4e7;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        opacity: 0;
+        transform: translateY(-4px);
+        pointer-events: none;
+        transition: opacity .15s, transform .15s;
+        box-shadow: 0 12px 28px rgba(0,0,0,0.35);
+    }
+    .version-help:hover .version-tooltip { opacity: 1; transform: translateY(0); }
     .canvas-wrapper {
-        flex: 1 1 auto;
-        display: flex; justify-content: center; align-items: center;
-        padding: 34px 14px 14px;
+        grid-column: 1;
+        grid-row: 2;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 18px 22px 14px;
         min-height: 0;
         position: relative;
     }
     .canvas-container-wrapper {
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        box-shadow: 0 24px 60px -12px rgba(0,0,0,0.72);
         overflow: hidden;
         background: white;
         line-height: 0;
+        outline: 1px solid rgba(255,255,255,0.1);
     }
     .bottom-toolbar {
-        flex: 0 0 auto;
-        background: var(--toolbar-bg);
-        border-top: 1px solid var(--toolbar-border);
-        display: flex; flex-wrap: nowrap;
-        justify-content: flex-start; align-items: center;
-        padding: 6px 10px;
-        gap: 4px;
-        min-height: 54px;
-        overflow-x: auto; overflow-y: hidden;
-        scrollbar-width: thin;
+        grid-column: 1 / -1;
+        grid-row: 3;
+        position: relative;
+        z-index: 30;
+        background: var(--panel-bg);
+        border-top: 1px solid var(--panel-border);
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: center;
+        align-items: flex-end;
+        padding: 6px 12px;
+        gap: 0;
+        min-height: 66px;
+        overflow: visible;
     }
-    .toolbar-group {
-        display: flex; gap: 2px;
-        padding: 0 8px;
-        border-right: 1px solid #ddd;
+    .tool-group-block {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
         align-items: center;
         flex: 0 0 auto;
     }
-    .toolbar-group:last-child { border-right: none; }
-    .tool-btn {
-        width: 40px; height: 40px;
-        border: 1px solid transparent;
-        background: transparent;
-        border-radius: 6px;
-        cursor: pointer;
-        display: flex; justify-content: center; align-items: center;
-        font-size: 1.15em; color: #555;
-        transition: background 0.15s;
+    .group-cap {
+        font-size: 8.5px;
+        font-weight: 700;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: #565b64;
+        text-align: center;
+        user-select: none;
+    }
+    .toolbar-group {
+        display: flex;
+        gap: 2px;
+        align-items: center;
         flex: 0 0 auto;
     }
-    .tool-btn:hover { background: #e2e6ea; }
-    .tool-btn.active { background: #dcebfd; color: var(--active-color); border-color: #b6d4fe; }
-    .btn-delete { color: #e74c3c; } .btn-delete:hover { background: #fadbd8; }
-    .btn-save { color: #27ae60; }
-    .custom-icon { width: 26px; height: 26px; background-size: contain; background-repeat: no-repeat; background-position: center; opacity: 0.75;}
-    .tool-btn.active .custom-icon { opacity: 1; filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(194deg) brightness(96%) contrast(101%); }
+    .vsep {
+        width: 1px;
+        align-self: stretch;
+        background: var(--panel-border);
+        margin: 0 10px;
+        flex: 0 0 auto;
+    }
+    .tool-btn, .menu-action {
+        border: 1px solid transparent;
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #9ca0a8;
+        transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .tool-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 9px;
+        font-size: 1.05em;
+        flex: 0 0 auto;
+        position: relative;
+    }
+    .tool-btn:hover { background: #262a32; color: var(--text-main); }
+    .tool-btn.active { background: rgba(59,130,246,.16); color: #60a5fa; border-color: rgba(59,130,246,.35); }
+    .btn-delete { color: #f87171; } .btn-delete:hover { background: rgba(248,113,113,.12); }
+    .btn-save { color: #34d399; }
+    .btn-primary {
+        width: auto;
+        padding: 0 14px;
+        gap: 7px;
+        color: #fff;
+        background: #2563eb;
+        border-color: #2563eb;
+        font-size: 13px;
+        font-weight: 700;
+    }
+    .btn-primary:hover { background: #3b82f6; }
+    .btn-export {
+        width: auto;
+        padding: 0 13px;
+        gap: 7px;
+        color: #e4e4e7;
+        border-color: #34383f;
+        font-size: 13px;
+        font-weight: 700;
+    }
+    .custom-icon {
+        width: 24px;
+        height: 24px;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        opacity: 0.9;
+        filter: invert(67%) sepia(6%) saturate(270%) hue-rotate(180deg) brightness(91%) contrast(88%);
+    }
+    .tool-btn.active .custom-icon {
+        opacity: 1;
+        filter: invert(62%) sepia(91%) saturate(1851%) hue-rotate(194deg) brightness(100%) contrast(96%);
+    }
     .icon-skate    { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 18 C 7 6, 15 6, 20 10'/%3E%3Cpolyline points='20 10 14 10 18 4'/%3E%3C/svg%3E"); }
     .icon-back     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 l3 -4 3 8 3 -8 3 8 3 -4'/%3E%3Cpolyline points='22 12 18 9 18 15 22 12'/%3E%3C/svg%3E"); }
     .icon-puckline { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 c2 -4 4 -4 6 0 s4 4 6 0 4 -4 6 0'/%3E%3Cpolyline points='22 12 18 9 18 15 22 12'/%3E%3C/svg%3E"); }
@@ -105,76 +247,210 @@
     .icon-shot     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 10 h16 M2 14 h16'/%3E%3Cpolyline points='23 12 18 8 18 16 23 12'/%3E%3C/svg%3E"); }
     .icon-stopline { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 h14'/%3E%3Cline x1='17' y1='7' x2='17' y2='17'/%3E%3Cline x1='21' y1='7' x2='21' y2='17'/%3E%3C/svg%3E"); }
     .color-swatch {
-        width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff;
-        box-shadow: 0 0 0 1px #ccc; cursor: pointer; flex: 0 0 auto; margin: 0 2px;
+        width: 24px; height: 24px; border-radius: 50%; border: 2px solid #22252c;
+        box-shadow: 0 0 0 1px #3d424c; cursor: pointer; flex: 0 0 auto; margin: 0 2px;
     }
     .color-swatch.active { box-shadow: 0 0 0 2px var(--active-color); }
-    input[type="color"] { width: 30px; height: 30px; border: none; background: none; cursor: pointer; padding: 0; }
+    .active-color-dot {
+        width: 21px;
+        height: 21px;
+        border-radius: 50%;
+        background: #0056b3;
+        box-shadow: 0 0 0 2px rgba(255,255,255,0.16);
+    }
+    input[type="color"] { width: 28px; height: 28px; border: none; background: none; cursor: pointer; padding: 0; }
+    .toolbar-combo { position: relative; }
+    .menu-caret {
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        font-size: 9px;
+        opacity: .55;
+        pointer-events: none;
+    }
+    .tool-popover {
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 8px);
+        transform: translateX(-50%) translateY(8px);
+        min-width: 172px;
+        padding: 8px;
+        border: 1px solid #34383f;
+        border-radius: 9px;
+        background: #22252c;
+        display: grid;
+        gap: 5px;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 20;
+        box-shadow: 0 18px 40px rgba(0,0,0,.45);
+        transition: opacity .14s, transform .14s;
+    }
+    .toolbar-combo.open .tool-popover {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(-50%) translateY(0);
+    }
+    .menu-action {
+        height: 34px;
+        justify-content: flex-start;
+        gap: 9px;
+        padding: 0 9px;
+        border-radius: 7px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+    .menu-action:hover { background: #2a2e36; color: #fff; }
+    .color-popover {
+        min-width: 150px;
+        grid-template-columns: repeat(4, 1fr);
+        align-items: center;
+        justify-items: center;
+    }
 
     /* ==== Interactive Components (правая панель) ==== */
     .side-panel {
-        flex: 0 0 128px;
-        background: #eef0f2;
-        border-left: 1px solid #cfd4d9;
+        grid-column: 2;
+        grid-row: 2;
+        background: var(--panel-bg);
+        border-left: 1px solid var(--panel-border);
         overflow-y: auto; overflow-x: hidden;
-        padding: 8px 6px 20px;
-        display: flex; flex-wrap: wrap; gap: 5px;
-        align-content: flex-start; justify-content: center;
+        padding: 11px 9px 16px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-content: start;
+        gap: 7px;
+        min-height: 0;
     }
     .panel-title {
-        width: 100%; font-size: 0.62em; font-weight: 600; color: #8a939c;
-        text-transform: uppercase; letter-spacing: 1px;
-        text-align: center; margin: 8px 0 2px; user-select: none;
-    }
-    .comp-item {
-        width: 50px; height: 50px;
-        background: #fff; border: 1px solid #d5d8dc; border-radius: 9px;
-        cursor: grab;
-        display: flex; justify-content: center; align-items: center;
-        transition: border-color 0.15s, box-shadow 0.15s;
+        grid-column: 1 / -1;
+        width: 100%;
+        font-size: 9px;
+        font-weight: 700;
+        color: #565b64;
+        text-transform: uppercase;
+        letter-spacing: .12em;
+        text-align: left;
+        margin: 2px 2px 0;
         user-select: none;
     }
-    .comp-item:hover { border-color: var(--active-color); box-shadow: 0 2px 6px rgba(0,86,179,0.25); }
-    .comp-item.active { border-color: var(--active-color); background: #dcebfd; box-shadow: 0 0 0 2px rgba(0,86,179,0.35); }
+    .comp-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+    }
+    .comp-item {
+        min-height: 63px;
+        background: var(--panel-soft);
+        border: 1px solid var(--panel-border);
+        border-radius: 9px;
+        cursor: grab;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        padding: 7px 2px 6px;
+        transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s, background 0.15s;
+        user-select: none;
+        color: #c8ccd4;
+    }
+    .comp-item:hover { border-color: var(--active-color); transform: translateY(-1px); }
+    .comp-item.active { border-color: var(--active-color); background: rgba(59,130,246,.12); box-shadow: 0 0 0 1px var(--active-color); }
     .comp-item:active { cursor: grabbing; }
-    .comp-item svg, .comp-item .marker-icon, .asset-icon-img { pointer-events: none; }
-    .asset-icon-img { max-width: 34px; max-height: 34px; object-fit: contain; display: block; }
+    .comp-item svg, .comp-item .marker-icon, .asset-icon-img, .comp-label { pointer-events: none; }
+    .comp-item svg {
+        width: 26px;
+        height: 26px;
+        filter: invert(86%) sepia(8%) saturate(132%) hue-rotate(185deg) brightness(93%) contrast(88%);
+        opacity: .9;
+    }
+    .comp-item::after {
+        content: attr(data-label);
+        display: block;
+        width: 100%;
+        color: var(--text-soft);
+        font-size: 9.5px;
+        line-height: 1.08;
+        text-align: center;
+        overflow-wrap: anywhere;
+    }
+    .comp-item[data-comp="mNum"],
+    .comp-item[data-comp="stickPuck"] {
+        grid-column: 1 / -1;
+        min-height: 44px;
+        flex-direction: row;
+        gap: 8px;
+        padding: 7px 8px;
+    }
+    .comp-item[data-comp="mNum"]::after,
+    .comp-item[data-comp="stickPuck"]::after {
+        width: auto;
+        text-align: left;
+        font-size: 10px;
+    }
+    .comp-wide {
+        grid-column: span 2;
+        min-height: 42px;
+        flex-direction: row;
+        gap: 8px;
+        padding: 7px 8px;
+    }
+    .asset-icon-img { max-width: 30px; max-height: 30px; object-fit: contain; display: block; }
     .marker-icon {
         font-weight: bold; display: flex; justify-content: center; align-items: center;
-        color: white; border-radius: 50%; width: 30px; height: 30px; font-size: 0.72em;
+        color: white; border-radius: 50%; width: 28px; height: 28px; font-size: 11px;
+    }
+    .comp-label {
+        display: block;
+        width: 100%;
+        color: var(--text-soft);
+        font-size: 9.5px;
+        line-height: 1.1;
+        text-align: center;
+        overflow-wrap: anywhere;
     }
 
     @media (max-width: 1300px), (max-height: 760px) {
-        .app-header { padding: 10px 12px 0; }
-        .app-title { font-size: 42px; line-height: 0.92; }
-        .canvas-wrapper { padding: 14px 10px 8px; }
-        .bottom-toolbar { min-height: 48px; padding: 5px 8px; }
-        .toolbar-group { padding: 0 6px; }
-        .tool-btn { width: 34px; height: 34px; border-radius: 5px; font-size: 1em; }
-        .custom-icon { width: 23px; height: 23px; }
-        .color-swatch { width: 20px; height: 20px; }
+        body { grid-template-columns: minmax(0, 1fr) 158px; }
+        .app-header { padding: 10px 12px 7px; }
+        .app-title { font-size: 27px; line-height: 0.95; }
+        .mainnav { height: 30px; gap: 44px; margin-top: 7px; }
+        .mainnav button { height: 30px; font-size: 12px; }
+        .canvas-wrapper { padding: 14px 18px 10px; }
+        .bottom-toolbar { min-height: 62px; padding: 5px 10px; }
+        .vsep { margin: 0 8px; }
+        .tool-btn { width: 34px; height: 34px; border-radius: 8px; font-size: 1em; }
+        .custom-icon { width: 22px; height: 22px; }
+        .color-swatch { width: 22px; height: 22px; }
         input[type="color"] { width: 26px; height: 26px; }
-        .side-panel { flex-basis: 104px; padding: 6px 5px 14px; gap: 4px; }
-        .panel-title { font-size: 10px; letter-spacing: 0.8px; margin: 6px 0 1px; }
-        .comp-item { width: 44px; height: 44px; border-radius: 8px; }
-        .marker-icon { width: 27px; height: 27px; font-size: 11px; }
-        .asset-icon-img { max-width: 30px; max-height: 30px; }
+        .side-panel { padding: 9px 7px 14px; gap: 6px; }
+        .comp-grid { gap: 5px; }
+        .comp-item { min-height: 58px; border-radius: 8px; }
+        .marker-icon { width: 26px; height: 26px; font-size: 10px; }
+        .asset-icon-img { max-width: 28px; max-height: 28px; }
     }
 
     @media (max-width: 980px), (max-height: 620px) {
-        .app-header { padding-top: 8px; }
-        .app-title { font-size: 34px; }
-        .canvas-wrapper { padding: 8px 8px 6px; }
-        .bottom-toolbar { min-height: 42px; padding: 4px 8px; }
-        .toolbar-group { padding: 0 5px; }
+        body { grid-template-columns: minmax(0, 1fr) 142px; }
+        .app-header { padding: 8px 10px 5px; }
+        .app-title { font-size: 23px; }
+        .mainnav { gap: 30px; height: 26px; margin-top: 5px; }
+        .mainnav button { height: 26px; font-size: 10.5px; }
+        .version-help { top: 8px; right: 10px; width: 25px; height: 25px; }
+        .canvas-wrapper { padding: 10px 12px 8px; }
+        .bottom-toolbar { min-height: 56px; padding: 4px 8px; }
         .tool-btn { width: 30px; height: 30px; font-size: 0.9em; }
         .custom-icon { width: 20px; height: 20px; }
+        .group-cap { font-size: 7.5px; }
+        .vsep { margin: 0 5px; }
         .color-swatch { width: 18px; height: 18px; }
         input[type="color"] { width: 24px; height: 24px; }
-        .side-panel { flex-basis: 86px; padding: 5px 4px 12px; }
-        .comp-item { width: 38px; height: 38px; }
-        .marker-icon { width: 24px; height: 24px; font-size: 10px; }
-        .asset-icon-img { max-width: 26px; max-height: 26px; }
+        .side-panel { padding: 7px 5px 12px; }
+        .comp-item { min-height: 52px; }
+        .comp-label { font-size: 8.5px; }
+        .marker-icon { width: 24px; height: 24px; font-size: 9.5px; }
+        .asset-icon-img { max-width: 25px; max-height: 25px; }
     }
 </style>
 </head>
@@ -182,7 +458,16 @@
 
 <div class="main-col">
     <header class="app-header">
-        <h1 class="app-title">BenchReview Lite</h1>
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.3.0" aria-label="Версия">
+            ?
+            <span class="version-tooltip">v0.3.0</span>
+        </button>
+        <h1 class="app-title">BenchReview <span class="lite-accent">Lite</span></h1>
+        <nav class="mainnav" aria-label="Разделы">
+            <button type="button" class="current">Тренировки</button>
+            <button type="button">Игра</button>
+            <button type="button">Статистика</button>
+        </nav>
     </header>
     <div class="canvas-wrapper">
         <div class="canvas-container-wrapper" id="canvasBox">
@@ -191,47 +476,85 @@
     </div>
 
     <div class="bottom-toolbar">
-        <!-- Линии движения -->
-        <div class="toolbar-group">
-            <button class="tool-btn line-tool" data-type="skate"    title="Катание без шайбы"><i class="custom-icon icon-skate"></i></button>
-            <button class="tool-btn line-tool" data-type="backward" title="Катание спиной вперёд"><i class="custom-icon icon-back"></i></button>
-            <button class="tool-btn line-tool" data-type="puck"     title="Ведение шайбы"><i class="custom-icon icon-puckline"></i></button>
-            <button class="tool-btn line-tool" data-type="pass"     title="Пас"><i class="custom-icon icon-pass"></i></button>
-            <button class="tool-btn line-tool" data-type="shot"     title="Бросок"><i class="custom-icon icon-shot"></i></button>
-            <button class="tool-btn line-tool" data-type="stop"     title="Движение с остановкой"><i class="custom-icon icon-stopline"></i></button>
+        <div class="tool-group-block">
+            <div class="group-cap">Линии</div>
+            <div class="toolbar-group">
+                <button class="tool-btn line-tool" data-type="skate"    title="Катание без шайбы"><i class="custom-icon icon-skate"></i></button>
+                <button class="tool-btn line-tool" data-type="backward" title="Катание спиной вперёд"><i class="custom-icon icon-back"></i></button>
+                <button class="tool-btn line-tool" data-type="puck"     title="Ведение шайбы"><i class="custom-icon icon-puckline"></i></button>
+                <button class="tool-btn line-tool" data-type="pass"     title="Пас"><i class="custom-icon icon-pass"></i></button>
+                <button class="tool-btn line-tool" data-type="shot"     title="Бросок"><i class="custom-icon icon-shot"></i></button>
+                <button class="tool-btn line-tool" data-type="stop"     title="Движение с остановкой"><i class="custom-icon icon-stopline"></i></button>
+            </div>
         </div>
-        <!-- Текст / зона / картинка -->
-        <div class="toolbar-group">
-            <button class="tool-btn" id="btnAddText" title="Текст"><i class="fa-solid fa-font"></i></button>
-            <button class="tool-btn" id="btnAddZone" title="Зона (прямоугольник)"><i class="fa-regular fa-square-full" style="opacity:0.6;"></i></button>
-            <button class="tool-btn" id="btnAddEllipse" title="Зона (овал)"><i class="fa-regular fa-circle" style="opacity:0.6; transform:scaleX(1.35);"></i></button>
-            <button class="tool-btn" id="btnAddImage" title="Вставить картинку/логотип"><i class="fa-regular fa-image"></i></button>
-            <input type="file" id="imgInput" accept="image/*" style="display:none">
+
+        <div class="vsep"></div>
+
+        <div class="tool-group-block">
+            <div class="group-cap">Инструменты</div>
+            <div class="toolbar-group">
+                <button class="tool-btn active" id="btnSelectMode" title="Перемещение / выделение"><i class="fa-solid fa-arrow-pointer"></i></button>
+                <button class="tool-btn" id="btnFreeDraw" title="Свободное рисование"><i class="fa-solid fa-paintbrush"></i></button>
+                <div class="toolbar-combo" id="shapeMenuWrap">
+                    <button class="tool-btn" id="btnShapeMenu" type="button" title="Текст, зоны и картинка">
+                        <i class="fa-solid fa-shapes"></i>
+                        <i class="fa-solid fa-chevron-up menu-caret"></i>
+                    </button>
+                    <div class="tool-popover" id="shapeMenu">
+                        <button class="menu-action" id="btnAddText" type="button"><i class="fa-solid fa-font"></i><span>Текст</span></button>
+                        <button class="menu-action" id="btnAddZone" type="button"><i class="fa-regular fa-square-full"></i><span>Прямоугольник</span></button>
+                        <button class="menu-action" id="btnAddEllipse" type="button"><i class="fa-regular fa-circle"></i><span>Овал</span></button>
+                        <button class="menu-action" id="btnAddImage" type="button"><i class="fa-regular fa-image"></i><span>Картинка</span></button>
+                    </div>
+                </div>
+                <div class="toolbar-combo" id="colorMenuWrap">
+                    <button class="tool-btn" id="btnColorMenu" type="button" title="Цвет линий">
+                        <span class="active-color-dot" id="activeColorDot"></span>
+                        <i class="fa-solid fa-chevron-up menu-caret"></i>
+                    </button>
+                    <div class="tool-popover color-popover" id="colorMenu">
+                        <div class="color-swatch active" data-color="#0056b3" style="background:#0056b3" title="Синий"></div>
+                        <div class="color-swatch" data-color="#c0392b" style="background:#c0392b" title="Красный"></div>
+                        <div class="color-swatch" data-color="#111111" style="background:#111111" title="Чёрный"></div>
+                        <div class="color-swatch" data-color="#1e8449" style="background:#1e8449" title="Зелёный"></div>
+                        <input type="color" id="colorPicker" value="#0056b3" title="Свой цвет">
+                    </div>
+                </div>
+                <input type="file" id="imgInput" accept="image/*" style="display:none">
+            </div>
         </div>
-        <!-- Цвет -->
-        <div class="toolbar-group" id="colorGroup">
-            <div class="color-swatch active" data-color="#0056b3" style="background:#0056b3"></div>
-            <div class="color-swatch" data-color="#c0392b" style="background:#c0392b"></div>
-            <div class="color-swatch" data-color="#111111" style="background:#111111"></div>
-            <div class="color-swatch" data-color="#1e8449" style="background:#1e8449"></div>
-            <input type="color" id="colorPicker" value="#0056b3" title="Свой цвет">
+
+        <div class="vsep"></div>
+
+        <div class="tool-group-block">
+            <div class="group-cap">Площадка</div>
+            <div class="toolbar-group">
+                <button class="tool-btn" id="btnRink" title="Полная / половина площадки"><i class="fa-solid fa-table-columns"></i></button>
+            </div>
         </div>
-        <!-- Режимы -->
-        <div class="toolbar-group">
-            <button class="tool-btn" id="btnFreeDraw" title="Свободное рисование"><i class="fa-solid fa-paintbrush"></i></button>
-            <button class="tool-btn active" id="btnSelectMode" title="Перемещение / выделение"><i class="fa-solid fa-arrow-pointer"></i></button>
-            <button class="tool-btn" id="btnRink" title="Полная / половина площадки"><i class="fa-solid fa-table-columns"></i></button>
+
+        <div class="vsep"></div>
+
+        <div class="tool-group-block">
+            <div class="group-cap">История</div>
+            <div class="toolbar-group">
+                <button class="tool-btn" id="btnUndo" title="Отменить (Ctrl+Z)"><i class="fa-solid fa-arrow-rotate-left"></i></button>
+                <button class="tool-btn" id="btnRedo" title="Повторить (Ctrl+Y)"><i class="fa-solid fa-arrow-rotate-right"></i></button>
+                <button class="tool-btn btn-delete" id="btnDelete" title="Удалить выделенное (Del)"><i class="fa-regular fa-trash-can"></i></button>
+                <button class="tool-btn btn-delete" id="btnClear" title="Ластик: провести по объектам. Shift+клик — очистить всё"><i class="fa-solid fa-broom"></i></button>
+            </div>
         </div>
-        <!-- Действия -->
-        <div class="toolbar-group">
-            <button class="tool-btn" id="btnUndo" title="Отменить (Ctrl+Z)"><i class="fa-solid fa-arrow-rotate-left"></i></button>
-            <button class="tool-btn" id="btnRedo" title="Повторить (Ctrl+Y)"><i class="fa-solid fa-arrow-rotate-right"></i></button>
-            <button class="tool-btn btn-delete" id="btnDelete" title="Удалить выделенное (Del)"><i class="fa-regular fa-trash-can"></i></button>
-            <button class="tool-btn btn-delete" id="btnClear" title="Ластик: провести по объектам. Shift+клик — очистить всё"><i class="fa-solid fa-broom"></i></button>
-            <button class="tool-btn btn-save" id="btnSavePng" title="Скачать PNG"><i class="fa-solid fa-download"></i></button>
-            <button class="tool-btn" id="btnSaveJson" title="Сохранить упражнение (файл)"><i class="fa-regular fa-floppy-disk"></i></button>
-            <button class="tool-btn" id="btnLoadJson" title="Открыть упражнение"><i class="fa-regular fa-folder-open"></i></button>
-            <input type="file" id="jsonInput" accept=".json" style="display:none">
+
+        <div class="vsep"></div>
+
+        <div class="tool-group-block">
+            <div class="group-cap">Файл</div>
+            <div class="toolbar-group">
+                <button class="tool-btn" id="btnLoadJson" title="Открыть упражнение"><i class="fa-regular fa-folder-open"></i></button>
+                <button class="tool-btn" id="btnSaveJson" title="Сохранить упражнение (файл)"><i class="fa-regular fa-floppy-disk"></i></button>
+                <button class="tool-btn btn-primary" id="btnSavePng" title="Скачать PNG"><i class="fa-solid fa-download"></i><span>PNG</span></button>
+                <input type="file" id="jsonInput" accept=".json" style="display:none">
+            </div>
         </div>
     </div>
 </div>
@@ -392,7 +715,8 @@ function fitCanvas() {
     const wrapStyle = getComputedStyle(wrap);
     const padX = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight);
     const padY = parseFloat(wrapStyle.paddingTop) + parseFloat(wrapStyle.paddingBottom);
-    const s = Math.max(0.2, Math.min((wrap.clientWidth - padX) / d.w, (wrap.clientHeight - padY) / d.h));
+    const fitFactor = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rink-fit')) || 1;
+    const s = Math.max(0.2, Math.min((wrap.clientWidth - padX) / d.w, (wrap.clientHeight - padY) / d.h) * fitFactor);
     canvas.setDimensions({ width: Math.round(d.w * s), height: Math.round(d.h * s) });
     canvas.setZoom(s);
     const r = Math.round(90 * s) + 'px';
@@ -484,10 +808,36 @@ function setColor(c) {
     canvas.freeDrawingBrush.color = c;
     document.querySelectorAll('.color-swatch').forEach(s =>
         s.classList.toggle('active', s.dataset.color === c));
+    const dot = document.getElementById('activeColorDot');
+    if (dot) dot.style.background = c;
 }
 document.querySelectorAll('.color-swatch').forEach(s =>
-    s.addEventListener('click', () => setColor(s.dataset.color)));
+    s.addEventListener('click', () => { setColor(s.dataset.color); closeToolMenus(); }));
 document.getElementById('colorPicker').addEventListener('input', e => setColor(e.target.value));
+
+function closeToolMenus(except = null) {
+    document.querySelectorAll('.toolbar-combo.open').forEach(wrap => {
+        if (wrap !== except) wrap.classList.remove('open');
+    });
+}
+function toggleToolMenu(wrap) {
+    const isOpen = wrap.classList.contains('open');
+    closeToolMenus(wrap);
+    wrap.classList.toggle('open', !isOpen);
+}
+document.getElementById('btnShapeMenu').addEventListener('click', e => {
+    e.stopPropagation();
+    toggleToolMenu(document.getElementById('shapeMenuWrap'));
+});
+document.getElementById('btnColorMenu').addEventListener('click', e => {
+    e.stopPropagation();
+    toggleToolMenu(document.getElementById('colorMenuWrap'));
+});
+document.querySelectorAll('.tool-popover').forEach(menu =>
+    menu.addEventListener('click', e => e.stopPropagation()));
+document.addEventListener('click', e => {
+    if (!e.target.closest('.toolbar-combo')) closeToolMenus();
+});
 
 // ================= ГЕОМЕТРИЯ ЛИНИЙ =================
 function resample(pts, step) {
@@ -852,15 +1202,46 @@ function addComponent(id, x, y, keepMode = false) {
     return created;
 }
 
-// клик по компоненту — режим "штампа": каждый клик по льду ставит новый объект;
-// drag&drop — разовое размещение в точке сброса
+const STAMP_COMPONENTS = new Set(['cone', 'puck', 'pucks', 'stick', 'stickPuck', 'barrierH', 'barrierV', 'stand']);
+const COMPONENT_LABELS = {
+    mF1: 'Форвард 1',
+    mF2: 'Форвард 2',
+    mF3: 'Форвард 3',
+    mD1: 'Защитник 1',
+    mD2: 'Защитник 2',
+    mC: 'Тренер',
+    mG: 'Вратарь',
+    oppX: 'Соперник',
+    mNum: 'Игрок с номером',
+    barrierH: 'Борт',
+    barrierV: 'Борт верт.',
+    stand: 'Стойка',
+    stickPuck: 'Шайба + клюшка',
+    pole: 'Шест',
+    stick: 'Клюшка',
+    tire: 'Покрышка',
+    cone: 'Конус',
+    puck: 'Шайба',
+    pucks: 'Горка шайб',
+    net: 'Ворота'
+};
+
+// stamp включается только для серийного инвентаря; остальные компоненты по клику добавляются разово.
+// drag&drop всегда остаётся разовым размещением в точке сброса.
 document.querySelectorAll('.comp-item').forEach(el => {
+    const id = el.dataset.comp;
+    el.dataset.label = COMPONENT_LABELS[id] || el.title || '';
+    el.classList.toggle('stampable', STAMP_COMPONENTS.has(id));
     el.addEventListener('click', () => {
-        const id = el.dataset.comp;
-        if (currentMode === 'place' && currentComponent === id) {
-            setMode('select'); // повторный клик по тому же элементу выключает штамп
+        if (STAMP_COMPONENTS.has(id)) {
+            if (currentMode === 'place' && currentComponent === id) {
+                setMode('select'); // повторный клик по тому же элементу выключает штамп
+            } else {
+                setMode('place', null, id);
+            }
         } else {
-            setMode('place', null, id);
+            const p = dropPos();
+            addComponent(id, p.x, p.y);
         }
     });
     el.addEventListener('dragstart', e => {
@@ -892,14 +1273,17 @@ function addToBoard(obj) {
     canvas.renderAll();
 }
 document.getElementById('btnAddText').addEventListener('click', () => {
+    closeToolMenus();
     const p = dropPos();
     addToBoard(new fabric.IText('Текст', { left: p.x, top: p.y, originX: 'center', originY: 'center', fontSize: 22, fontFamily: 'Arial', fill: currentColor }));
 });
 document.getElementById('btnAddZone').addEventListener('click', () => {
+    closeToolMenus();
     const p = dropPos();
     addToBoard(new fabric.Rect({ left: p.x, top: p.y, width: 120, height: 90, fill: hexA(currentColor, 0.15), stroke: currentColor, strokeWidth: 1.5, strokeDashArray: [6, 5], originX: 'center', originY: 'center', customType: 'zone' }));
 });
 document.getElementById('btnAddEllipse').addEventListener('click', () => {
+    closeToolMenus();
     const p = dropPos();
     addToBoard(new fabric.Ellipse({ left: p.x, top: p.y, rx: 70, ry: 45, fill: hexA(currentColor, 0.15), stroke: currentColor, strokeWidth: 1.5, strokeDashArray: [6, 5], originX: 'center', originY: 'center', customType: 'zone' }));
 });
@@ -908,7 +1292,7 @@ function hexA(hex, a) {
     return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
-document.getElementById('btnAddImage').addEventListener('click', () => document.getElementById('imgInput').click());
+document.getElementById('btnAddImage').addEventListener('click', () => { closeToolMenus(); document.getElementById('imgInput').click(); });
 document.getElementById('imgInput').addEventListener('change', e => {
     const f = e.target.files[0];
     if (!f) return;
@@ -957,7 +1341,10 @@ document.getElementById('btnClear').addEventListener('click', e => {
 window.addEventListener('keydown', e => {
     const ao = canvas.getActiveObject();
     const editing = ao && ao.isEditing;
-    if (e.key === 'Escape' && currentMode !== 'select') { setMode('select'); return; }
+    if (e.key === 'Escape') {
+        closeToolMenus();
+        if (currentMode !== 'select') { setMode('select'); return; }
+    }
     if ((e.key === 'Delete' || e.key === 'Backspace') && !editing &&
         !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
         e.preventDefault(); deleteSelected();
