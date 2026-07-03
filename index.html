@@ -26,7 +26,7 @@
         --panel-border: #262a32;
         --text-soft: #8b8f98;
         --text-main: #e4e4e7;
-        --rink-fit: 0.965;
+        --rink-fit: 0.995;
     }
     * { box-sizing: border-box; }
     html, body { height: 100%; }
@@ -48,22 +48,29 @@
         grid-row: 1;
         position: relative;
         flex: 0 0 auto;
-        padding: 13px 18px 8px;
-        text-align: center;
+        min-height: 54px;
+        padding: 7px 18px 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         background: #16181d;
     }
     .app-title {
+        position: absolute;
+        left: 18px;
+        top: 50%;
         display: inline-block;
         margin: 0;
         font-family: 'Russo One', 'Black Ops One', Impact, Haettenschweiler, 'Arial Black', sans-serif;
-        font-size: 34px;
+        font-size: 24px;
         line-height: 0.95;
         font-weight: 400;
         letter-spacing: 0.7px;
         color: #f4f8ff;
         text-transform: none;
-        transform: scaleX(1.08);
-        transform-origin: center;
+        transform: translateY(-50%) scaleX(1.06);
+        transform-origin: left center;
+        white-space: nowrap;
         text-shadow: 0 2px 0 #0d182b, 0 8px 18px rgba(0,0,0,0.48);
     }
     .app-title .lite-accent { color: #60a5fa; }
@@ -73,7 +80,7 @@
         justify-content: center;
         align-items: center;
         gap: 54px;
-        margin-top: 9px;
+        margin-top: 0;
     }
     .mainnav button {
         height: 38px;
@@ -135,9 +142,19 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        padding: 18px 22px 14px;
+        padding: 10px 18px 10px;
         min-height: 0;
         position: relative;
+    }
+    body[data-view="field"] .trainings-view { display: none; }
+    body[data-view="trainings"] {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+    body[data-view="trainings"] .canvas-wrapper,
+    body[data-view="trainings"] .bottom-toolbar,
+    body[data-view="trainings"] .side-panel {
+        display: none;
     }
     .canvas-container-wrapper {
         box-shadow: 0 24px 60px -12px rgba(0,0,0,0.72);
@@ -339,8 +356,7 @@
         align-items: center;
         justify-items: center;
     }
-    .training-editor,
-    .training-list-panel {
+    .training-editor {
         position: absolute;
         left: 22px;
         z-index: 25;
@@ -350,8 +366,7 @@
         box-shadow: 0 18px 40px rgba(0,0,0,.45);
         color: var(--text-main);
     }
-    .training-editor[hidden],
-    .training-list-panel[hidden] {
+    .training-editor[hidden] {
         display: none;
     }
     .training-editor {
@@ -396,80 +411,270 @@
         color: #fff;
     }
     .training-editor-btn.save:hover { background: #3b82f6; }
-    .training-list-panel {
-        top: 16px;
-        width: min(340px, calc(100% - 44px));
-        max-height: min(520px, calc(100% - 32px));
-        padding: 12px;
-        overflow: auto;
-    }
-    .training-list-head {
+    .stamp-hint {
+        position: absolute;
+        left: 50%;
+        bottom: 16px;
+        transform: translateX(-50%);
+        z-index: 24;
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        margin-bottom: 10px;
+        gap: 10px;
+        max-width: calc(100% - 40px);
+        padding: 7px 8px 7px 14px;
+        border: 1px solid #34383f;
+        border-radius: 999px;
+        background: rgba(34,37,44,.96);
+        color: #f4f4f5;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 18px 40px rgba(0,0,0,.38);
+        white-space: nowrap;
     }
-    .training-list-title {
-        font-size: 12px;
-        font-weight: 800;
-        letter-spacing: .1em;
-        text-transform: uppercase;
+    .stamp-hint[hidden] { display: none; }
+    .stamp-hint i { color: #f97316; }
+    .stamp-hint-key {
+        min-width: 30px;
+        padding: 2px 7px;
+        border: 1px solid #34383f;
+        border-bottom-width: 2px;
+        border-radius: 6px;
+        background: #22252c;
         color: #aeb4bf;
+        font-size: 10px;
+        text-align: center;
     }
-    .training-close {
-        width: 28px;
-        height: 28px;
+    .trainings-view {
+        grid-column: 1 / -1;
+        grid-row: 2 / 4;
+        min-height: 0;
+        overflow-y: auto;
+        background: #16181d;
+        padding: 18px 24px 34px;
+    }
+    .trainings-shell {
+        width: min(920px, 100%);
+        margin: 0 auto;
+    }
+    .training-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 18px;
+    }
+    .training-seg {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        padding: 2px;
+        border: 1px solid #262a32;
+        border-radius: 9px;
+        background: #1c1f26;
+    }
+    .training-seg button {
+        height: 30px;
         border: 0;
         border-radius: 7px;
         background: transparent;
-        color: #9ca0a8;
-        cursor: pointer;
-    }
-    .training-close:hover { background: #2a2e36; color: #fff; }
-    .training-empty {
-        margin: 8px 0 2px;
-        color: var(--text-soft);
-        font-size: 13px;
-        line-height: 1.35;
-    }
-    .training-list {
-        display: grid;
-        gap: 8px;
-    }
-    .training-card {
-        display: grid;
-        grid-template-columns: 84px 1fr;
-        gap: 9px;
+        color: #8b8f98;
+        padding: 0 11px;
+        display: flex;
         align-items: center;
-        width: 100%;
-        border: 1px solid #2c313a;
-        border-radius: 9px;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .training-seg button.on {
+        background: #262a32;
+        color: #fff;
+    }
+    .training-seg button:disabled {
+        cursor: default;
+        opacity: .55;
+    }
+    .training-seg-count {
+        min-width: 20px;
+        padding: 1px 6px;
+        border-radius: 999px;
+        background: #3b82f6;
+        color: #fff;
+        font-size: 10px;
+        line-height: 1.4;
+        text-align: center;
+    }
+    .training-search {
+        position: relative;
+        flex: 0 0 auto;
+    }
+    .training-search i {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #565b64;
+        font-size: 12px;
+    }
+    .training-search input {
+        width: 150px;
+        height: 30px;
+        border: 1px solid #262a32;
+        border-radius: 8px;
         background: #1c1f26;
+        color: #e4e4e7;
+        padding: 0 9px 0 29px;
+        outline: none;
+        font-size: 12px;
+    }
+    .training-search input:focus { border-color: #3b82f6; }
+    .training-action {
+        height: 30px;
+        border: 1px solid #262a32;
+        border-radius: 8px;
+        background: #1c1f26;
+        color: #b6bac2;
+        padding: 0 11px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: background .15s, color .15s, border-color .15s;
+    }
+    .training-action:hover {
+        background: #262a32;
+        color: #fff;
+    }
+    .training-action.primary {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #fff;
+        box-shadow: 0 4px 14px -4px rgba(37,99,235,.65);
+    }
+    .training-action.primary:hover { background: #3b82f6; }
+    .training-day {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 22px 0 10px;
+        color: #565b64;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+    .training-day::after {
+        content: "";
+        flex: 1 1 auto;
+        height: 1px;
+        background: #262a32;
+    }
+    .training-row {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 154px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 14px 10px 10px;
+        border: 1px solid #262a32;
+        border-radius: 12px;
+        background: #1a1d23;
         color: inherit;
-        padding: 7px;
         text-align: left;
+        transition: border-color .15s, background .15s, transform .15s, box-shadow .15s;
         cursor: pointer;
     }
-    .training-card:hover { border-color: #3b82f6; background: #20242c; }
-    .training-thumb {
-        width: 84px;
-        aspect-ratio: 1000 / 470;
-        border-radius: 6px;
+    .training-row:hover {
+        border-color: #3b82f6;
+        background: #1c2027;
+        transform: translateY(-1px);
+        box-shadow: 0 8px 24px -8px rgba(0,0,0,.55);
+    }
+    .training-row-thumb {
+        width: 154px;
+        aspect-ratio: 1000 / 540;
+        border-radius: 9px;
         background: #fff;
         object-fit: cover;
+        box-shadow: 0 0 0 1px rgba(255,255,255,.08);
     }
-    .training-card-name {
-        font-size: 13px;
+    .training-row-title {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 0;
+        margin-bottom: 8px;
+    }
+    .training-row-title h3 {
+        margin: 0;
+        color: #fff;
+        font-size: 15px;
         font-weight: 800;
-        color: #f4f4f5;
         line-height: 1.2;
-        margin-bottom: 4px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
-    .training-card-time {
-        font-size: 11px;
+    .training-chip {
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: rgba(59,130,246,.14);
+        color: #60a5fa;
+        padding: 2px 9px;
+        font-size: 10.5px;
+        font-weight: 700;
+    }
+    .training-meta {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
         color: #8b8f98;
-        line-height: 1.25;
+        font-size: 12px;
+    }
+    .training-meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .training-row-actions {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        flex: 0 0 auto;
+    }
+    .training-icon-btn {
+        width: 32px;
+        height: 32px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: #8b8f98;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background .15s, color .15s;
+    }
+    .training-icon-btn:hover {
+        background: #262a32;
+        color: #e4e4e7;
+    }
+    .training-icon-btn.danger:hover {
+        background: rgba(248,113,113,.12);
+        color: #f87171;
+    }
+    .training-page-empty {
+        margin: 52px auto 0;
+        max-width: 360px;
+        color: #8b8f98;
+        text-align: center;
+        font-size: 14px;
+        line-height: 1.45;
     }
 
     /* ==== Interactive Components (правая панель) ==== */
@@ -577,13 +782,13 @@
 
     @media (max-width: 1300px), (max-height: 760px) {
         body { grid-template-columns: minmax(0, 1fr) 158px; }
-        .app-header { padding: 10px 12px 7px; }
-        .app-title { font-size: 30px; line-height: 0.95; }
-        .mainnav { height: 32px; gap: 44px; margin-top: 7px; }
+        .app-header { min-height: 48px; padding: 6px 12px 5px; }
+        .app-title { left: 14px; font-size: 21px; line-height: 0.95; transform: translateY(-50%) scaleX(1.04); }
+        .mainnav { height: 32px; gap: 44px; margin-top: 0; }
         .mainnav button { height: 32px; font-size: 12.5px; }
         .mainnav:hover button { font-size: 11.5px; }
         .mainnav button:hover { font-size: 17px; }
-        .canvas-wrapper { padding: 14px 18px 10px; }
+        .canvas-wrapper { padding: 8px 14px 8px; }
         .bottom-toolbar { min-height: 62px; padding: 5px 10px; }
         .vsep { margin: 0 8px; }
         .tool-btn { width: 34px; height: 34px; border-radius: 8px; font-size: 1em; }
@@ -599,18 +804,21 @@
         .comp-item { min-height: 58px; border-radius: 8px; }
         .marker-icon { width: 26px; height: 26px; font-size: 10px; }
         .asset-icon-img { max-width: 28px; max-height: 28px; }
+        .trainings-view { padding: 16px 18px 30px; }
+        .training-row { grid-template-columns: 142px minmax(0, 1fr) auto; gap: 13px; }
+        .training-row-thumb { width: 142px; }
     }
 
     @media (max-width: 980px), (max-height: 620px) {
         body { grid-template-columns: minmax(0, 1fr) 142px; }
-        .app-header { padding: 8px 10px 5px; }
-        .app-title { font-size: 24px; transform: scaleX(1.03); }
-        .mainnav { gap: 30px; height: 26px; margin-top: 5px; }
+        .app-header { min-height: 42px; padding: 5px 10px 4px; }
+        .app-title { left: 11px; font-size: 17px; transform: translateY(-50%) scaleX(1.02); }
+        .mainnav { gap: 30px; height: 26px; margin-top: 0; }
         .mainnav button { height: 26px; font-size: 10.5px; }
         .mainnav:hover button { font-size: 10px; }
         .mainnav button:hover { font-size: 14px; }
         .version-help { top: 8px; right: 10px; width: 25px; height: 25px; }
-        .canvas-wrapper { padding: 10px 12px 8px; }
+        .canvas-wrapper { padding: 7px 9px 7px; }
         .bottom-toolbar { min-height: 56px; padding: 4px 8px; }
         .tool-btn { width: 30px; height: 30px; font-size: 0.9em; }
         .tool-btn.btn-primary,
@@ -618,7 +826,6 @@
         .btn-record { min-width: 128px; padding: 0 10px; font-size: 10.5px; }
         .training-start-block { margin-right: 10px; padding-right: 10px; }
         .training-editor { left: 12px; width: min(330px, calc(100% - 24px)); grid-template-columns: 1fr; }
-        .training-list-panel { left: 12px; width: min(320px, calc(100% - 24px)); }
         .custom-icon { width: 20px; height: 20px; }
         .group-cap { font-size: 7.5px; }
         .vsep { margin: 0 5px; }
@@ -629,42 +836,69 @@
         .comp-label { font-size: 8.5px; }
         .marker-icon { width: 24px; height: 24px; font-size: 9.5px; }
         .asset-icon-img { max-width: 25px; max-height: 25px; }
+        .stamp-hint { bottom: 10px; font-size: 11px; padding: 6px 7px 6px 11px; }
+        .trainings-view { padding: 12px 12px 24px; }
+        .training-row { grid-template-columns: 112px minmax(0, 1fr); gap: 11px; }
+        .training-row-thumb { width: 112px; }
+        .training-row-actions { grid-column: 1 / -1; justify-content: flex-end; }
+        .training-meta { gap: 8px; font-size: 11px; }
     }
 </style>
 </head>
-<body>
+<body data-view="field">
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.4.0" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.0" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.4.0</span>
+            <span class="version-tooltip">v0.5.0</span>
         </button>
         <h1 class="app-title">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
-            <button type="button" class="current" id="btnTrainingList">Тренировки</button>
-            <button type="button">Игра</button>
-            <button type="button">Статистика</button>
+            <button type="button" id="btnNavTrainings" data-view-target="trainings">Тренировки</button>
+            <button type="button" class="current" id="btnNavField" data-view-target="field">Поле</button>
+            <button type="button" id="btnNavStats">Статистика</button>
         </nav>
     </header>
     <div class="canvas-wrapper">
         <div class="canvas-container-wrapper" id="canvasBox">
             <canvas id="rink-canvas" width="1000" height="470"></canvas>
         </div>
+        <div class="stamp-hint" id="stampHint" hidden>
+            <i class="fa-solid fa-stamp"></i>
+            <span id="stampHintText">Конус: кликайте по льду</span>
+            <span class="stamp-hint-key">Esc</span>
+        </div>
         <div class="training-editor" id="trainingEditor" hidden>
             <input class="training-name" id="trainingNameInput" type="text" maxlength="60" placeholder="Название тренировки">
             <button class="training-editor-btn save" id="btnSaveTraining" type="button">Сохранить тренировку</button>
             <button class="training-editor-btn" id="btnCancelTraining" type="button">Отменить</button>
         </div>
-        <div class="training-list-panel" id="trainingListPanel" hidden>
-            <div class="training-list-head">
-                <div class="training-list-title">Тренировки</div>
-                <button class="training-close" id="btnCloseTrainingList" type="button" title="Закрыть"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <div class="training-list" id="trainingList"></div>
-            <p class="training-empty" id="trainingEmpty">Пока нет сохранённых тренировок.</p>
-        </div>
     </div>
+
+    <main class="trainings-view" id="trainingsView">
+        <div class="trainings-shell">
+            <div class="training-controls">
+                <div class="training-seg" aria-label="Типы тренировок">
+                    <button type="button" class="on"><i class="fa-regular fa-bookmark"></i>Сохранённые <span class="training-seg-count" id="trainingSavedCount">0</span></button>
+                    <button type="button" disabled><i class="fa-regular fa-calendar"></i>Запланированные <span class="training-seg-count">0</span></button>
+                    <button type="button" disabled><i class="fa-solid fa-layer-group"></i>Блоки <span class="training-seg-count">0</span></button>
+                </div>
+                <label class="training-search" for="trainingSearch">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input id="trainingSearch" type="search" placeholder="Поиск...">
+                </label>
+                <button class="training-action" id="btnTrainingSort" type="button" title="Сначала новые">
+                    <i class="fa-solid fa-arrow-down-wide-short"></i>Сначала новые
+                </button>
+                <button class="training-action primary" id="btnNewExercise" type="button">
+                    <i class="fa-solid fa-plus"></i>Новое упражнение
+                </button>
+            </div>
+            <div id="trainingGroups"></div>
+            <p class="training-page-empty" id="trainingPageEmpty">Пока нет сохранённых тренировок. Запишите упражнение на поле, и скрин появится здесь.</p>
+        </div>
+    </main>
 
     <div class="bottom-toolbar">
         <div class="tool-group-block training-start-block">
@@ -740,8 +974,8 @@
             <div class="toolbar-group">
                 <button class="tool-btn" id="btnUndo" title="Отменить (Ctrl+Z)"><i class="fa-solid fa-arrow-rotate-left"></i></button>
                 <button class="tool-btn" id="btnRedo" title="Повторить (Ctrl+Y)"><i class="fa-solid fa-arrow-rotate-right"></i></button>
-                <button class="tool-btn btn-delete" id="btnDelete" title="Удалить выделенное (Del)"><i class="fa-regular fa-trash-can"></i></button>
-                <button class="tool-btn btn-delete" id="btnClear" title="Ластик: провести по объектам. Shift+клик — очистить всё"><i class="fa-solid fa-broom"></i></button>
+                <button class="tool-btn btn-delete" id="btnDelete" title="Удалить всё"><i class="fa-regular fa-trash-can"></i></button>
+                <button class="tool-btn btn-delete" id="btnClear" title="Ластик: провести по объектам"><i class="fa-solid fa-broom"></i></button>
             </div>
         </div>
 
@@ -899,6 +1133,9 @@ let numCounter = 1;
 const TRAINING_STORAGE_KEY = 'benchreview-lite.trainings.v1';
 let trainingDraft = null;
 let trainingRecords = [];
+let activeTrainingTitle = '';
+let activeTrainingCreatedAt = '';
+let trainingSortDesc = true;
 
 canvas.freeDrawingBrush.color = currentColor;
 canvas.freeDrawingBrush.width = 3;
@@ -930,6 +1167,21 @@ function fitCanvas() {
 window.addEventListener('resize', fitCanvas);
 if (window.visualViewport) window.visualViewport.addEventListener('resize', fitCanvas);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCanvas);
+
+function setView(view) {
+    if (trainingDraft && view !== 'field') return;
+    document.body.dataset.view = view;
+    document.querySelectorAll('.mainnav button[data-view-target]').forEach(btn =>
+        btn.classList.toggle('current', btn.dataset.viewTarget === view));
+    if (view === 'trainings') {
+        renderTrainingList();
+    } else {
+        requestAnimationFrame(fitCanvas);
+    }
+}
+document.getElementById('btnNavTrainings').addEventListener('click', () => setView('trainings'));
+document.getElementById('btnNavField').addEventListener('click', () => setView('field'));
+document.getElementById('btnNavStats').addEventListener('click', () => setView('field'));
 
 // ================= ИСТОРИЯ =================
 let stateHistory = [], historyIndex = -1, suspendHistory = true, saveTimer = null;
@@ -1001,6 +1253,18 @@ function updateToolbarUI() {
         const c = document.querySelector(`.comp-item[data-comp="${currentComponent}"]`);
         if (c) c.classList.add('active');
     }
+    updateStampHint();
+}
+function updateStampHint() {
+    const hint = document.getElementById('stampHint');
+    const text = document.getElementById('stampHintText');
+    const stampable = typeof STAMP_COMPONENTS !== 'undefined' && STAMP_COMPONENTS.has(currentComponent);
+    if (!hint || !text || currentMode !== 'place' || !currentComponent || !stampable) {
+        if (hint) hint.hidden = true;
+        return;
+    }
+    text.textContent = `${COMPONENT_LABELS[currentComponent] || 'Элемент'}: кликайте по льду`;
+    hint.hidden = false;
 }
 document.getElementById('btnSelectMode').addEventListener('click', () => setMode('select'));
 document.getElementById('btnFreeDraw').addEventListener('click', () => setMode('freedraw'));
@@ -1524,22 +1788,20 @@ function deleteSelected() {
         canvas.requestRenderAll();
     }
 }
-document.getElementById('btnDelete').addEventListener('click', deleteSelected);
-function clearBoard() {
+document.getElementById('btnDelete').addEventListener('click', () => clearBoard());
+function clearBoard(skipConfirm = false) {
     const objects = canvas.getObjects().filter(o => !o.__temp);
     if (!objects.length) return;
-    if (!confirm('Очистить всю доску?')) return;
+    if (!skipConfirm && !confirm('Удалить всё с поля?')) return;
     suspendHistory = true;
     objects.forEach(o => canvas.remove(o));
     suspendHistory = false;
+    activeTrainingTitle = '';
+    activeTrainingCreatedAt = '';
     snapshotNow();
     canvas.requestRenderAll();
 }
 document.getElementById('btnClear').addEventListener('click', e => {
-    if (e.shiftKey) {
-        clearBoard();
-        return;
-    }
     setMode(currentMode === 'erase' ? 'select' : 'erase');
 });
 window.addEventListener('keydown', e => {
@@ -1547,7 +1809,7 @@ window.addEventListener('keydown', e => {
     const editing = ao && ao.isEditing;
     if (e.key === 'Escape') {
         closeToolMenus();
-        if (!document.getElementById('trainingListPanel').hidden) setTrainingListVisible(false);
+        if (document.body.dataset.view === 'trainings') { setView('field'); return; }
         if (currentMode !== 'select') { setMode('select'); return; }
     }
     if ((e.key === 'Delete' || e.key === 'Backspace') && !editing &&
@@ -1574,14 +1836,86 @@ function downloadBlob(name, blob) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function safeFileStamp(prefix) {
+    const safePrefix = String(prefix || 'drill')
+        .trim()
+        .replace(/[\\/:*?"<>|]+/g, '-')
+        .replace(/\s+/g, '-')
+        .slice(0, 48) || 'drill';
     const stamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
-    return `${prefix}-${stamp}`;
+    return `${safePrefix}-${stamp}`;
 }
-function captureBoardDataUrl(format = 'png', baseMultiplier = 2, quality = 0.95) {
+function captureBoardCanvas(baseMultiplier = 2) {
     canvas.discardActiveObject();
     canvas.renderAll();
     const mult = baseMultiplier / canvas.getZoom();
-    return canvas.toDataURL({ format, quality, multiplier: mult });
+    if (typeof canvas.toCanvasElement === 'function') return canvas.toCanvasElement(mult);
+    const raw = document.createElement('canvas');
+    raw.width = Math.round(canvas.lowerCanvasEl.width * mult);
+    raw.height = Math.round(canvas.lowerCanvasEl.height * mult);
+    raw.getContext('2d').drawImage(canvas.lowerCanvasEl, 0, 0, raw.width, raw.height);
+    return raw;
+}
+function exportDateLabel(iso = new Date().toISOString()) {
+    return new Date(iso).toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+function currentExportMeta(titleOverride = null, dateOverride = null) {
+    const draftTitle = trainingDraft ? document.getElementById('trainingNameInput').value.trim() : '';
+    return {
+        title: titleOverride !== null ? titleOverride : (draftTitle || activeTrainingTitle || ''),
+        createdAt: dateOverride || activeTrainingCreatedAt || new Date().toISOString()
+    };
+}
+function ellipsizeText(ctx, text, maxWidth) {
+    if (!text || ctx.measureText(text).width <= maxWidth) return text || '';
+    let out = text;
+    while (out.length > 1 && ctx.measureText(out + '...').width > maxWidth) out = out.slice(0, -1);
+    return out.length > 1 ? out + '...' : '';
+}
+function captureBoardWithFooter(format = 'png', baseMultiplier = 2, quality = 0.95, meta = {}) {
+    const boardCanvas = captureBoardCanvas(baseMultiplier);
+    const footerH = Math.max(42, Math.round(58 * baseMultiplier));
+    const out = document.createElement('canvas');
+    out.width = boardCanvas.width;
+    out.height = boardCanvas.height + footerH;
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(boardCanvas, 0, 0);
+    ctx.fillStyle = '#16181d';
+    ctx.fillRect(0, boardCanvas.height, out.width, footerH);
+
+    const pad = Math.max(16, Math.round(24 * baseMultiplier));
+    const title = (meta.title || '').trim();
+    const date = exportDateLabel(meta.createdAt);
+    const titleSize = Math.max(14, Math.round(18 * baseMultiplier));
+    const metaSize = Math.max(11, Math.round(13 * baseMultiplier));
+    const yTitle = boardCanvas.height + Math.round(23 * baseMultiplier);
+    const yMeta = title ? boardCanvas.height + Math.round(44 * baseMultiplier) : boardCanvas.height + Math.round(35 * baseMultiplier);
+
+    if (title) {
+        ctx.fillStyle = '#f4f8ff';
+        ctx.font = `700 ${titleSize}px "Russo One", "Arial Black", Arial, sans-serif`;
+        ctx.fillText(ellipsizeText(ctx, title, out.width - pad * 2), pad, yTitle);
+    }
+    ctx.fillStyle = '#aeb4bf';
+    ctx.font = `600 ${metaSize}px "Segoe UI", Arial, sans-serif`;
+    const dateLabel = `Дата и время: ${date}`;
+    ctx.fillText(ellipsizeText(ctx, dateLabel, out.width - pad * 2), pad, yMeta);
+    return {
+        dataUrl: out.toDataURL(`image/${format}`, quality),
+        width: out.width,
+        height: out.height
+    };
+}
+function captureBoardDataUrl(format = 'png', baseMultiplier = 2, quality = 0.95) {
+    const boardCanvas = captureBoardCanvas(baseMultiplier);
+    return boardCanvas.toDataURL(`image/${format}`, quality);
 }
 function stringToBytes(str) {
     const out = new Uint8Array(str.length);
@@ -1620,16 +1954,16 @@ function buildPdfFromJpeg(dataUrl, imgW, imgH) {
     return new Blob([stringToBytes(chunks.join(''))], { type: 'application/pdf' });
 }
 document.getElementById('btnSavePng').addEventListener('click', () => {
-    download(`${safeFileStamp('drill')}.png`, captureBoardDataUrl('png', 2));
+    const shot = captureBoardWithFooter('png', 2, 0.95, currentExportMeta());
+    download(`${safeFileStamp(activeTrainingTitle || 'drill')}.png`, shot.dataUrl);
 });
 document.getElementById('btnSavePdf').addEventListener('click', () => {
     try {
         const baseMultiplier = 2;
-        const jpg = captureBoardDataUrl('jpeg', baseMultiplier, 0.94);
-        const d = designSize();
+        const shot = captureBoardWithFooter('jpeg', baseMultiplier, 0.94, currentExportMeta());
         downloadBlob(
-            `${safeFileStamp('drill')}.pdf`,
-            buildPdfFromJpeg(jpg, Math.round(d.w * baseMultiplier), Math.round(d.h * baseMultiplier))
+            `${safeFileStamp(activeTrainingTitle || 'drill')}.pdf`,
+            buildPdfFromJpeg(shot.dataUrl, shot.width, shot.height)
         );
     } catch (err) {
         alert('Не удалось сохранить PDF: ' + err.message);
@@ -1657,6 +1991,8 @@ document.getElementById('jsonInput').addEventListener('change', e => {
                     canvas.forEachObject(applyModeToObject);
                     suspendHistory = false;
                     stateHistory = []; historyIndex = -1; snapshotNow();
+                    activeTrainingTitle = '';
+                    activeTrainingCreatedAt = '';
                     setMode('select');
                 });
             });
@@ -1667,9 +2003,13 @@ document.getElementById('jsonInput').addEventListener('change', e => {
 });
 
 function trainingDateLabel(iso) {
-    return new Date(iso).toLocaleString('ru-RU', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit'
+    return exportDateLabel(iso);
+}
+function trainingDayLabel(iso) {
+    return new Date(iso).toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
     });
 }
 function loadTrainingRecords() {
@@ -1677,6 +2017,7 @@ function loadTrainingRecords() {
         const raw = localStorage.getItem(TRAINING_STORAGE_KEY);
         trainingRecords = raw ? JSON.parse(raw) : [];
         if (!Array.isArray(trainingRecords)) trainingRecords = [];
+        trainingRecords.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     } catch (_) {
         trainingRecords = [];
     }
@@ -1696,31 +2037,97 @@ function persistTrainingRecords() {
         }
     }
 }
-function renderTrainingList() {
-    const list = document.getElementById('trainingList');
-    const empty = document.getElementById('trainingEmpty');
-    list.innerHTML = '';
-    empty.hidden = trainingRecords.length > 0;
-    trainingRecords.forEach(record => {
-        const card = document.createElement('button');
-        card.type = 'button';
-        card.className = 'training-card';
-        card.dataset.id = record.id;
-        card.innerHTML = `
-            <img class="training-thumb" src="${record.screen}" alt="">
-            <span>
-                <span class="training-card-name"></span>
-                <span class="training-card-time">${trainingDateLabel(record.createdAt)}</span>
-            </span>`;
-        card.querySelector('.training-card-name').textContent = record.title || 'Тренировка';
-        card.addEventListener('click', () => loadTrainingRecord(record.id));
-        list.appendChild(card);
-    });
+function recordObjectCount(record) {
+    if (Number.isFinite(record.objectCount)) return record.objectCount;
+    const objects = record.canvas && Array.isArray(record.canvas.objects) ? record.canvas.objects : [];
+    return objects.filter(o => !o.__temp).length;
 }
-function setTrainingListVisible(visible) {
-    const panel = document.getElementById('trainingListPanel');
-    panel.hidden = !visible;
-    if (visible) renderTrainingList();
+function recordRinkLabel(record) {
+    return record.rinkMode === 'half' ? 'Половина поля' : 'Полное поле';
+}
+function recordScreenSize(record) {
+    return {
+        width: record.screenW || (record.rinkMode === 'half' ? 505 : 1000),
+        height: record.screenH || 528
+    };
+}
+function renderTrainingList() {
+    const groups = document.getElementById('trainingGroups');
+    const empty = document.getElementById('trainingPageEmpty');
+    const count = document.getElementById('trainingSavedCount');
+    const search = document.getElementById('trainingSearch');
+    if (!groups || !empty) return;
+
+    const q = (search ? search.value.trim().toLowerCase() : '');
+    const filtered = trainingRecords.filter(record => {
+        const hay = `${record.title || ''} ${trainingDateLabel(record.createdAt || new Date().toISOString())}`.toLowerCase();
+        return !q || hay.includes(q);
+    }).sort((a, b) => {
+        const da = new Date(a.createdAt || 0);
+        const db = new Date(b.createdAt || 0);
+        return trainingSortDesc ? db - da : da - db;
+    });
+
+    groups.innerHTML = '';
+    if (count) count.textContent = String(trainingRecords.length);
+    empty.hidden = filtered.length > 0;
+    empty.textContent = trainingRecords.length
+        ? 'Ничего не найдено. Попробуйте другой запрос.'
+        : 'Пока нет сохранённых тренировок. Запишите упражнение на поле, и скрин появится здесь.';
+
+    let currentDay = '';
+    filtered.forEach(record => {
+        const day = trainingDayLabel(record.createdAt || new Date().toISOString());
+        if (day !== currentDay) {
+            currentDay = day;
+            const dayEl = document.createElement('div');
+            dayEl.className = 'training-day';
+            dayEl.textContent = day;
+            groups.appendChild(dayEl);
+        }
+
+        const row = document.createElement('div');
+        row.className = 'training-row';
+        row.tabIndex = 0;
+        row.dataset.id = record.id;
+        row.innerHTML = `
+            <img class="training-row-thumb" alt="">
+            <div class="training-row-main">
+                <div class="training-row-title">
+                    <h3></h3>
+                    <span class="training-chip">Скрин</span>
+                </div>
+                <div class="training-meta">
+                    <span><i class="fa-regular fa-calendar"></i><b data-role="time"></b></span>
+                    <span><i class="fa-solid fa-shapes"></i><b data-role="objects"></b></span>
+                    <span><i class="fa-regular fa-square"></i><b data-role="rink"></b></span>
+                </div>
+            </div>
+            <div class="training-row-actions">
+                <button class="training-icon-btn" type="button" data-action="open" title="Открыть на поле"><i class="fa-solid fa-pen"></i></button>
+                <button class="training-icon-btn" type="button" data-action="duplicate" title="Дублировать"><i class="fa-regular fa-copy"></i></button>
+                <button class="training-icon-btn" type="button" data-action="screen" title="Скачать скрин"><i class="fa-solid fa-download"></i></button>
+                <button class="training-icon-btn" type="button" data-action="pdf" title="Скачать PDF"><i class="fa-regular fa-file-lines"></i></button>
+                <button class="training-icon-btn danger" type="button" data-action="delete" title="Удалить"><i class="fa-regular fa-trash-can"></i></button>
+            </div>`;
+
+        row.querySelector('.training-row-thumb').src = record.screen || '';
+        row.querySelector('h3').textContent = record.title || 'Тренировка';
+        row.querySelector('[data-role="time"]').textContent = trainingDateLabel(record.createdAt || new Date().toISOString());
+        row.querySelector('[data-role="objects"]').textContent = `${recordObjectCount(record)} объектов`;
+        row.querySelector('[data-role="rink"]').textContent = recordRinkLabel(record);
+        row.addEventListener('click', () => loadTrainingRecord(record.id));
+        row.addEventListener('keydown', e => {
+            if (e.key === 'Enter') loadTrainingRecord(record.id);
+        });
+        row.querySelectorAll('.training-icon-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                handleTrainingAction(record.id, btn.dataset.action);
+            });
+        });
+        groups.appendChild(row);
+    });
 }
 function beginTrainingEdit() {
     if (trainingDraft) {
@@ -1728,7 +2135,7 @@ function beginTrainingEdit() {
         return;
     }
     closeToolMenus();
-    setTrainingListVisible(false);
+    setView('field');
     if (currentMode !== 'select') setMode('select');
     trainingDraft = {
         rinkMode,
@@ -1770,26 +2177,35 @@ function saveTrainingEdit() {
     if (!trainingDraft) return;
     const input = document.getElementById('trainingNameInput');
     const createdAt = new Date().toISOString();
+    const title = input.value.trim() || 'Тренировка';
+    const screen = captureBoardWithFooter('jpeg', 1, 0.86, { title, createdAt });
     const record = {
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        title: input.value.trim() || 'Тренировка',
+        title,
         createdAt,
-        screen: captureBoardDataUrl('jpeg', 0.95, 0.86),
+        screen: screen.dataUrl,
+        screenW: screen.width,
+        screenH: screen.height,
         rinkMode,
         numCounter,
+        objectCount: canvas.getObjects().filter(o => !o.__temp).length,
         canvas: canvas.toJSON(EXTRA_PROPS)
     };
     trainingRecords.unshift(record);
     persistTrainingRecords();
     renderTrainingList();
+    activeTrainingTitle = title;
+    activeTrainingCreatedAt = createdAt;
     endTrainingEdit();
-    setTrainingListVisible(true);
+    setView('trainings');
 }
 function loadTrainingRecord(id) {
     const record = trainingRecords.find(item => item.id === id);
     if (!record || !record.canvas || trainingDraft) return;
     rinkMode = record.rinkMode || 'full';
     numCounter = record.numCounter || 1;
+    activeTrainingTitle = record.title || '';
+    activeTrainingCreatedAt = record.createdAt || '';
     suspendHistory = true;
     canvas.loadFromJSON(record.canvas, () => {
         setBackground(() => {
@@ -1800,18 +2216,78 @@ function loadTrainingRecord(id) {
             historyIndex = -1;
             snapshotNow();
             setMode('select');
-            setTrainingListVisible(false);
+            setView('field');
         });
     });
+}
+function downloadTrainingScreen(record) {
+    if (!record || !record.screen) return;
+    download(`${safeFileStamp(record.title || 'training')}.jpg`, record.screen);
+}
+function downloadTrainingPdf(record) {
+    if (!record || !record.screen) return;
+    try {
+        const size = recordScreenSize(record);
+        downloadBlob(
+            `${safeFileStamp(record.title || 'training')}.pdf`,
+            buildPdfFromJpeg(record.screen, size.width, size.height)
+        );
+    } catch (err) {
+        alert('Не удалось сохранить PDF: ' + err.message);
+    }
+}
+function duplicateTrainingRecord(id) {
+    const record = trainingRecords.find(item => item.id === id);
+    if (!record) return;
+    const createdAt = new Date().toISOString();
+    trainingRecords.unshift(Object.assign({}, record, {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        title: `${record.title || 'Тренировка'} копия`,
+        createdAt
+    }));
+    persistTrainingRecords();
+    renderTrainingList();
+}
+function deleteTrainingRecord(id) {
+    const record = trainingRecords.find(item => item.id === id);
+    if (!record) return;
+    if (!confirm(`Удалить тренировку "${record.title || 'Тренировка'}"?`)) return;
+    trainingRecords = trainingRecords.filter(item => item.id !== id);
+    persistTrainingRecords();
+    renderTrainingList();
+}
+function handleTrainingAction(id, action) {
+    const record = trainingRecords.find(item => item.id === id);
+    if (!record) return;
+    if (action === 'open') loadTrainingRecord(id);
+    if (action === 'duplicate') duplicateTrainingRecord(id);
+    if (action === 'screen') downloadTrainingScreen(record);
+    if (action === 'pdf') downloadTrainingPdf(record);
+    if (action === 'delete') deleteTrainingRecord(id);
+}
+function startNewExercise() {
+    setView('field');
+    const hasObjects = canvas.getObjects().some(o => !o.__temp);
+    if (hasObjects && !confirm('Очистить поле для нового упражнения?')) return;
+    if (hasObjects) clearBoard(true);
+    activeTrainingTitle = '';
+    activeTrainingCreatedAt = '';
+}
+function toggleTrainingSort() {
+    trainingSortDesc = !trainingSortDesc;
+    const btn = document.getElementById('btnTrainingSort');
+    btn.innerHTML = trainingSortDesc
+        ? '<i class="fa-solid fa-arrow-down-wide-short"></i>Сначала новые'
+        : '<i class="fa-solid fa-arrow-up-wide-short"></i>Сначала старые';
+    btn.title = trainingSortDesc ? 'Сначала новые' : 'Сначала старые';
+    renderTrainingList();
 }
 document.getElementById('btnStartTraining').addEventListener('click', beginTrainingEdit);
 document.getElementById('btnSaveTraining').addEventListener('click', saveTrainingEdit);
 document.getElementById('btnCancelTraining').addEventListener('click', cancelTrainingEdit);
-document.getElementById('btnTrainingList').addEventListener('click', () => {
-    if (trainingDraft) return;
-    setTrainingListVisible(document.getElementById('trainingListPanel').hidden);
-});
-document.getElementById('btnCloseTrainingList').addEventListener('click', () => setTrainingListVisible(false));
+document.getElementById('btnNewExercise').addEventListener('click', startNewExercise);
+document.getElementById('btnTrainingSort').addEventListener('click', toggleTrainingSort);
+document.getElementById('trainingSearch').addEventListener('input', renderTrainingList);
 
 document.getElementById('btnRink').addEventListener('click', () => {
     rinkMode = (rinkMode === 'full') ? 'half' : 'full';
