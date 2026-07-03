@@ -358,23 +358,24 @@
     }
     .training-editor {
         position: absolute;
-        left: 22px;
+        left: 50%;
         z-index: 25;
         border: 1px solid #34383f;
         border-radius: 10px;
         background: rgba(34,37,44,.96);
         box-shadow: 0 18px 40px rgba(0,0,0,.45);
         color: var(--text-main);
+        transform: translateX(-50%);
     }
     .training-editor[hidden] {
         display: none;
     }
     .training-editor {
-        top: 16px;
-        width: min(360px, calc(100% - 44px));
+        top: calc(50% + 110px);
+        width: min(640px, calc(100% - 48px));
         padding: 10px;
         display: grid;
-        grid-template-columns: 1fr auto auto;
+        grid-template-columns: minmax(280px, 1fr) auto auto;
         gap: 8px;
         align-items: center;
     }
@@ -411,6 +412,16 @@
         color: #fff;
     }
     .training-editor-btn.save:hover { background: #3b82f6; }
+    .training-editor-btn.cancel {
+        background: #451a1a;
+        border-color: #7f1d1d;
+        color: #fecaca;
+    }
+    .training-editor-btn.cancel:hover {
+        background: #991b1b;
+        border-color: #ef4444;
+        color: #fff;
+    }
     .stamp-hint {
         position: absolute;
         left: 50%;
@@ -758,6 +769,17 @@
         text-align: left;
         font-size: 10px;
     }
+    .comp-item[data-comp="barrierH"] { order: 10; }
+    .comp-item[data-comp="barrierV"] { order: 11; }
+    .comp-item[data-comp="stand"] { order: 12; }
+    .comp-item[data-comp="pole"] { order: 13; }
+    .comp-item[data-comp="stickPuck"] { order: 14; }
+    .comp-item[data-comp="net"] { order: 15; }
+    .comp-item[data-comp="stick"] { order: 16; }
+    .comp-item[data-comp="tire"] { order: 17; }
+    .comp-item[data-comp="cone"] { order: 18; }
+    .comp-item[data-comp="puck"] { order: 19; }
+    .comp-item[data-comp="pucks"] { order: 20; }
     .comp-wide {
         grid-column: span 2;
         min-height: 42px;
@@ -825,7 +847,7 @@
         .tool-btn.btn-export { width: auto; min-width: 58px; padding: 0 9px; }
         .btn-record { min-width: 128px; padding: 0 10px; font-size: 10.5px; }
         .training-start-block { margin-right: 10px; padding-right: 10px; }
-        .training-editor { left: 12px; width: min(330px, calc(100% - 24px)); grid-template-columns: 1fr; }
+        .training-editor { top: calc(50% + 78px); width: min(420px, calc(100% - 24px)); grid-template-columns: 1fr; }
         .custom-icon { width: 20px; height: 20px; }
         .group-cap { font-size: 7.5px; }
         .vsep { margin: 0 5px; }
@@ -872,7 +894,7 @@
         <div class="training-editor" id="trainingEditor" hidden>
             <input class="training-name" id="trainingNameInput" type="text" maxlength="60" placeholder="Название тренировки">
             <button class="training-editor-btn save" id="btnSaveTraining" type="button">Сохранить тренировку</button>
-            <button class="training-editor-btn" id="btnCancelTraining" type="button">Отменить</button>
+            <button class="training-editor-btn cancel" id="btnCancelTraining" type="button">Отменить</button>
         </div>
     </div>
 
