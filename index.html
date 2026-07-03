@@ -232,6 +232,62 @@
         text-align: center;
         user-select: none;
     }
+    .group-cap.with-plus {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+    }
+    .line-label-toggle {
+        position: relative;
+        width: 17px;
+        height: 17px;
+        border: 1px solid #34383f;
+        border-radius: 50%;
+        background: #1c1f26;
+        color: #9ca0a8;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        font-size: 13px;
+        line-height: 1;
+        font-weight: 900;
+        cursor: pointer;
+        transform: translateY(-1px);
+        transition: background .15s, border-color .15s, color .15s;
+    }
+    .line-label-toggle:hover,
+    .line-label-toggle.active {
+        background: rgba(37,99,235,.2);
+        border-color: #3b82f6;
+        color: #60a5fa;
+    }
+    .line-label-toggle::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 7px);
+        transform: translateX(-50%) translateY(3px);
+        padding: 5px 8px;
+        border-radius: 7px;
+        border: 1px solid #34383f;
+        background: #22252c;
+        color: #e4e4e7;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: none;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        box-shadow: 0 12px 24px rgba(0,0,0,.35);
+        transition: opacity .15s, transform .15s;
+    }
+    .line-label-toggle:hover::after {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
     .toolbar-group {
         display: flex;
         gap: 2px;
@@ -622,6 +678,32 @@
         box-shadow: 0 4px 14px -4px rgba(37,99,235,.65);
     }
     .training-action.primary:hover { background: #3b82f6; }
+    .training-action:disabled,
+    .training-action:disabled:hover,
+    .training-block-select:disabled {
+        opacity: .48;
+        cursor: default;
+        background: #1c1f26;
+        color: #6f747d;
+        border-color: #262a32;
+        box-shadow: none;
+    }
+    .training-block-select {
+        width: 150px;
+        height: 30px;
+        border: 1px solid #262a32;
+        border-radius: 8px;
+        background: #1c1f26;
+        color: #d4d4d8;
+        padding: 0 28px 0 10px;
+        font-size: 12px;
+        font-weight: 700;
+        outline: none;
+    }
+    .training-block-select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59,130,246,.16);
+    }
     .training-day {
         display: flex;
         align-items: center;
@@ -642,7 +724,7 @@
     .training-row {
         width: 100%;
         display: grid;
-        grid-template-columns: 154px minmax(0, 1fr) auto;
+        grid-template-columns: 32px 154px minmax(0, 1fr) auto;
         align-items: center;
         gap: 16px;
         padding: 10px 14px 10px 10px;
@@ -654,6 +736,9 @@
         transition: border-color .15s, background .15s, transform .15s, box-shadow .15s;
         cursor: pointer;
     }
+    .training-row.block-row {
+        grid-template-columns: 154px minmax(0, 1fr) auto;
+    }
     .training-row:hover {
         border-color: #3b82f6;
         background: #1c2027;
@@ -664,6 +749,32 @@
         border-color: #3b82f6;
         box-shadow: 0 0 0 1px #3b82f6;
         background: #1b2230;
+    }
+    .training-row.selected-for-block {
+        border-color: rgba(96,165,250,.68);
+        background: #1b2230;
+    }
+    .training-select-box {
+        width: 26px;
+        height: 26px;
+        border: 1px solid #34383f;
+        border-radius: 8px;
+        background: #181b21;
+        color: transparent;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background .15s, border-color .15s, color .15s;
+    }
+    .training-select-box:hover {
+        border-color: #3b82f6;
+        background: #22252c;
+    }
+    .training-select-box.on {
+        background: #2563eb;
+        border-color: #3b82f6;
+        color: #fff;
     }
     .training-row-thumb {
         width: 154px;
@@ -1015,7 +1126,8 @@
         .marker-icon { width: 26px; height: 26px; font-size: 10px; }
         .asset-icon-img { max-width: 28px; max-height: 28px; }
         .trainings-view { padding: 16px 18px 30px; }
-        .training-row { grid-template-columns: 142px minmax(0, 1fr) auto; gap: 13px; }
+        .training-row { grid-template-columns: 30px 142px minmax(0, 1fr) auto; gap: 13px; }
+        .training-row.block-row { grid-template-columns: 142px minmax(0, 1fr) auto; }
         .training-row-thumb,
         .training-row-block-icon { width: 142px; }
     }
@@ -1051,7 +1163,8 @@
         .asset-icon-img { max-width: 25px; max-height: 25px; }
         .stamp-hint { bottom: 10px; font-size: 11px; padding: 6px 7px 6px 11px; }
         .trainings-view { padding: 12px 12px 24px; }
-        .training-row { grid-template-columns: 112px minmax(0, 1fr); gap: 11px; }
+        .training-row { grid-template-columns: 30px 112px minmax(0, 1fr); gap: 11px; }
+        .training-row.block-row { grid-template-columns: 112px minmax(0, 1fr); }
         .training-row-thumb,
         .training-row-block-icon { width: 112px; }
         .training-row-actions { grid-column: 1 / -1; justify-content: flex-end; }
@@ -1063,9 +1176,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.2" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.3" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.5.2</span>
+            <span class="version-tooltip">v0.5.3</span>
         </button>
         <h1 class="app-title">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -1113,6 +1226,10 @@
                     <button class="training-action block" id="btnCreateBlock" type="button">
                         <i class="fa-solid fa-layer-group"></i>Создать блок
                     </button>
+                    <select class="training-block-select" id="trainingBlockSelect" aria-label="Блок для выбранных тренировок"></select>
+                    <button class="training-action block" id="btnAddSelectedToBlock" type="button" disabled>
+                        <i class="fa-solid fa-plus"></i>В блок
+                    </button>
                     <button class="training-action primary" id="btnNewExercise" type="button">
                         <i class="fa-solid fa-plus"></i>Новое упражнение
                     </button>
@@ -1134,7 +1251,10 @@
         </div>
 
         <div class="tool-group-block">
-            <div class="group-cap">Катание</div>
+            <div class="group-cap with-plus">
+                <span>Катание</span>
+                <button class="line-label-toggle" id="btnLineLabels" type="button" data-tooltip="с подписями" aria-label="Линии с подписями">+</button>
+            </div>
             <div class="toolbar-group">
                 <button class="tool-btn line-tool" data-type="skate"    title="Катание без шайбы"><i class="custom-icon icon-skate"></i></button>
                 <button class="tool-btn line-tool" data-type="backward" title="Катание спиной вперёд"><i class="custom-icon icon-back"></i></button>
@@ -1379,8 +1499,18 @@ let activeTrainingId = '';
 let activeTrainingTitle = '';
 let activeTrainingCreatedAt = '';
 let trainingSortDesc = true;
+let selectedTrainingIds = new Set();
+let lineLabelsEnabled = false;
 let confirmResolve = null;
 let confirmPreviousFocus = null;
+const LINE_LABELS = {
+    skate: 'без шайбы',
+    backward: 'спиной',
+    puck: 'с шайбой',
+    pass: 'ПАС',
+    shot: 'Бросок',
+    stop: 'СТОП'
+};
 
 canvas.freeDrawingBrush.color = currentColor;
 canvas.freeDrawingBrush.width = 3;
@@ -1593,6 +1723,11 @@ document.getElementById('btnSelectMode').addEventListener('click', () => setMode
 document.getElementById('btnFreeDraw').addEventListener('click', () => setMode('freedraw'));
 document.querySelectorAll('.line-tool').forEach(b =>
     b.addEventListener('click', e => setMode('line', e.currentTarget.dataset.type)));
+document.getElementById('btnLineLabels').addEventListener('click', e => {
+    e.stopPropagation();
+    lineLabelsEnabled = !lineLabelsEnabled;
+    e.currentTarget.classList.toggle('active', lineLabelsEnabled);
+});
 
 function setColor(c) {
     currentColor = c;
@@ -1724,6 +1859,61 @@ function stopBars(pt, dir, color) {
     return bars;
 }
 
+function pointAlongPath(pts, ratio) {
+    const total = pathLen(pts);
+    if (!total) return null;
+    const target = total * Math.max(0, Math.min(1, ratio));
+    let acc = 0;
+    for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1], b = pts[i];
+        const seg = Math.hypot(b.x - a.x, b.y - a.y);
+        if (acc + seg >= target) {
+            const t = seg ? (target - acc) / seg : 0;
+            return {
+                point: { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t },
+                dir: { x: b.x - a.x, y: b.y - a.y }
+            };
+        }
+        acc += seg;
+    }
+    return {
+        point: pts[pts.length - 1],
+        dir: { x: pts[pts.length - 1].x - pts[pts.length - 2].x, y: pts[pts.length - 1].y - pts[pts.length - 2].y }
+    };
+}
+
+function makeLineLabel(pts, type, color) {
+    const text = LINE_LABELS[type];
+    if (!text) return null;
+    const ratio = type === 'stop' ? 0.88 : (type === 'shot' ? 0.58 : 0.52);
+    const at = pointAlongPath(pts, ratio);
+    if (!at) return null;
+    const len = Math.hypot(at.dir.x, at.dir.y) || 1;
+    let nx = -at.dir.y / len, ny = at.dir.x / len;
+    if (ny > 0) { nx = -nx; ny = -ny; }
+    const offset = type === 'stop' ? 24 : 19;
+    let angle = Math.atan2(at.dir.y, at.dir.x) * 180 / Math.PI;
+    if (angle > 90 || angle < -90) angle += 180;
+    return new fabric.Text(text, {
+        left: at.point.x + nx * offset,
+        top: at.point.y + ny * offset,
+        originX: 'center',
+        originY: 'center',
+        angle,
+        fill: color,
+        stroke: '#ffffff',
+        strokeWidth: 3,
+        paintFirst: 'stroke',
+        fontSize: 17,
+        fontWeight: 700,
+        fontFamily: 'Segoe UI, Arial, sans-serif',
+        selectable: false,
+        evented: false,
+        objectCaching: false,
+        customType: 'line-label'
+    });
+}
+
 function addStyledLine(rawPts, type, color) {
     color = color || currentColor;
     if (!rawPts || rawPts.length < 2) return null;
@@ -1771,6 +1961,10 @@ function addStyledLine(rawPts, type, color) {
         default:
             items.push(ptsToPath(pts, color));
             items.push(arrowHead(endPt, dir, color));
+    }
+    if (lineLabelsEnabled) {
+        const label = makeLineLabel(pts, type, color);
+        if (label) items.push(label);
     }
     const g = new fabric.Group(items, { customType: 'line-' + type });
     g.selectable = (currentMode === 'select'); g.evented = (currentMode === 'select');
@@ -2412,6 +2606,45 @@ function updateTrainingModeControls() {
     if (plannedCount) plannedCount.textContent = '0';
     if (blocksCount) blocksCount.textContent = String(trainingBlocks.length);
 }
+function pruneSelectedTrainingIds() {
+    const knownIds = new Set(trainingRecords.map(record => record.id));
+    selectedTrainingIds.forEach(id => {
+        if (!knownIds.has(id)) selectedTrainingIds.delete(id);
+    });
+}
+function updateBlockAddControls() {
+    pruneSelectedTrainingIds();
+    const select = document.getElementById('trainingBlockSelect');
+    const btn = document.getElementById('btnAddSelectedToBlock');
+    if (!select || !btn) return;
+    const isSavedMode = trainingMode === 'saved';
+    select.hidden = !isSavedMode;
+    btn.hidden = !isSavedMode;
+
+    const previous = select.value;
+    select.innerHTML = '';
+    if (trainingBlocks.length) {
+        trainingBlocks.forEach(block => {
+            const option = document.createElement('option');
+            option.value = block.id;
+            option.textContent = block.title || 'Блок тренировок';
+            select.appendChild(option);
+        });
+        if (trainingBlocks.some(block => block.id === previous)) select.value = previous;
+    } else {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Нет блоков';
+        select.appendChild(option);
+    }
+
+    const selectedCount = selectedTrainingIds.size;
+    select.disabled = !isSavedMode || !trainingBlocks.length;
+    btn.disabled = !isSavedMode || !trainingBlocks.length || !selectedCount;
+    btn.innerHTML = selectedCount
+        ? `<i class="fa-solid fa-plus"></i>В блок (${selectedCount})`
+        : '<i class="fa-solid fa-plus"></i>В блок';
+}
 function setTrainingMode(mode) {
     trainingMode = mode;
     renderTrainingList();
@@ -2449,7 +2682,7 @@ function renderTrainingBlocks(groups, empty, q) {
 
         const exerciseIds = Array.isArray(block.exerciseIds) ? block.exerciseIds : [];
         const row = document.createElement('div');
-        row.className = 'training-row';
+        row.className = 'training-row block-row';
         row.tabIndex = 0;
         row.dataset.id = block.id;
         row.innerHTML = `
@@ -2494,10 +2727,12 @@ function renderTrainingList() {
     if (trainingMode === 'planned') {
         empty.hidden = false;
         empty.textContent = 'Запланированные тренировки пока пустые. Сначала сохраняем упражнения, потом соберём календарь.';
+        updateBlockAddControls();
         return;
     }
     if (trainingMode === 'blocks') {
         renderTrainingBlocks(groups, empty, q);
+        updateBlockAddControls();
         return;
     }
 
@@ -2517,10 +2752,12 @@ function renderTrainingList() {
         currentDay = appendTrainingDay(groups, day, currentDay);
 
         const row = document.createElement('div');
-        row.className = `training-row${record.id === activeTrainingId ? ' selected' : ''}`;
+        const marked = selectedTrainingIds.has(record.id);
+        row.className = `training-row${record.id === activeTrainingId ? ' selected' : ''}${marked ? ' selected-for-block' : ''}`;
         row.tabIndex = 0;
         row.dataset.id = record.id;
         row.innerHTML = `
+            <button class="training-select-box${marked ? ' on' : ''}" type="button" data-action="toggleSelect" title="Отметить для блока" aria-label="Отметить для блока"><i class="fa-solid fa-check"></i></button>
             <img class="training-row-thumb" alt="">
             <div class="training-row-main">
                 <div class="training-row-title">
@@ -2550,7 +2787,7 @@ function renderTrainingList() {
         row.addEventListener('keydown', e => {
             if (e.key === 'Enter') loadTrainingRecord(record.id);
         });
-        row.querySelectorAll('.training-icon-btn').forEach(btn => {
+        row.querySelectorAll('.training-icon-btn, .training-select-box').forEach(btn => {
             btn.addEventListener('click', e => {
                 e.stopPropagation();
                 handleTrainingAction(record.id, btn.dataset.action);
@@ -2558,6 +2795,32 @@ function renderTrainingList() {
         });
         groups.appendChild(row);
     });
+    updateBlockAddControls();
+}
+function toggleTrainingSelection(id) {
+    if (selectedTrainingIds.has(id)) {
+        selectedTrainingIds.delete(id);
+    } else {
+        selectedTrainingIds.add(id);
+    }
+    renderTrainingList();
+}
+function addSelectedTrainingsToBlock() {
+    const select = document.getElementById('trainingBlockSelect');
+    if (!select || !select.value || !selectedTrainingIds.size) return;
+    const block = trainingBlocks.find(item => item.id === select.value);
+    if (!block) return;
+    const existing = new Set(Array.isArray(block.exerciseIds) ? block.exerciseIds : []);
+    const knownIds = new Set(trainingRecords.map(record => record.id));
+    selectedTrainingIds.forEach(id => {
+        if (knownIds.has(id)) existing.add(id);
+    });
+    block.exerciseIds = Array.from(existing);
+    block.updatedAt = new Date().toISOString();
+    persistTrainingBlocks();
+    selectedTrainingIds.clear();
+    trainingMode = 'blocks';
+    renderTrainingList();
 }
 function beginTrainingEdit() {
     if (trainingDraft) {
@@ -2692,12 +2955,28 @@ async function deleteTrainingRecord(id) {
         activeTrainingCreatedAt = '';
         updateFieldReturn();
     }
+    selectedTrainingIds.delete(id);
+    let blocksChanged = false;
+    trainingBlocks.forEach(block => {
+        const exerciseIds = Array.isArray(block.exerciseIds) ? block.exerciseIds : [];
+        const nextIds = exerciseIds.filter(exerciseId => exerciseId !== id);
+        if (nextIds.length !== exerciseIds.length) {
+            block.exerciseIds = nextIds;
+            block.updatedAt = new Date().toISOString();
+            blocksChanged = true;
+        }
+    });
+    if (blocksChanged) persistTrainingBlocks();
     persistTrainingRecords();
     renderTrainingList();
 }
 async function handleTrainingAction(id, action) {
     const record = trainingRecords.find(item => item.id === id);
     if (!record) return;
+    if (action === 'toggleSelect') {
+        toggleTrainingSelection(id);
+        return;
+    }
     if (action === 'open') loadTrainingRecord(id);
     if (action === 'duplicate') duplicateTrainingRecord(id);
     if (action === 'screen') downloadTrainingScreen(record);
@@ -2770,6 +3049,8 @@ document.getElementById('btnSaveTraining').addEventListener('click', saveTrainin
 document.getElementById('btnCancelTraining').addEventListener('click', cancelTrainingEdit);
 document.getElementById('btnNewExercise').addEventListener('click', startNewExercise);
 document.getElementById('btnCreateBlock').addEventListener('click', createTrainingBlock);
+document.getElementById('btnAddSelectedToBlock').addEventListener('click', addSelectedTrainingsToBlock);
+document.getElementById('trainingBlockSelect').addEventListener('change', updateBlockAddControls);
 document.getElementById('btnTrainingSort').addEventListener('click', toggleTrainingSort);
 document.getElementById('trainingSearch').addEventListener('input', renderTrainingList);
 document.querySelectorAll('[data-training-mode]').forEach(btn => {
