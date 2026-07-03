@@ -48,8 +48,8 @@
         grid-row: 1;
         position: relative;
         flex: 0 0 auto;
-        min-height: 54px;
-        padding: 7px 18px 6px;
+        min-height: 60px;
+        padding: 0 22px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -57,13 +57,13 @@
     }
     .app-title {
         position: absolute;
-        left: 18px;
-        top: 50%;
+        left: 24px;
+        top: calc(50% + 1px);
         display: inline-block;
         margin: 0;
         font-family: 'Russo One', 'Black Ops One', Impact, Haettenschweiler, 'Arial Black', sans-serif;
-        font-size: 24px;
-        line-height: 0.95;
+        font-size: 29px;
+        line-height: 1;
         font-weight: 400;
         letter-spacing: 0.7px;
         color: #f4f8ff;
@@ -81,6 +81,7 @@
         align-items: center;
         gap: 54px;
         margin-top: 0;
+        transform: translateY(1px);
     }
     .mainnav button {
         height: 38px;
@@ -93,6 +94,9 @@
         line-height: 1;
         letter-spacing: 0.06em;
         text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         transition: color .2s, transform .2s, font-size .2s;
     }
     .mainnav button.current { color: var(--text-main); }
@@ -146,6 +150,33 @@
         min-height: 0;
         position: relative;
     }
+    .field-return {
+        position: absolute;
+        top: 16px;
+        left: 18px;
+        z-index: 23;
+        height: 34px;
+        border: 1px solid #34383f;
+        border-radius: 999px;
+        background: rgba(28,31,38,.92);
+        color: #d9e5f8;
+        padding: 0 13px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        box-shadow: 0 14px 30px rgba(0,0,0,.32);
+        transition: background .15s, border-color .15s, color .15s, transform .15s;
+    }
+    .field-return:hover {
+        background: #2563eb;
+        border-color: #3b82f6;
+        color: #fff;
+        transform: translateY(-1px);
+    }
+    .field-return[hidden] { display: none; }
     body[data-view="field"] .trainings-view { display: none; }
     body[data-view="trainings"] {
         grid-template-columns: minmax(0, 1fr);
@@ -475,6 +506,14 @@
         gap: 8px;
         margin-bottom: 18px;
     }
+    .training-actions-row {
+        flex: 0 0 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 2px;
+    }
     .training-seg {
         display: inline-flex;
         align-items: center;
@@ -497,6 +536,8 @@
         font-size: 12px;
         font-weight: 600;
         white-space: nowrap;
+        cursor: pointer;
+        transition: background .15s, color .15s;
     }
     .training-seg button.on {
         background: #262a32;
@@ -560,6 +601,14 @@
         background: #262a32;
         color: #fff;
     }
+    .training-action.block {
+        border-color: rgba(59,130,246,.45);
+        color: #60a5fa;
+    }
+    .training-action.block:hover {
+        border-color: #3b82f6;
+        color: #fff;
+    }
     .training-action.primary {
         background: #2563eb;
         border-color: #2563eb;
@@ -605,6 +654,11 @@
         transform: translateY(-1px);
         box-shadow: 0 8px 24px -8px rgba(0,0,0,.55);
     }
+    .training-row.selected {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 1px #3b82f6;
+        background: #1b2230;
+    }
     .training-row-thumb {
         width: 154px;
         aspect-ratio: 1000 / 540;
@@ -612,6 +666,18 @@
         background: #fff;
         object-fit: cover;
         box-shadow: 0 0 0 1px rgba(255,255,255,.08);
+    }
+    .training-row-block-icon {
+        width: 154px;
+        aspect-ratio: 1000 / 540;
+        border-radius: 9px;
+        border: 1px solid rgba(96,165,250,.35);
+        background: linear-gradient(135deg, #111827, #1d2b44);
+        color: #60a5fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
     }
     .training-row-title {
         display: flex;
@@ -804,8 +870,8 @@
 
     @media (max-width: 1300px), (max-height: 760px) {
         body { grid-template-columns: minmax(0, 1fr) 158px; }
-        .app-header { min-height: 48px; padding: 6px 12px 5px; }
-        .app-title { left: 14px; font-size: 21px; line-height: 0.95; transform: translateY(-50%) scaleX(1.04); }
+        .app-header { min-height: 52px; padding: 0 14px; }
+        .app-title { left: 18px; font-size: 24px; line-height: 1; transform: translateY(-50%) scaleX(1.04); }
         .mainnav { height: 32px; gap: 44px; margin-top: 0; }
         .mainnav button { height: 32px; font-size: 12.5px; }
         .mainnav:hover button { font-size: 11.5px; }
@@ -828,19 +894,21 @@
         .asset-icon-img { max-width: 28px; max-height: 28px; }
         .trainings-view { padding: 16px 18px 30px; }
         .training-row { grid-template-columns: 142px minmax(0, 1fr) auto; gap: 13px; }
-        .training-row-thumb { width: 142px; }
+        .training-row-thumb,
+        .training-row-block-icon { width: 142px; }
     }
 
     @media (max-width: 980px), (max-height: 620px) {
         body { grid-template-columns: minmax(0, 1fr) 142px; }
-        .app-header { min-height: 42px; padding: 5px 10px 4px; }
-        .app-title { left: 11px; font-size: 17px; transform: translateY(-50%) scaleX(1.02); }
+        .app-header { min-height: 46px; padding: 0 10px; }
+        .app-title { left: 12px; font-size: 19px; transform: translateY(-50%) scaleX(1.02); }
         .mainnav { gap: 30px; height: 26px; margin-top: 0; }
         .mainnav button { height: 26px; font-size: 10.5px; }
         .mainnav:hover button { font-size: 10px; }
         .mainnav button:hover { font-size: 14px; }
         .version-help { top: 8px; right: 10px; width: 25px; height: 25px; }
         .canvas-wrapper { padding: 7px 9px 7px; }
+        .field-return { top: 10px; left: 10px; height: 30px; padding: 0 10px; font-size: 11px; }
         .bottom-toolbar { min-height: 56px; padding: 4px 8px; }
         .tool-btn { width: 30px; height: 30px; font-size: 0.9em; }
         .tool-btn.btn-primary,
@@ -861,7 +929,8 @@
         .stamp-hint { bottom: 10px; font-size: 11px; padding: 6px 7px 6px 11px; }
         .trainings-view { padding: 12px 12px 24px; }
         .training-row { grid-template-columns: 112px minmax(0, 1fr); gap: 11px; }
-        .training-row-thumb { width: 112px; }
+        .training-row-thumb,
+        .training-row-block-icon { width: 112px; }
         .training-row-actions { grid-column: 1 / -1; justify-content: flex-end; }
         .training-meta { gap: 8px; font-size: 11px; }
     }
@@ -871,9 +940,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.0" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.1" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.5.0</span>
+            <span class="version-tooltip">v0.5.1</span>
         </button>
         <h1 class="app-title">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -886,6 +955,10 @@
         <div class="canvas-container-wrapper" id="canvasBox">
             <canvas id="rink-canvas" width="1000" height="470"></canvas>
         </div>
+        <button class="field-return" id="btnBackToTrainings" type="button" hidden>
+            <i class="fa-solid fa-arrow-left"></i>
+            К тренировкам
+        </button>
         <div class="stamp-hint" id="stampHint" hidden>
             <i class="fa-solid fa-stamp"></i>
             <span id="stampHintText">Конус: кликайте по льду</span>
@@ -902,9 +975,9 @@
         <div class="trainings-shell">
             <div class="training-controls">
                 <div class="training-seg" aria-label="Типы тренировок">
-                    <button type="button" class="on"><i class="fa-regular fa-bookmark"></i>Сохранённые <span class="training-seg-count" id="trainingSavedCount">0</span></button>
-                    <button type="button" disabled><i class="fa-regular fa-calendar"></i>Запланированные <span class="training-seg-count">0</span></button>
-                    <button type="button" disabled><i class="fa-solid fa-layer-group"></i>Блоки <span class="training-seg-count">0</span></button>
+                    <button type="button" class="on" data-training-mode="saved"><i class="fa-regular fa-bookmark"></i>Сохранённые <span class="training-seg-count" id="trainingSavedCount">0</span></button>
+                    <button type="button" data-training-mode="planned"><i class="fa-regular fa-calendar"></i>Запланированные <span class="training-seg-count" id="trainingPlannedCount">0</span></button>
+                    <button type="button" data-training-mode="blocks"><i class="fa-solid fa-layer-group"></i>Блоки <span class="training-seg-count" id="trainingBlocksCount">0</span></button>
                 </div>
                 <label class="training-search" for="trainingSearch">
                     <i class="fa-solid fa-magnifying-glass"></i>
@@ -913,9 +986,14 @@
                 <button class="training-action" id="btnTrainingSort" type="button" title="Сначала новые">
                     <i class="fa-solid fa-arrow-down-wide-short"></i>Сначала новые
                 </button>
-                <button class="training-action primary" id="btnNewExercise" type="button">
-                    <i class="fa-solid fa-plus"></i>Новое упражнение
-                </button>
+                <div class="training-actions-row">
+                    <button class="training-action block" id="btnCreateBlock" type="button">
+                        <i class="fa-solid fa-layer-group"></i>Создать блок
+                    </button>
+                    <button class="training-action primary" id="btnNewExercise" type="button">
+                        <i class="fa-solid fa-plus"></i>Новое упражнение
+                    </button>
+                </div>
             </div>
             <div id="trainingGroups"></div>
             <p class="training-page-empty" id="trainingPageEmpty">Пока нет сохранённых тренировок. Запишите упражнение на поле, и скрин появится здесь.</p>
@@ -1153,8 +1231,12 @@ let currentComponent = null;
 let currentColor = '#0056b3';
 let numCounter = 1;
 const TRAINING_STORAGE_KEY = 'benchreview-lite.trainings.v1';
+const BLOCK_STORAGE_KEY = 'benchreview-lite.blocks.v1';
 let trainingDraft = null;
 let trainingRecords = [];
+let trainingBlocks = [];
+let trainingMode = 'saved';
+let activeTrainingId = '';
 let activeTrainingTitle = '';
 let activeTrainingCreatedAt = '';
 let trainingSortDesc = true;
@@ -1200,10 +1282,17 @@ function setView(view) {
     } else {
         requestAnimationFrame(fitCanvas);
     }
+    updateFieldReturn();
 }
 document.getElementById('btnNavTrainings').addEventListener('click', () => setView('trainings'));
 document.getElementById('btnNavField').addEventListener('click', () => setView('field'));
 document.getElementById('btnNavStats').addEventListener('click', () => setView('field'));
+
+function updateFieldReturn() {
+    const btn = document.getElementById('btnBackToTrainings');
+    if (!btn) return;
+    btn.hidden = !(document.body.dataset.view === 'field' && activeTrainingId && !trainingDraft);
+}
 
 // ================= ИСТОРИЯ =================
 let stateHistory = [], historyIndex = -1, suspendHistory = true, saveTimer = null;
@@ -1818,8 +1907,10 @@ function clearBoard(skipConfirm = false) {
     suspendHistory = true;
     objects.forEach(o => canvas.remove(o));
     suspendHistory = false;
+    activeTrainingId = '';
     activeTrainingTitle = '';
     activeTrainingCreatedAt = '';
+    updateFieldReturn();
     snapshotNow();
     canvas.requestRenderAll();
 }
@@ -2013,8 +2104,10 @@ document.getElementById('jsonInput').addEventListener('change', e => {
                     canvas.forEachObject(applyModeToObject);
                     suspendHistory = false;
                     stateHistory = []; historyIndex = -1; snapshotNow();
+                    activeTrainingId = '';
                     activeTrainingTitle = '';
                     activeTrainingCreatedAt = '';
+                    updateFieldReturn();
                     setMode('select');
                 });
             });
@@ -2059,6 +2152,25 @@ function persistTrainingRecords() {
         }
     }
 }
+function loadTrainingBlocks() {
+    try {
+        const raw = localStorage.getItem(BLOCK_STORAGE_KEY);
+        trainingBlocks = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(trainingBlocks)) trainingBlocks = [];
+        trainingBlocks.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    } catch (_) {
+        trainingBlocks = [];
+    }
+}
+function persistTrainingBlocks() {
+    const trimmed = trainingBlocks.slice(0, 24);
+    try {
+        localStorage.setItem(BLOCK_STORAGE_KEY, JSON.stringify(trimmed));
+        trainingBlocks = trimmed;
+    } catch (_) {
+        trainingBlocks = [];
+    }
+}
 function recordObjectCount(record) {
     if (Number.isFinite(record.objectCount)) return record.objectCount;
     const objects = record.canvas && Array.isArray(record.canvas.objects) ? record.canvas.objects : [];
@@ -2073,25 +2185,111 @@ function recordScreenSize(record) {
         height: record.screenH || 528
     };
 }
-function renderTrainingList() {
-    const groups = document.getElementById('trainingGroups');
-    const empty = document.getElementById('trainingPageEmpty');
-    const count = document.getElementById('trainingSavedCount');
-    const search = document.getElementById('trainingSearch');
-    if (!groups || !empty) return;
-
-    const q = (search ? search.value.trim().toLowerCase() : '');
-    const filtered = trainingRecords.filter(record => {
-        const hay = `${record.title || ''} ${trainingDateLabel(record.createdAt || new Date().toISOString())}`.toLowerCase();
-        return !q || hay.includes(q);
-    }).sort((a, b) => {
+function updateTrainingModeControls() {
+    document.querySelectorAll('[data-training-mode]').forEach(btn => {
+        btn.classList.toggle('on', btn.dataset.trainingMode === trainingMode);
+    });
+    const savedCount = document.getElementById('trainingSavedCount');
+    const plannedCount = document.getElementById('trainingPlannedCount');
+    const blocksCount = document.getElementById('trainingBlocksCount');
+    if (savedCount) savedCount.textContent = String(trainingRecords.length);
+    if (plannedCount) plannedCount.textContent = '0';
+    if (blocksCount) blocksCount.textContent = String(trainingBlocks.length);
+}
+function setTrainingMode(mode) {
+    trainingMode = mode;
+    renderTrainingList();
+}
+function sortedByDate(items) {
+    return items.slice().sort((a, b) => {
         const da = new Date(a.createdAt || 0);
         const db = new Date(b.createdAt || 0);
         return trainingSortDesc ? db - da : da - db;
     });
+}
+function appendTrainingDay(groups, day, currentDay) {
+    if (day === currentDay) return currentDay;
+    const dayEl = document.createElement('div');
+    dayEl.className = 'training-day';
+    dayEl.textContent = day;
+    groups.appendChild(dayEl);
+    return day;
+}
+function renderTrainingBlocks(groups, empty, q) {
+    const filtered = sortedByDate(trainingBlocks.filter(block => {
+        const hay = `${block.title || ''} ${trainingDateLabel(block.createdAt || new Date().toISOString())}`.toLowerCase();
+        return !q || hay.includes(q);
+    }));
 
+    empty.hidden = filtered.length > 0;
+    empty.textContent = trainingBlocks.length
+        ? 'Ничего не найдено. Попробуйте другой запрос.'
+        : 'Блоков пока нет. Создайте блок, чтобы собрать упражнения в один план.';
+
+    let currentDay = '';
+    filtered.forEach(block => {
+        const day = trainingDayLabel(block.createdAt || new Date().toISOString());
+        currentDay = appendTrainingDay(groups, day, currentDay);
+
+        const exerciseIds = Array.isArray(block.exerciseIds) ? block.exerciseIds : [];
+        const row = document.createElement('div');
+        row.className = 'training-row';
+        row.tabIndex = 0;
+        row.dataset.id = block.id;
+        row.innerHTML = `
+            <div class="training-row-block-icon"><i class="fa-solid fa-layer-group"></i></div>
+            <div class="training-row-main">
+                <div class="training-row-title">
+                    <h3></h3>
+                    <span class="training-chip">Блок</span>
+                </div>
+                <div class="training-meta">
+                    <span><i class="fa-regular fa-calendar"></i><b data-role="time"></b></span>
+                    <span><i class="fa-solid fa-list-check"></i><b data-role="exercises"></b></span>
+                </div>
+            </div>
+            <div class="training-row-actions">
+                <button class="training-icon-btn" type="button" data-action="duplicate" title="Дублировать блок"><i class="fa-regular fa-copy"></i></button>
+                <button class="training-icon-btn danger" type="button" data-action="delete" title="Удалить блок"><i class="fa-regular fa-trash-can"></i></button>
+            </div>`;
+
+        row.querySelector('h3').textContent = block.title || 'Блок тренировок';
+        row.querySelector('[data-role="time"]').textContent = trainingDateLabel(block.createdAt || new Date().toISOString());
+        row.querySelector('[data-role="exercises"]').textContent = `${exerciseIds.length} упражнений`;
+        row.querySelectorAll('.training-icon-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                handleBlockAction(block.id, btn.dataset.action);
+            });
+        });
+        groups.appendChild(row);
+    });
+}
+function renderTrainingList() {
+    const groups = document.getElementById('trainingGroups');
+    const empty = document.getElementById('trainingPageEmpty');
+    const search = document.getElementById('trainingSearch');
+    if (!groups || !empty) return;
+
+    updateTrainingModeControls();
+    const q = (search ? search.value.trim().toLowerCase() : '');
     groups.innerHTML = '';
-    if (count) count.textContent = String(trainingRecords.length);
+
+    if (trainingMode === 'planned') {
+        empty.hidden = false;
+        empty.textContent = 'Запланированные тренировки пока пустые. Сначала сохраняем упражнения, потом соберём календарь.';
+        return;
+    }
+    if (trainingMode === 'blocks') {
+        renderTrainingBlocks(groups, empty, q);
+        return;
+    }
+
+    const filtered = sortedByDate(trainingRecords.filter(record => {
+        const hay = `${record.title || ''} ${trainingDateLabel(record.createdAt || new Date().toISOString())}`.toLowerCase();
+        return !q || hay.includes(q);
+    }));
+
     empty.hidden = filtered.length > 0;
     empty.textContent = trainingRecords.length
         ? 'Ничего не найдено. Попробуйте другой запрос.'
@@ -2100,16 +2298,10 @@ function renderTrainingList() {
     let currentDay = '';
     filtered.forEach(record => {
         const day = trainingDayLabel(record.createdAt || new Date().toISOString());
-        if (day !== currentDay) {
-            currentDay = day;
-            const dayEl = document.createElement('div');
-            dayEl.className = 'training-day';
-            dayEl.textContent = day;
-            groups.appendChild(dayEl);
-        }
+        currentDay = appendTrainingDay(groups, day, currentDay);
 
         const row = document.createElement('div');
-        row.className = 'training-row';
+        row.className = `training-row${record.id === activeTrainingId ? ' selected' : ''}`;
         row.tabIndex = 0;
         row.dataset.id = record.id;
         row.innerHTML = `
@@ -2216,6 +2408,7 @@ function saveTrainingEdit() {
     trainingRecords.unshift(record);
     persistTrainingRecords();
     renderTrainingList();
+    activeTrainingId = record.id;
     activeTrainingTitle = title;
     activeTrainingCreatedAt = createdAt;
     endTrainingEdit();
@@ -2226,6 +2419,7 @@ function loadTrainingRecord(id) {
     if (!record || !record.canvas || trainingDraft) return;
     rinkMode = record.rinkMode || 'full';
     numCounter = record.numCounter || 1;
+    activeTrainingId = record.id;
     activeTrainingTitle = record.title || '';
     activeTrainingCreatedAt = record.createdAt || '';
     suspendHistory = true;
@@ -2275,6 +2469,12 @@ function deleteTrainingRecord(id) {
     if (!record) return;
     if (!confirm(`Удалить тренировку "${record.title || 'Тренировка'}"?`)) return;
     trainingRecords = trainingRecords.filter(item => item.id !== id);
+    if (activeTrainingId === id) {
+        activeTrainingId = '';
+        activeTrainingTitle = '';
+        activeTrainingCreatedAt = '';
+        updateFieldReturn();
+    }
     persistTrainingRecords();
     renderTrainingList();
 }
@@ -2287,13 +2487,53 @@ function handleTrainingAction(id, action) {
     if (action === 'pdf') downloadTrainingPdf(record);
     if (action === 'delete') deleteTrainingRecord(id);
 }
+function createTrainingBlock() {
+    const title = prompt('Название блока', `Блок ${trainingDateLabel(new Date().toISOString())}`);
+    if (title === null) return;
+    const trimmed = title.trim() || 'Блок тренировок';
+    trainingBlocks.unshift({
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        title: trimmed,
+        createdAt: new Date().toISOString(),
+        exerciseIds: []
+    });
+    persistTrainingBlocks();
+    trainingMode = 'blocks';
+    renderTrainingList();
+}
+function duplicateTrainingBlock(id) {
+    const block = trainingBlocks.find(item => item.id === id);
+    if (!block) return;
+    trainingBlocks.unshift(Object.assign({}, block, {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        title: `${block.title || 'Блок тренировок'} копия`,
+        createdAt: new Date().toISOString(),
+        exerciseIds: Array.isArray(block.exerciseIds) ? block.exerciseIds.slice() : []
+    }));
+    persistTrainingBlocks();
+    renderTrainingList();
+}
+function deleteTrainingBlock(id) {
+    const block = trainingBlocks.find(item => item.id === id);
+    if (!block) return;
+    if (!confirm(`Удалить блок "${block.title || 'Блок тренировок'}"?`)) return;
+    trainingBlocks = trainingBlocks.filter(item => item.id !== id);
+    persistTrainingBlocks();
+    renderTrainingList();
+}
+function handleBlockAction(id, action) {
+    if (action === 'duplicate') duplicateTrainingBlock(id);
+    if (action === 'delete') deleteTrainingBlock(id);
+}
 function startNewExercise() {
     setView('field');
     const hasObjects = canvas.getObjects().some(o => !o.__temp);
     if (hasObjects && !confirm('Очистить поле для нового упражнения?')) return;
     if (hasObjects) clearBoard(true);
+    activeTrainingId = '';
     activeTrainingTitle = '';
     activeTrainingCreatedAt = '';
+    updateFieldReturn();
 }
 function toggleTrainingSort() {
     trainingSortDesc = !trainingSortDesc;
@@ -2308,8 +2548,13 @@ document.getElementById('btnStartTraining').addEventListener('click', beginTrain
 document.getElementById('btnSaveTraining').addEventListener('click', saveTrainingEdit);
 document.getElementById('btnCancelTraining').addEventListener('click', cancelTrainingEdit);
 document.getElementById('btnNewExercise').addEventListener('click', startNewExercise);
+document.getElementById('btnCreateBlock').addEventListener('click', createTrainingBlock);
 document.getElementById('btnTrainingSort').addEventListener('click', toggleTrainingSort);
 document.getElementById('trainingSearch').addEventListener('input', renderTrainingList);
+document.querySelectorAll('[data-training-mode]').forEach(btn => {
+    btn.addEventListener('click', () => setTrainingMode(btn.dataset.trainingMode));
+});
+document.getElementById('btnBackToTrainings').addEventListener('click', () => setView('trainings'));
 
 document.getElementById('btnRink').addEventListener('click', () => {
     rinkMode = (rinkMode === 'full') ? 'half' : 'full';
@@ -2322,6 +2567,7 @@ document.getElementById('btnRink').addEventListener('click', () => {
 
 // ================= СТАРТ =================
 loadTrainingRecords();
+loadTrainingBlocks();
 renderTrainingList();
 setBackground(() => {
     fitCanvas();
