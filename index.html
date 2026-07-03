@@ -31,15 +31,20 @@
     * { box-sizing: border-box; }
     html, body { height: 100%; }
     body {
+        --side-panel-width: 164px;
         margin: 0; padding: 0;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 164px;
+        grid-template-columns: minmax(0, 1fr) var(--side-panel-width);
         grid-template-rows: auto minmax(0, 1fr) auto;
         height: 100vh;
         background-color: var(--bg-color);
         color: var(--text-main);
         font-family: 'Segoe UI', Arial, sans-serif;
         overflow: hidden;
+        transition: grid-template-columns .24s ease;
+    }
+    body.side-panel-collapsed {
+        grid-template-columns: minmax(0, 1fr) 0px;
     }
     button { font: inherit; }
     .main-col { display: contents; }
@@ -184,7 +189,8 @@
     }
     body[data-view="trainings"] .canvas-wrapper,
     body[data-view="trainings"] .bottom-toolbar,
-    body[data-view="trainings"] .side-panel {
+    body[data-view="trainings"] .side-panel,
+    body[data-view="trainings"] .side-toggle {
         display: none;
     }
     .canvas-container-wrapper {
@@ -758,6 +764,8 @@
     .side-panel {
         grid-column: 2;
         grid-row: 2;
+        width: var(--side-panel-width);
+        justify-self: end;
         background: var(--panel-bg);
         border-left: 1px solid var(--panel-border);
         overflow-y: auto; overflow-x: hidden;
@@ -767,6 +775,45 @@
         align-content: start;
         gap: 7px;
         min-height: 0;
+        transition: transform .24s ease, box-shadow .24s ease;
+        will-change: transform;
+    }
+    body.side-panel-collapsed .side-panel {
+        transform: translateX(var(--side-panel-width));
+        pointer-events: none;
+    }
+    .side-toggle {
+        position: fixed;
+        top: 76px;
+        right: calc(var(--side-panel-width) - 1px);
+        z-index: 44;
+        width: 30px;
+        height: 50px;
+        border: 1px solid var(--panel-border);
+        border-right: 0;
+        border-radius: 11px 0 0 11px;
+        background: rgba(28,31,38,.96);
+        color: #b9c2d1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 14px 28px rgba(0,0,0,.34);
+        transition: right .24s ease, background .15s, color .15s, border-color .15s;
+    }
+    .side-toggle:hover {
+        background: #2563eb;
+        border-color: #3b82f6;
+        color: #fff;
+    }
+    .side-toggle i {
+        transition: transform .24s ease;
+    }
+    body.side-panel-collapsed .side-toggle {
+        right: 0;
+    }
+    body.side-panel-collapsed .side-toggle i {
+        transform: rotate(180deg);
     }
     .panel-title {
         grid-column: 1 / -1;
@@ -867,9 +914,83 @@
         text-align: center;
         overflow-wrap: anywhere;
     }
+    .confirm-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 80;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: rgba(6,8,12,.58);
+        backdrop-filter: blur(2px);
+    }
+    .confirm-overlay[hidden] { display: none; }
+    .confirm-dialog {
+        width: min(450px, calc(100vw - 48px));
+        border: 1px solid #34383f;
+        border-radius: 14px;
+        background: #1c1f26;
+        color: var(--text-main);
+        box-shadow: 0 28px 70px rgba(0,0,0,.55);
+        padding: 22px;
+    }
+    .confirm-title {
+        margin: 0 0 10px;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 800;
+        line-height: 1.2;
+    }
+    .confirm-message {
+        margin: 0;
+        color: #c9cdd6;
+        font-size: 14px;
+        line-height: 1.45;
+    }
+    .confirm-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 22px;
+    }
+    .confirm-btn {
+        height: 36px;
+        min-width: 92px;
+        border: 1px solid #34383f;
+        border-radius: 999px;
+        background: #262a32;
+        color: #e4e4e7;
+        padding: 0 18px;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background .15s, border-color .15s, color .15s, transform .15s;
+    }
+    .confirm-btn:hover {
+        transform: translateY(-1px);
+        background: #303643;
+        color: #fff;
+    }
+    .confirm-btn.primary {
+        background: #2563eb;
+        border-color: #3b82f6;
+        color: #fff;
+        box-shadow: 0 10px 22px rgba(37,99,235,.28);
+    }
+    .confirm-btn.primary:hover { background: #3b82f6; }
+    .confirm-btn.cancel {
+        background: #451a1a;
+        border-color: #7f1d1d;
+        color: #fecaca;
+    }
+    .confirm-btn.cancel:hover {
+        background: #991b1b;
+        border-color: #ef4444;
+        color: #fff;
+    }
 
     @media (max-width: 1300px), (max-height: 760px) {
-        body { grid-template-columns: minmax(0, 1fr) 158px; }
+        body { --side-panel-width: 158px; }
         .app-header { min-height: 52px; padding: 0 14px; }
         .app-title { left: 18px; font-size: 24px; line-height: 1; transform: translateY(-50%) scaleX(1.04); }
         .mainnav { height: 32px; gap: 44px; margin-top: 0; }
@@ -888,6 +1009,7 @@
         .color-swatch { width: 22px; height: 22px; }
         input[type="color"] { width: 26px; height: 26px; }
         .side-panel { padding: 9px 7px 14px; gap: 6px; }
+        .side-toggle { top: 62px; width: 28px; height: 46px; }
         .comp-grid { gap: 5px; }
         .comp-item { min-height: 58px; border-radius: 8px; }
         .marker-icon { width: 26px; height: 26px; font-size: 10px; }
@@ -899,7 +1021,7 @@
     }
 
     @media (max-width: 980px), (max-height: 620px) {
-        body { grid-template-columns: minmax(0, 1fr) 142px; }
+        body { --side-panel-width: 142px; }
         .app-header { min-height: 46px; padding: 0 10px; }
         .app-title { left: 12px; font-size: 19px; transform: translateY(-50%) scaleX(1.02); }
         .mainnav { gap: 30px; height: 26px; margin-top: 0; }
@@ -922,6 +1044,7 @@
         .color-swatch { width: 18px; height: 18px; }
         input[type="color"] { width: 24px; height: 24px; }
         .side-panel { padding: 7px 5px 12px; }
+        .side-toggle { top: 54px; width: 26px; height: 42px; }
         .comp-item { min-height: 52px; }
         .comp-label { font-size: 8.5px; }
         .marker-icon { width: 24px; height: 24px; font-size: 9.5px; }
@@ -940,9 +1063,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.1" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.2" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.5.1</span>
+            <span class="version-tooltip">v0.5.2</span>
         </button>
         <h1 class="app-title">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -1094,6 +1217,10 @@
     </div>
 </div>
 
+<button class="side-toggle" id="btnSidePanelToggle" type="button" title="Скрыть панель" aria-label="Скрыть панель компонентов" aria-expanded="true">
+    <i class="fa-solid fa-chevron-right"></i>
+</button>
+
 <!-- ==== Interactive Components ==== -->
 <div class="side-panel" id="sidePanel">
     <div class="panel-title">Игроки</div>
@@ -1140,6 +1267,17 @@
     </div>
     <div class="comp-item" draggable="true" data-comp="net" title="Ворота">
         <img class="asset-icon-img" alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAA2CAYAAAA25uK9AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAAAYxJREFUeAHtmNFtgzAQhn0heUciRHlkBDYoG7QbtN2gG4RMkGyQsAGdIIzABuExUhKV90S53hmoUIsKRqFSpTsJbFk//vxjP1g/oOuiuk+lCjFTADEcj1GTAO4Iq80KGYHDH1CGtQFxOn0gzQZnsz3O516jxnV9dJwXavfVnKQPjWE16EIDbdtu0b3RnB/l3KtesFK/Y2gHnf8FdJwnHhsp00Jc0p4EbTLar1RrNWW04b9hDrteU3oHXaRwOq2pSeix1WTybAyDPM+VWcX6jRiYOzMty3rXLYA/OAwOh6zsesM7q5XABCYwgQlMYAPVWPWsPpfb/+GMrmrQVVv9BTmNAhOYwAQmMIF1KA5fym72F84KGGI6PAxgUcLiQWEcmBHEo24G53NkfOHRoRdi0qor9qpwdbuF3Bg509GfZa0Itv1Vx46U2inOrDjkJFc83smZhozHPqdrtMpt9fE3jUdh2CN1Oe4LikFcU1i2rDTDxLZK5bSoV1pUXB/sfUltKM6FUzp9ibpcoqb07hPKLKqeiCmoAwAAAABJRU5ErkJggg==">
+    </div>
+</div>
+
+<div class="confirm-overlay" id="confirmOverlay" hidden>
+    <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+        <h2 class="confirm-title" id="confirmTitle">Подтвердите действие</h2>
+        <p class="confirm-message" id="confirmMessage"></p>
+        <div class="confirm-actions">
+            <button class="confirm-btn primary" id="confirmOk" type="button">ОК</button>
+            <button class="confirm-btn cancel" id="confirmCancel" type="button">Отмена</button>
+        </div>
     </div>
 </div>
 
@@ -1232,6 +1370,7 @@ let currentColor = '#0056b3';
 let numCounter = 1;
 const TRAINING_STORAGE_KEY = 'benchreview-lite.trainings.v1';
 const BLOCK_STORAGE_KEY = 'benchreview-lite.blocks.v1';
+const SIDE_PANEL_STORAGE_KEY = 'benchreview-lite.side-panel-collapsed.v1';
 let trainingDraft = null;
 let trainingRecords = [];
 let trainingBlocks = [];
@@ -1240,6 +1379,8 @@ let activeTrainingId = '';
 let activeTrainingTitle = '';
 let activeTrainingCreatedAt = '';
 let trainingSortDesc = true;
+let confirmResolve = null;
+let confirmPreviousFocus = null;
 
 canvas.freeDrawingBrush.color = currentColor;
 canvas.freeDrawingBrush.width = 3;
@@ -1293,6 +1434,77 @@ function updateFieldReturn() {
     if (!btn) return;
     btn.hidden = !(document.body.dataset.view === 'field' && activeTrainingId && !trainingDraft);
 }
+
+function setSidePanelCollapsed(collapsed, persist = true) {
+    document.body.classList.toggle('side-panel-collapsed', collapsed);
+    const btn = document.getElementById('btnSidePanelToggle');
+    if (btn) {
+        btn.title = collapsed ? 'Показать панель' : 'Скрыть панель';
+        btn.setAttribute('aria-label', collapsed ? 'Показать панель компонентов' : 'Скрыть панель компонентов');
+        btn.setAttribute('aria-expanded', String(!collapsed));
+    }
+    if (persist) {
+        try { localStorage.setItem(SIDE_PANEL_STORAGE_KEY, collapsed ? '1' : '0'); } catch (_) {}
+    }
+    requestAnimationFrame(fitCanvas);
+    setTimeout(fitCanvas, 260);
+}
+
+function initSidePanelToggle() {
+    let collapsed = false;
+    try { collapsed = localStorage.getItem(SIDE_PANEL_STORAGE_KEY) === '1'; } catch (_) {}
+    setSidePanelCollapsed(collapsed, false);
+    document.getElementById('btnSidePanelToggle').addEventListener('click', () => {
+        setSidePanelCollapsed(!document.body.classList.contains('side-panel-collapsed'));
+    });
+}
+
+function closeConfirm(result) {
+    if (!confirmResolve) return;
+    const resolve = confirmResolve;
+    confirmResolve = null;
+    document.getElementById('confirmOverlay').hidden = true;
+    if (confirmPreviousFocus && typeof confirmPreviousFocus.focus === 'function') {
+        confirmPreviousFocus.focus();
+    }
+    confirmPreviousFocus = null;
+    resolve(result);
+}
+
+function showConfirm(message, options = {}) {
+    const overlay = document.getElementById('confirmOverlay');
+    const ok = document.getElementById('confirmOk');
+    const cancel = document.getElementById('confirmCancel');
+    document.getElementById('confirmTitle').textContent = options.title || 'Подтвердите действие';
+    document.getElementById('confirmMessage').textContent = message;
+    ok.textContent = options.okLabel || 'ОК';
+    cancel.textContent = options.cancelLabel || 'Отмена';
+    confirmPreviousFocus = document.activeElement;
+    overlay.hidden = false;
+    ok.focus();
+    return new Promise(resolve => {
+        confirmResolve = resolve;
+    });
+}
+
+document.getElementById('confirmOk').addEventListener('click', () => closeConfirm(true));
+document.getElementById('confirmCancel').addEventListener('click', () => closeConfirm(false));
+document.getElementById('confirmOverlay').addEventListener('click', e => {
+    if (e.target.id === 'confirmOverlay') closeConfirm(false);
+});
+document.addEventListener('keydown', e => {
+    if (!confirmResolve) return;
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        closeConfirm(false);
+    }
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        closeConfirm(true);
+    }
+}, true);
 
 // ================= ИСТОРИЯ =================
 let stateHistory = [], historyIndex = -1, suspendHistory = true, saveTimer = null;
@@ -1900,10 +2112,13 @@ function deleteSelected() {
     }
 }
 document.getElementById('btnDelete').addEventListener('click', () => clearBoard());
-function clearBoard(skipConfirm = false) {
+async function clearBoard(skipConfirm = false) {
     const objects = canvas.getObjects().filter(o => !o.__temp);
-    if (!objects.length) return;
-    if (!skipConfirm && !confirm('Удалить всё с поля?')) return;
+    if (!objects.length) return false;
+    if (!skipConfirm) {
+        const confirmed = await showConfirm('Удалить всё с поля?', { okLabel: 'Удалить' });
+        if (!confirmed) return false;
+    }
     suspendHistory = true;
     objects.forEach(o => canvas.remove(o));
     suspendHistory = false;
@@ -1913,6 +2128,7 @@ function clearBoard(skipConfirm = false) {
     updateFieldReturn();
     snapshotNow();
     canvas.requestRenderAll();
+    return true;
 }
 document.getElementById('btnClear').addEventListener('click', e => {
     setMode(currentMode === 'erase' ? 'select' : 'erase');
@@ -2464,10 +2680,11 @@ function duplicateTrainingRecord(id) {
     persistTrainingRecords();
     renderTrainingList();
 }
-function deleteTrainingRecord(id) {
+async function deleteTrainingRecord(id) {
     const record = trainingRecords.find(item => item.id === id);
     if (!record) return;
-    if (!confirm(`Удалить тренировку "${record.title || 'Тренировка'}"?`)) return;
+    const confirmed = await showConfirm(`Удалить тренировку "${record.title || 'Тренировка'}"?`, { okLabel: 'Удалить' });
+    if (!confirmed) return;
     trainingRecords = trainingRecords.filter(item => item.id !== id);
     if (activeTrainingId === id) {
         activeTrainingId = '';
@@ -2478,14 +2695,14 @@ function deleteTrainingRecord(id) {
     persistTrainingRecords();
     renderTrainingList();
 }
-function handleTrainingAction(id, action) {
+async function handleTrainingAction(id, action) {
     const record = trainingRecords.find(item => item.id === id);
     if (!record) return;
     if (action === 'open') loadTrainingRecord(id);
     if (action === 'duplicate') duplicateTrainingRecord(id);
     if (action === 'screen') downloadTrainingScreen(record);
     if (action === 'pdf') downloadTrainingPdf(record);
-    if (action === 'delete') deleteTrainingRecord(id);
+    if (action === 'delete') await deleteTrainingRecord(id);
 }
 function createTrainingBlock() {
     const title = prompt('Название блока', `Блок ${trainingDateLabel(new Date().toISOString())}`);
@@ -2513,23 +2730,27 @@ function duplicateTrainingBlock(id) {
     persistTrainingBlocks();
     renderTrainingList();
 }
-function deleteTrainingBlock(id) {
+async function deleteTrainingBlock(id) {
     const block = trainingBlocks.find(item => item.id === id);
     if (!block) return;
-    if (!confirm(`Удалить блок "${block.title || 'Блок тренировок'}"?`)) return;
+    const confirmed = await showConfirm(`Удалить блок "${block.title || 'Блок тренировок'}"?`, { okLabel: 'Удалить' });
+    if (!confirmed) return;
     trainingBlocks = trainingBlocks.filter(item => item.id !== id);
     persistTrainingBlocks();
     renderTrainingList();
 }
-function handleBlockAction(id, action) {
+async function handleBlockAction(id, action) {
     if (action === 'duplicate') duplicateTrainingBlock(id);
-    if (action === 'delete') deleteTrainingBlock(id);
+    if (action === 'delete') await deleteTrainingBlock(id);
 }
-function startNewExercise() {
+async function startNewExercise() {
     setView('field');
     const hasObjects = canvas.getObjects().some(o => !o.__temp);
-    if (hasObjects && !confirm('Очистить поле для нового упражнения?')) return;
-    if (hasObjects) clearBoard(true);
+    if (hasObjects) {
+        const confirmed = await showConfirm('Очистить поле для нового упражнения?', { okLabel: 'Очистить' });
+        if (!confirmed) return;
+        await clearBoard(true);
+    }
     activeTrainingId = '';
     activeTrainingTitle = '';
     activeTrainingCreatedAt = '';
@@ -2569,6 +2790,7 @@ document.getElementById('btnRink').addEventListener('click', () => {
 loadTrainingRecords();
 loadTrainingBlocks();
 renderTrainingList();
+initSidePanelToggle();
 setBackground(() => {
     fitCanvas();
     suspendHistory = false;
