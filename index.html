@@ -77,6 +77,7 @@
         transform-origin: left center;
         white-space: nowrap;
         text-shadow: 0 2px 0 #0d182b, 0 8px 18px rgba(0,0,0,0.48);
+        cursor: pointer;
     }
     .app-title .lite-accent { color: #60a5fa; }
     .mainnav {
@@ -84,7 +85,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        gap: 54px;
+        gap: 42px;
         margin-top: 0;
         transform: translateY(1px);
     }
@@ -182,7 +183,9 @@
         transform: translateY(-1px);
     }
     .field-return[hidden] { display: none; }
-    body[data-view="field"] .trainings-view { display: none; }
+    body[data-view="field"] .trainings-view,
+    body[data-view="field"] .calendar-view,
+    body[data-view="field"] .goalie-view { display: none; }
     body[data-view="trainings"] {
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: auto minmax(0, 1fr);
@@ -190,7 +193,33 @@
     body[data-view="trainings"] .canvas-wrapper,
     body[data-view="trainings"] .bottom-toolbar,
     body[data-view="trainings"] .side-panel,
-    body[data-view="trainings"] .side-toggle {
+    body[data-view="trainings"] .side-toggle,
+    body[data-view="trainings"] .calendar-view,
+    body[data-view="trainings"] .goalie-view {
+        display: none;
+    }
+    body[data-view="calendar"] {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+    body[data-view="calendar"] .canvas-wrapper,
+    body[data-view="calendar"] .bottom-toolbar,
+    body[data-view="calendar"] .side-panel,
+    body[data-view="calendar"] .side-toggle,
+    body[data-view="calendar"] .trainings-view,
+    body[data-view="calendar"] .goalie-view {
+        display: none;
+    }
+    body[data-view="goalie"] {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+    body[data-view="goalie"] .canvas-wrapper,
+    body[data-view="goalie"] .bottom-toolbar,
+    body[data-view="goalie"] .side-panel,
+    body[data-view="goalie"] .side-toggle,
+    body[data-view="goalie"] .trainings-view,
+    body[data-view="goalie"] .calendar-view {
         display: none;
     }
     .canvas-container-wrapper {
@@ -620,6 +649,474 @@
         width: min(920px, 100%);
         margin: 0 auto;
     }
+    .calendar-view {
+        grid-column: 1 / -1;
+        grid-row: 2 / 4;
+        min-height: 0;
+        overflow-y: auto;
+        background: #16181d;
+        padding: 18px 24px 34px;
+    }
+    .calendar-shell {
+        width: min(1040px, 100%);
+        margin: 0 auto;
+    }
+    .calendar-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+    .calendar-title {
+        margin: 0;
+        color: #fff;
+        font-size: 20px;
+        font-weight: 900;
+        letter-spacing: .02em;
+        text-transform: uppercase;
+    }
+    .calendar-actions {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+    .calendar-nav-btn {
+        height: 34px;
+        min-width: 34px;
+        border: 1px solid #262a32;
+        border-radius: 9px;
+        background: #1c1f26;
+        color: #b6bac2;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        padding: 0 11px;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background .15s, border-color .15s, color .15s;
+    }
+    .calendar-nav-btn:hover {
+        border-color: #3b82f6;
+        background: #22252c;
+        color: #fff;
+    }
+    .calendar-weekdays,
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 7px;
+    }
+    .calendar-weekday {
+        color: #565b64;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        padding: 0 8px 5px;
+    }
+    .calendar-day-cell {
+        position: relative;
+        min-height: 116px;
+        border: 1px solid #262a32;
+        border-radius: 12px;
+        background: #1a1d23;
+        padding: 9px;
+        display: grid;
+        align-content: start;
+        gap: 7px;
+        color: #d4d4d8;
+        transition: border-color .15s, box-shadow .15s, background .15s;
+    }
+    .calendar-day-cell:hover {
+        border-color: rgba(96,165,250,.65);
+        box-shadow: 0 0 0 1px rgba(96,165,250,.2);
+    }
+    .calendar-day-cell.muted {
+        opacity: .42;
+    }
+    .calendar-day-cell.today {
+        border-color: rgba(96,165,250,.55);
+        box-shadow: 0 0 0 1px rgba(59,130,246,.28);
+    }
+    .calendar-day-cell.has-plan {
+        background: #1b2230;
+        cursor: pointer;
+    }
+    .calendar-day-cell.has-plan:hover {
+        border-color: #3b82f6;
+        background: #1d2636;
+    }
+    .calendar-day-num {
+        color: #f4f8ff;
+        font-size: 15px;
+        font-weight: 900;
+    }
+    .calendar-plus {
+        position: absolute;
+        right: 8px;
+        top: 8px;
+        width: 24px;
+        height: 24px;
+        border: 1px solid rgba(96,165,250,.45);
+        border-radius: 50%;
+        background: rgba(37,99,235,.22);
+        color: #bfdbfe;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transform: translateY(-2px);
+        cursor: pointer;
+        transition: opacity .15s, transform .15s, background .15s, color .15s;
+    }
+    .calendar-day-cell:hover .calendar-plus {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .calendar-plus:hover {
+        background: #2563eb;
+        color: #fff;
+    }
+    .calendar-day-cell.muted .calendar-plus { display: none; }
+    .calendar-plan-pill {
+        min-height: 26px;
+        border-radius: 8px;
+        background: rgba(37,99,235,.18);
+        color: #bfdbfe;
+        display: grid;
+        grid-template-columns: 19px minmax(0, 1fr);
+        align-items: center;
+        gap: 7px;
+        padding: 5px 7px;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.2;
+    }
+    .calendar-plan-pill span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .calendar-stick-icon {
+        position: relative;
+        width: 18px;
+        height: 18px;
+        display: inline-block;
+    }
+    .calendar-stick-icon::before {
+        content: "";
+        position: absolute;
+        left: 8px;
+        top: 1px;
+        width: 3px;
+        height: 16px;
+        border-radius: 999px;
+        background: #93c5fd;
+        transform: rotate(35deg);
+        transform-origin: center;
+    }
+    .calendar-stick-icon::after {
+        content: "";
+        position: absolute;
+        left: 2px;
+        bottom: 2px;
+        width: 11px;
+        height: 3px;
+        border-radius: 999px;
+        background: #93c5fd;
+        transform: rotate(-8deg);
+    }
+    .goalie-view {
+        grid-column: 1 / -1;
+        grid-row: 2 / 4;
+        min-height: 0;
+        overflow-y: auto;
+        background: #f4f5f7;
+        color: #111827;
+        padding: 22px 24px 38px;
+    }
+    .goalie-shell {
+        width: min(1060px, 100%);
+        margin: 0 auto;
+        display: grid;
+        gap: 18px;
+    }
+    .goalie-card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 24px;
+        box-shadow: 0 18px 40px rgba(15,23,42,.08);
+    }
+    .goalie-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: start;
+        margin-bottom: 18px;
+    }
+    .goalie-title {
+        margin: 0 0 12px;
+        color: #111827;
+        font-size: 22px;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+    .goalie-fields {
+        display: grid;
+        grid-template-columns: minmax(220px, 1.45fr) minmax(130px, .9fr) minmax(86px, .62fr) minmax(130px, .9fr) minmax(86px, .62fr);
+        gap: 9px;
+        align-items: end;
+    }
+    .goalie-field {
+        display: grid;
+        gap: 5px;
+        color: #6b7280;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+    .goalie-input {
+        height: 36px;
+        border: 1px solid #d1d5db;
+        border-radius: 9px;
+        background: #fff;
+        color: #111827;
+        padding: 0 10px;
+        font-size: 14px;
+        font-weight: 800;
+        outline: none;
+    }
+    .goalie-input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
+    .goalie-save {
+        width: 150px;
+        min-height: 48px;
+        border: 0;
+        border-radius: 0;
+        background: #b91c1c;
+        color: #050505;
+        font-size: 15px;
+        font-weight: 900;
+        line-height: 1.05;
+        cursor: pointer;
+    }
+    .goalie-save:hover {
+        background: #dc2626;
+        color: #fff;
+    }
+    .goalie-stage {
+        display: grid;
+        grid-template-columns: minmax(360px, 1fr) 160px;
+        gap: 28px;
+        align-items: center;
+    }
+    .goalie-net-wrap {
+        display: grid;
+        justify-items: center;
+        gap: 16px;
+    }
+    .goalie-switch-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: #111827;
+        font-size: 20px;
+        font-weight: 900;
+    }
+    .goalie-switch {
+        min-width: 56px;
+        height: 30px;
+        border: 0;
+        border-radius: 999px;
+        background: #e5e7eb;
+        color: #111827;
+        font-size: 17px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+    .goalie-tabs {
+        display: flex;
+        gap: 7px;
+        justify-content: center;
+        margin-bottom: 6px;
+    }
+    .goalie-tab {
+        height: 31px;
+        border: 1px solid #d1d5db;
+        border-radius: 999px;
+        background: #fff;
+        color: #374151;
+        padding: 0 12px;
+        font-size: 12px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+    .goalie-tab.active {
+        background: #111827;
+        border-color: #111827;
+        color: #fff;
+    }
+    .goalie-net {
+        position: relative;
+        width: min(560px, 100%);
+        aspect-ratio: 3 / 2;
+        border-left: 10px solid #e1261c;
+        border-right: 10px solid #e1261c;
+        border-top: 12px solid #e1261c;
+        border-radius: 34px 34px 4px 4px;
+        background:
+            linear-gradient(rgba(255,255,255,.72), rgba(255,255,255,.72)),
+            repeating-linear-gradient(35deg, rgba(148,163,184,.38) 0 2px, transparent 2px 10px),
+            repeating-linear-gradient(-35deg, rgba(148,163,184,.32) 0 2px, transparent 2px 10px),
+            linear-gradient(#f8fafc, #e5e7eb);
+        overflow: hidden;
+        box-shadow: inset 0 -22px 28px rgba(30,41,59,.14);
+    }
+    .goalie-net::before {
+        content: "";
+        position: absolute;
+        left: calc(50% - 3px);
+        top: 0;
+        bottom: 0;
+        width: 6px;
+        background: rgba(220,38,38,.78);
+        z-index: 1;
+    }
+    .goalie-zone-grid {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        z-index: 2;
+    }
+    .goalie-zone {
+        border: 2px solid #080808;
+        background: transparent;
+        color: #050505;
+        font-size: 35px;
+        font-weight: 1000;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .12s, box-shadow .12s;
+    }
+    .goalie-zone:hover {
+        background: rgba(96,165,250,.14);
+        box-shadow: inset 0 0 0 3px rgba(37,99,235,.28);
+    }
+    .goalie-zone.goal-hit {
+        background: rgba(185,28,28,.22);
+    }
+    .goalie-controls {
+        display: grid;
+        gap: 12px;
+        justify-items: stretch;
+    }
+    .goalie-mode-btn {
+        height: 54px;
+        border: 0;
+        border-radius: 0;
+        color: #050505;
+        font-size: 20px;
+        font-weight: 1000;
+        cursor: pointer;
+    }
+    .goalie-mode-btn.shot { background: #5cbf58; }
+    .goalie-mode-btn.goal { background: #b91c1c; }
+    .goalie-mode-btn.active {
+        outline: 4px solid rgba(37,99,235,.35);
+    }
+    .goalie-undo-row {
+        height: 48px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        background: #111827;
+    }
+    .goalie-undo-row button {
+        border: 0;
+        background: transparent;
+        color: #cbd5e1;
+        font-size: 20px;
+        cursor: pointer;
+    }
+    .goalie-undo-row button:disabled {
+        opacity: .35;
+        cursor: default;
+    }
+    .goalie-stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 24px;
+        margin-top: 6px;
+        color: #050505;
+        font-size: 19px;
+        font-weight: 1000;
+    }
+    .goalie-saved-list {
+        display: grid;
+        gap: 12px;
+    }
+    .goalie-saved-card {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 16px;
+        align-items: center;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+        padding: 12px;
+    }
+    .goalie-saved-empty {
+        border: 1px dashed #d1d5db;
+        border-radius: 12px;
+        background: #fff;
+        color: #6b7280;
+        padding: 18px;
+        text-align: center;
+        font-size: 13px;
+        font-weight: 800;
+    }
+    .goalie-mini-net {
+        position: relative;
+        aspect-ratio: 3 / 2;
+        border-left: 5px solid #e1261c;
+        border-right: 5px solid #e1261c;
+        border-top: 6px solid #e1261c;
+        border-radius: 18px 18px 3px 3px;
+        background: #f8fafc;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        overflow: hidden;
+    }
+    .goalie-mini-zone {
+        border: 1px solid #111;
+        display: grid;
+        place-items: center;
+        color: #b91c1c;
+        font-size: 12px;
+        font-weight: 900;
+    }
+    .goalie-saved-meta h3 {
+        margin: 0 0 7px;
+        font-size: 16px;
+    }
+    .goalie-saved-meta p {
+        margin: 3px 0;
+        color: #111827;
+        font-size: 13px;
+        font-weight: 800;
+    }
     .training-controls {
         display: flex;
         align-items: center;
@@ -812,10 +1309,10 @@
         cursor: pointer;
     }
     .training-row.block-row {
-        grid-template-columns: 154px minmax(0, 1fr) auto;
+        grid-template-columns: 154px minmax(0, 1fr) 132px auto;
     }
     .training-row.plan-row {
-        grid-template-columns: 32px 70px minmax(0, 1fr) auto;
+        grid-template-columns: 32px 70px minmax(0, 1fr) 132px auto;
     }
     .training-row.plan-row.done {
         opacity: .72;
@@ -876,6 +1373,24 @@
         align-items: center;
         justify-content: center;
         font-size: 30px;
+    }
+    .training-collection-preview {
+        width: 132px;
+        aspect-ratio: 1000 / 540;
+        border: 1px solid #262a32;
+        border-radius: 9px;
+        background: #11141a;
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+        color: #6f747d;
+        font-size: 20px;
+    }
+    .training-collection-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
     }
     .training-row-title {
         display: flex;
@@ -1388,37 +1903,31 @@
         margin-top: 18px;
     }
     .workflow-dialog.collection-dialog {
-        width: min(660px, calc(100vw - 48px));
+        width: min(780px, calc(100vw - 48px));
     }
     .collection-fields[hidden] { display: none; }
     .exercise-checklist {
-        max-height: 242px;
+        max-height: 340px;
         overflow-y: auto;
         display: grid;
         gap: 7px;
         padding: 4px 2px 2px;
     }
     .exercise-check {
-        min-height: 44px;
+        min-height: 70px;
         border: 1px solid #262a32;
         border-radius: 9px;
         background: #171a20;
-        padding: 7px 9px;
+        padding: 7px;
         display: grid;
-        grid-template-columns: 22px minmax(0, 1fr);
+        grid-template-columns: 104px minmax(0, 1fr) auto;
         gap: 9px;
         align-items: center;
         color: #d4d4d8;
-        cursor: pointer;
     }
     .exercise-check:hover {
         border-color: rgba(59,130,246,.55);
         background: #1b2029;
-    }
-    .exercise-check input {
-        width: 18px;
-        height: 18px;
-        accent-color: #2563eb;
     }
     .exercise-check strong {
         display: block;
@@ -1436,6 +1945,72 @@
         font-size: 11px;
         line-height: 1.2;
     }
+    .exercise-thumb {
+        width: 104px;
+        aspect-ratio: 1000 / 540;
+        border-radius: 7px;
+        background: #fff;
+        object-fit: cover;
+        display: block;
+    }
+    .exercise-thumb.placeholder {
+        background: #11141a;
+        color: #6f747d;
+        display: grid;
+        place-items: center;
+        font-size: 18px;
+    }
+    .exercise-remove,
+    .exercise-add-btn {
+        height: 30px;
+        border: 1px solid #34383f;
+        border-radius: 8px;
+        background: #1c1f26;
+        color: #b6bac2;
+        padding: 0 10px;
+        font-size: 11px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background .15s, border-color .15s, color .15s;
+    }
+    .exercise-remove:hover {
+        border-color: #ef4444;
+        background: rgba(248,113,113,.12);
+        color: #fecaca;
+    }
+    .exercise-add-btn:hover {
+        border-color: #3b82f6;
+        background: rgba(37,99,235,.18);
+        color: #fff;
+    }
+    .collection-exercise-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 7px;
+    }
+    .collection-exercise-toolbar span {
+        color: #8b8f98;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+    .collection-add-panel {
+        margin-top: 9px;
+        border: 1px solid #262a32;
+        border-radius: 10px;
+        background: #171a20;
+        padding: 9px;
+    }
+    .collection-add-panel[hidden] { display: none; }
+    .exercise-pick-list {
+        max-height: 260px;
+        overflow-y: auto;
+        display: grid;
+        gap: 7px;
+    }
     .exercise-empty {
         border: 1px dashed #34383f;
         border-radius: 9px;
@@ -1449,7 +2024,7 @@
         body { --side-panel-width: 158px; }
         .app-header { min-height: 52px; padding: 0 14px; }
         .app-title { left: 18px; font-size: 24px; line-height: 1; transform: translateY(-50%) scaleX(1.04); }
-        .mainnav { height: 32px; gap: 44px; margin-top: 0; }
+        .mainnav { height: 32px; gap: 34px; margin-top: 0; }
         .mainnav button { height: 32px; font-size: 12.5px; }
         .mainnav:hover button { font-size: 11.5px; }
         .mainnav button:hover { font-size: 17px; }
@@ -1473,18 +2048,26 @@
         .asset-icon-img { max-width: 28px; max-height: 28px; }
         .trainings-view { padding: 16px 18px 30px; }
         .training-row { grid-template-columns: 30px 142px minmax(0, 1fr) auto; gap: 13px; }
-        .training-row.block-row { grid-template-columns: 142px minmax(0, 1fr) auto; }
-        .training-row.plan-row { grid-template-columns: 30px 64px minmax(0, 1fr) auto; }
+        .training-row.block-row { grid-template-columns: 142px minmax(0, 1fr) 118px auto; }
+        .training-row.plan-row { grid-template-columns: 30px 64px minmax(0, 1fr) 118px auto; }
         .training-row-thumb,
         .training-row-block-icon { width: 142px; }
+        .training-collection-preview { width: 118px; }
         .training-plan-date { width: 64px; min-height: 52px; }
+        .calendar-day-cell { min-height: 102px; }
+        .goalie-view { padding: 16px 18px 30px; }
+        .goalie-card { padding: 18px; }
+        .goalie-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .goalie-stage { grid-template-columns: minmax(320px, 1fr) 140px; gap: 20px; }
+        .goalie-mode-btn { height: 48px; font-size: 18px; }
+        .goalie-stats { font-size: 17px; gap: 8px 18px; }
     }
 
     @media (max-width: 980px), (max-height: 620px) {
         body { --side-panel-width: 142px; }
         .app-header { min-height: 46px; padding: 0 10px; }
         .app-title { left: 12px; font-size: 19px; transform: translateY(-50%) scaleX(1.02); }
-        .mainnav { gap: 30px; height: 26px; margin-top: 0; }
+        .mainnav { gap: 20px; height: 26px; margin-top: 0; }
         .mainnav button { height: 26px; font-size: 10.5px; }
         .mainnav:hover button { font-size: 10px; }
         .mainnav button:hover { font-size: 14px; }
@@ -1517,7 +2100,26 @@
         .training-row.plan-row { grid-template-columns: 30px 56px minmax(0, 1fr); }
         .training-row-thumb,
         .training-row-block-icon { width: 112px; }
+        .training-collection-preview { grid-column: 1 / -1; width: 150px; justify-self: end; }
         .training-plan-date { width: 56px; min-height: 48px; }
+        .calendar-weekdays,
+        .calendar-grid { gap: 4px; }
+        .calendar-day-cell { min-height: 88px; padding: 7px; }
+        .calendar-title { font-size: 16px; }
+        .calendar-head { align-items: flex-start; flex-direction: column; }
+        .goalie-view { padding: 12px; }
+        .goalie-header,
+        .goalie-stage { grid-template-columns: 1fr; }
+        .goalie-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .goalie-save { width: 100%; }
+        .goalie-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .goalie-undo-row { grid-column: 1 / -1; }
+        .goalie-stats { grid-template-columns: 1fr; font-size: 15px; }
+        .goalie-saved-card { grid-template-columns: 1fr; }
+        .exercise-check { grid-template-columns: 82px minmax(0, 1fr); }
+        .exercise-remove,
+        .exercise-add-btn { grid-column: 1 / -1; justify-self: end; }
+        .exercise-thumb { width: 82px; }
         .workflow-grid,
         .workflow-choice-row { grid-template-columns: 1fr; }
         .training-row-actions { grid-column: 1 / -1; justify-content: flex-end; }
@@ -1529,14 +2131,16 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.5" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.7" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.5.5</span>
+            <span class="version-tooltip">v0.5.7</span>
         </button>
-        <h1 class="app-title">BenchReview <span class="lite-accent">Lite</span></h1>
+        <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
             <button type="button" id="btnNavTrainings" data-view-target="trainings">Тренировки</button>
             <button type="button" class="current" id="btnNavField" data-view-target="field">Поле</button>
+            <button type="button" id="btnNavGoalie" data-view-target="goalie">Вратарь</button>
+            <button type="button" id="btnNavCalendar" data-view-target="calendar">Календарь</button>
             <button type="button" id="btnNavStats">Статистика</button>
         </nav>
     </header>
@@ -1598,6 +2202,111 @@
             </div>
             <div id="trainingGroups"></div>
             <p class="training-page-empty" id="trainingPageEmpty">Пока нет сохранённых тренировок. Запишите упражнение на поле, и скрин появится здесь.</p>
+        </div>
+    </main>
+
+    <main class="calendar-view" id="calendarView">
+        <div class="calendar-shell">
+            <div class="calendar-head">
+                <h2 class="calendar-title" id="calendarTitle">Календарь</h2>
+                <div class="calendar-actions">
+                    <button class="calendar-nav-btn" id="btnCalendarPrev" type="button" title="Предыдущий месяц"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button class="calendar-nav-btn" id="btnCalendarToday" type="button">Сегодня</button>
+                    <button class="calendar-nav-btn" id="btnCalendarNext" type="button" title="Следующий месяц"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="calendar-weekdays" aria-hidden="true">
+                <div class="calendar-weekday">Пн</div>
+                <div class="calendar-weekday">Вт</div>
+                <div class="calendar-weekday">Ср</div>
+                <div class="calendar-weekday">Чт</div>
+                <div class="calendar-weekday">Пт</div>
+                <div class="calendar-weekday">Сб</div>
+                <div class="calendar-weekday">Вс</div>
+            </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+    </main>
+
+    <main class="goalie-view" id="goalieView">
+        <div class="goalie-shell">
+            <section class="goalie-card">
+                <div class="goalie-header">
+                    <div>
+                        <h2 class="goalie-title">Вратарь</h2>
+                        <div class="goalie-fields">
+                            <label class="goalie-field">
+                                Матч
+                                <input class="goalie-input" id="goalieMatchInput" type="text" value="МАТЧ 19-02 соперник">
+                            </label>
+                            <label class="goalie-field">
+                                Вратарь 1
+                                <input class="goalie-input" id="goalieName0" type="text" value="Иванов">
+                            </label>
+                            <label class="goalie-field">
+                                Время 1
+                                <input class="goalie-input" id="goalieTime0" type="text" value="60:00" placeholder="60:00">
+                            </label>
+                            <label class="goalie-field">
+                                Вратарь 2
+                                <input class="goalie-input" id="goalieName1" type="text" placeholder="Фамилия">
+                            </label>
+                            <label class="goalie-field">
+                                Время 2
+                                <input class="goalie-input" id="goalieTime1" type="text" value="0:00" placeholder="0:00">
+                            </label>
+                        </div>
+                    </div>
+                    <button class="goalie-save" id="btnGoalieSaveMatch" type="button">Сохранить<br>Матч</button>
+                </div>
+
+                <div class="goalie-switch-row">
+                    <span id="goalieActiveLabel">Вратарь Иванов</span>
+                    <button class="goalie-switch" id="btnGoalieSwitch" type="button" title="Замена">↑</button>
+                    <span>Замена</span>
+                </div>
+                <div class="goalie-tabs" aria-label="Выбор вратаря">
+                    <button class="goalie-tab active" id="btnGoalieTab0" type="button" data-goalie-index="0">Вратарь 1</button>
+                    <button class="goalie-tab" id="btnGoalieTab1" type="button" data-goalie-index="1">Вратарь 2</button>
+                </div>
+
+                <div class="goalie-stage">
+                    <div class="goalie-net-wrap">
+                        <div class="goalie-net" id="goalieNet" aria-label="Карта ворот">
+                            <div class="goalie-zone-grid">
+                                <button class="goalie-zone" type="button" data-zone="9">9</button>
+                                <button class="goalie-zone" type="button" data-zone="8">8</button>
+                                <button class="goalie-zone" type="button" data-zone="7">7</button>
+                                <button class="goalie-zone" type="button" data-zone="6">6</button>
+                                <button class="goalie-zone" type="button" data-zone="5">5</button>
+                                <button class="goalie-zone" type="button" data-zone="4">4</button>
+                                <button class="goalie-zone" type="button" data-zone="3">3</button>
+                                <button class="goalie-zone" type="button" data-zone="2">2</button>
+                                <button class="goalie-zone" type="button" data-zone="1">1</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="goalie-controls">
+                        <button class="goalie-mode-btn shot active" id="btnGoalieShot" type="button">Бросок</button>
+                        <button class="goalie-mode-btn goal" id="btnGoalieGoal" type="button">Гол</button>
+                        <div class="goalie-undo-row">
+                            <button id="btnGoalieUndo" type="button" title="Отменить"><i class="fa-solid fa-rotate-left"></i></button>
+                            <button id="btnGoalieRedo" type="button" title="Вернуть"><i class="fa-solid fa-rotate-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="goalie-stats" id="goalieStats">
+                    <div>Сейвы: <span data-goalie-stat="saves">0</span></div>
+                    <div>Бросков всего: <span data-goalie-stat="shots">0</span></div>
+                    <div>Голов: <span data-goalie-stat="goals">0</span></div>
+                    <div>Время на льду: <span data-goalie-stat="ice">60:00</span></div>
+                    <div>Процент ОБ(SV): <span data-goalie-stat="sv">100.0</span></div>
+                    <div>Надежность (GAA): <span data-goalie-stat="gaa">0.00</span></div>
+                </div>
+            </section>
+
+            <section class="goalie-saved-list" id="goalieSavedList" aria-label="Сохранённые матчи"></section>
         </div>
     </main>
 
@@ -1727,8 +2436,8 @@
     <div class="comp-item" draggable="true" data-comp="stand" title="Стойка (тренировочная)">
         <svg width="34" height="34" viewBox="0 0 34 34" fill="none" stroke="#333" stroke-width="3" stroke-linecap="round"><line x1="17" y1="12" x2="17" y2="29"/><line x1="17" y1="12" x2="10" y2="4"/><line x1="17" y1="12" x2="24" y2="4"/></svg>
     </div>
-    <div class="comp-item" draggable="true" data-comp="stickPuck" title="Клюшка с шайбой">
-        <svg width="34" height="34" viewBox="0 0 34 34"><circle cx="7" cy="17" r="4" fill="#111"/><line x1="12" y1="17" x2="30" y2="17" stroke="#333" stroke-width="3" stroke-linecap="round"/></svg>
+    <div class="comp-item" draggable="true" data-comp="stickPuck" title="Дриблинг">
+        <svg width="34" height="34" viewBox="0 0 34 34"><circle cx="7" cy="17" r="4" fill="#111"/><line x1="12" y1="17" x2="23" y2="17" stroke="#333" stroke-width="3" stroke-linecap="round"/><circle cx="27" cy="17" r="4" fill="#111"/></svg>
     </div>
     <div class="comp-item" draggable="true" data-comp="pole" title="Шест / палка">
         <svg width="34" height="34" viewBox="0 0 34 34"><line x1="8" y1="28" x2="26" y2="6" stroke="#333" stroke-width="3.5" stroke-linecap="round"/></svg>
@@ -1866,10 +2575,18 @@
                     <input class="training-form-field" id="collectionPlanEnd" type="time">
                 </label>
             </div>
-            <label class="workflow-field-label wide">
-                Упражнения
+            <div class="wide">
+                <div class="collection-exercise-toolbar">
+                    <span>Упражнения</span>
+                    <button class="exercise-add-btn" id="btnCollectionAddExercise" type="button">
+                        <i class="fa-solid fa-plus"></i> Добавить упражнение
+                    </button>
+                </div>
                 <div class="exercise-checklist" id="collectionExerciseList"></div>
-            </label>
+                <div class="collection-add-panel" id="collectionAddPanel" hidden>
+                    <div class="exercise-pick-list" id="collectionAddList"></div>
+                </div>
+            </div>
         </div>
         <div class="workflow-actions">
             <button class="confirm-btn primary" id="btnCollectionSave" type="button">Сохранить</button>
@@ -1968,6 +2685,7 @@ let numCounter = 1;
 const TRAINING_STORAGE_KEY = 'benchreview-lite.trainings.v1';
 const BLOCK_STORAGE_KEY = 'benchreview-lite.blocks.v1';
 const PLANNED_STORAGE_KEY = 'benchreview-lite.planned.v1';
+const GOALIE_STORAGE_KEY = 'benchreview-lite.goalie-matches.v1';
 const SIDE_PANEL_STORAGE_KEY = 'benchreview-lite.side-panel-collapsed.v1';
 let trainingDraft = null;
 let trainingRecords = [];
@@ -1986,6 +2704,17 @@ let lineLabelsEnabled = false;
 let pendingNumberValue = null;
 let activePlayerHalo = null;
 let collectionEditing = null;
+let collectionExerciseIds = [];
+let calendarCursor = new Date();
+calendarCursor.setDate(1);
+let scheduleDateOverride = '';
+let goalieMode = 'shot';
+let goalieActiveIndex = 0;
+let goalieGoalies = [
+    { name: 'Иванов', iceTime: '60:00', events: [], undone: [] },
+    { name: '', iceTime: '0:00', events: [], undone: [] }
+];
+let goalieSavedMatches = [];
 let confirmResolve = null;
 let confirmPreviousFocus = null;
 const TRAINING_TAGS = {
@@ -2041,14 +2770,27 @@ function setView(view) {
         btn.classList.toggle('current', btn.dataset.viewTarget === view));
     if (view === 'trainings') {
         renderTrainingList();
+    } else if (view === 'calendar') {
+        renderCalendar();
+    } else if (view === 'goalie') {
+        renderGoaliePage();
     } else {
         requestAnimationFrame(fitCanvas);
     }
     updateFieldReturn();
 }
 document.getElementById('btnNavTrainings').addEventListener('click', () => setView('trainings'));
+document.getElementById('btnNavCalendar').addEventListener('click', () => setView('calendar'));
 document.getElementById('btnNavField').addEventListener('click', () => setView('field'));
+document.getElementById('btnNavGoalie').addEventListener('click', () => setView('goalie'));
 document.getElementById('btnNavStats').addEventListener('click', () => setView('field'));
+document.getElementById('appTitle').addEventListener('click', () => setView('field'));
+document.getElementById('appTitle').addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        setView('field');
+    }
+});
 
 function updateFieldReturn() {
     const btn = document.getElementById('btnBackToTrainings');
@@ -2401,16 +3143,18 @@ function makeLineLabel(pts, type, color) {
     const text = LINE_LABELS[type];
     if (!text) return null;
     if (type === 'stop') {
-        const at = pointAlongPath(pts, 0.96);
-        if (!at) return null;
-        const len = Math.hypot(at.dir.x, at.dir.y) || 1;
-        let nx = -at.dir.y / len, ny = at.dir.x / len;
-        if (ny > 0) { nx = -nx; ny = -ny; }
-        let angle = Math.atan2(at.dir.y, at.dir.x) * 180 / Math.PI + 90;
-        if (angle > 90 || angle < -90) angle += 180;
+        const end = pts[pts.length - 1];
+        const before = pts[Math.max(0, pts.length - 4)];
+        const dx = end.x - before.x, dy = end.y - before.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const ux = dx / len, uy = dy / len;
+        const labelOffset = 27;
+        let angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+        if (angle > 90) angle -= 180;
+        if (angle < -90) angle += 180;
         return new fabric.Text(text, {
-            left: at.point.x + nx * 31,
-            top: at.point.y + ny * 31,
+            left: end.x + ux * labelOffset,
+            top: end.y + uy * labelOffset,
             originX: 'center',
             originY: 'center',
             angle,
@@ -2710,7 +3454,8 @@ const COMPONENTS = {
         { stroke: '#222', strokeWidth: 3, fill: '', strokeLineCap: 'round', strokeLineJoin: 'round', customType: 'obj-stick' }),
     stickPuck: () => new fabric.Group([
         new fabric.Circle({ radius: 3.2, fill: '#111', left: 0, top: 0, originX: 'center', originY: 'center' }),
-        new fabric.Line([5, 0, 21, 0], { stroke: '#333', strokeWidth: 2.8, strokeLineCap: 'round' })
+        new fabric.Line([5, 0, 21, 0], { stroke: '#333', strokeWidth: 2.8, strokeLineCap: 'round' }),
+        new fabric.Circle({ radius: 3.2, fill: '#111', left: 26, top: 0, originX: 'center', originY: 'center' })
     ], { customType: 'obj-stickpuck' })
 };
 
@@ -2828,7 +3573,7 @@ const COMPONENT_LABELS = {
     barrierH: 'Борт',
     barrierV: 'Борт верт.',
     stand: 'Стойка',
-    stickPuck: 'Шайба + клюшка',
+    stickPuck: 'Дриблинг',
     pole: 'Шест',
     stick: 'Клюшка',
     tire: 'Покрышка',
@@ -3027,7 +3772,7 @@ window.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
         closeToolMenus();
         closeNumberPicker();
-        if (document.body.dataset.view === 'trainings') { setView('field'); return; }
+        if (document.body.dataset.view === 'trainings' || document.body.dataset.view === 'calendar') { setView('field'); return; }
         if (currentMode !== 'select') { setMode('select'); return; }
     }
     if ((e.key === 'Delete' || e.key === 'Backspace') && !editing &&
@@ -3181,30 +3926,36 @@ function dataUrlToBlob(dataUrl) {
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     return new Blob([bytes], { type: mime });
 }
+function shareTargetUrl(platform, text) {
+    const pageUrl = location.href.split('#')[0];
+    return platform === 'telegram'
+        ? `https://t.me/share/url?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(text)}`
+        : `https://api.whatsapp.com/send?text=${encodeURIComponent(`${text} ${pageUrl}`)}`;
+}
 async function shareBoard(platform) {
     const meta = currentExportMeta();
     const shot = captureBoardWithFooter('png', 2, 0.95, meta);
     const filename = `${safeFileStamp(meta.title || activeTrainingTitle || 'benchreview')}.png`;
     const blob = dataUrlToBlob(shot.dataUrl);
     const text = `BenchReview Lite${meta.title ? `: ${meta.title}` : ''}`;
+    const file = window.File ? new File([blob], filename, { type: 'image/png' }) : null;
+
     try {
-        if (navigator.share && window.File) {
-            const file = new File([blob], filename, { type: blob.type || 'image/png' });
+        if (navigator.share && file) {
+            const payload = { title: 'BenchReview Lite', text, files: [file] };
             if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-                await navigator.share({ title: 'BenchReview Lite', text, files: [file] });
+                await navigator.share(payload);
                 return;
             }
         }
     } catch (err) {
         if (err && err.name === 'AbortError') return;
     }
+
     downloadBlob(filename, blob);
-    const shareText = `${text}. Скрин скачан, прикрепите его к сообщению.`;
-    const pageUrl = location.href.split('#')[0];
-    const url = platform === 'telegram'
-        ? `https://t.me/share/url?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(shareText)}`
-        : `https://wa.me/?text=${encodeURIComponent(`${shareText} ${pageUrl}`)}`;
-    window.open(url, '_blank', 'noopener');
+    const shareUrl = shareTargetUrl(platform, `${text}. Скрин скачан, прикрепите PNG к сообщению.`);
+    const popup = window.open(shareUrl, '_blank');
+    if (!popup) window.location.href = shareUrl;
 }
 document.getElementById('btnSavePng').addEventListener('click', () => {
     const shot = captureBoardWithFooter('png', 2, 0.95, currentExportMeta());
@@ -3399,6 +4150,311 @@ function planExerciseSummary(plan) {
         .map(record => record.title || 'Тренировка')
         .join(', ');
 }
+function exerciseRecordsByIds(ids = []) {
+    return ids
+        .map(id => trainingRecords.find(record => record.id === id))
+        .filter(Boolean);
+}
+function dateKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+function fillCollectionPreview(el, ids = []) {
+    if (!el) return;
+    const record = exerciseRecordsByIds(ids).find(item => item.screen);
+    el.innerHTML = '';
+    if (record && record.screen) {
+        const img = document.createElement('img');
+        img.alt = '';
+        img.src = record.screen;
+        el.appendChild(img);
+    } else {
+        el.innerHTML = '<i class="fa-regular fa-image"></i>';
+    }
+}
+function plansByDateKey() {
+    const map = new Map();
+    plannedTrainings.forEach(plan => {
+        const key = plan.scheduledDate || todayInputValue();
+        if (!map.has(key)) map.set(key, []);
+        map.get(key).push(plan);
+    });
+    return map;
+}
+function renderCalendar() {
+    const grid = document.getElementById('calendarGrid');
+    const title = document.getElementById('calendarTitle');
+    if (!grid || !title) return;
+    grid.innerHTML = '';
+    const monthStart = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth(), 1);
+    const monthTitle = monthStart.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+    title.textContent = monthTitle.charAt(0).toUpperCase() + monthTitle.slice(1);
+
+    const planMap = plansByDateKey();
+    const startOffset = (monthStart.getDay() + 6) % 7;
+    const firstCell = new Date(monthStart);
+    firstCell.setDate(monthStart.getDate() - startOffset);
+    const todayKey = dateKey(new Date());
+
+    for (let i = 0; i < 42; i++) {
+        const d = new Date(firstCell);
+        d.setDate(firstCell.getDate() + i);
+        const key = dateKey(d);
+        const plans = planMap.get(key) || [];
+        const cell = document.createElement('div');
+        cell.className = `calendar-day-cell${d.getMonth() !== monthStart.getMonth() ? ' muted' : ''}${key === todayKey ? ' today' : ''}${plans.length ? ' has-plan' : ''}`;
+        cell.innerHTML = `<div class="calendar-day-num">${d.getDate()}</div>`;
+        if (d.getMonth() === monthStart.getMonth()) {
+            const plus = document.createElement('button');
+            plus.type = 'button';
+            plus.className = 'calendar-plus';
+            plus.title = 'Запланировать тренировку';
+            plus.setAttribute('aria-label', `Запланировать тренировку на ${d.toLocaleDateString('ru-RU')}`);
+            plus.innerHTML = '<i class="fa-solid fa-plus"></i>';
+            plus.addEventListener('click', e => {
+                e.stopPropagation();
+                openScheduleModalForDate(key);
+            });
+            cell.appendChild(plus);
+        }
+        if (plans.length) {
+            const first = plans[0];
+            const label = plans.length > 1 ? `${plans.length} тренировки` : (first.title || 'Тренировка');
+            const pill = document.createElement('div');
+            pill.className = 'calendar-plan-pill';
+            pill.innerHTML = '<span class="calendar-stick-icon"></span><span></span>';
+            pill.querySelector('span:last-child').textContent = label;
+            cell.appendChild(pill);
+            cell.tabIndex = 0;
+            cell.setAttribute('role', 'button');
+            cell.addEventListener('click', () => {
+                trainingMode = 'planned';
+                setView('trainings');
+            });
+            cell.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    trainingMode = 'planned';
+                    setView('trainings');
+                }
+            });
+        }
+        grid.appendChild(cell);
+    }
+}
+
+function parseGoalieIceMinutes(value) {
+    const raw = String(value || '').trim().replace(',', '.');
+    if (!raw) return 0;
+    const timeMatch = raw.match(/^(\d+)\s*[:\-]\s*(\d{1,2})$/);
+    if (timeMatch) {
+        const minutes = Number(timeMatch[1]) || 0;
+        const seconds = Math.min(59, Number(timeMatch[2]) || 0);
+        return minutes + seconds / 60;
+    }
+    const numeric = Number.parseFloat(raw);
+    return Number.isFinite(numeric) ? Math.max(0, numeric) : 0;
+}
+
+function formatGoalieIce(value) {
+    let minutes = parseGoalieIceMinutes(value);
+    let whole = Math.floor(minutes);
+    let seconds = Math.round((minutes - whole) * 60);
+    if (seconds >= 60) {
+        whole += 1;
+        seconds = 0;
+    }
+    return `${whole}:${String(seconds).padStart(2, '0')}`;
+}
+
+function goalieStats(goalie) {
+    const events = Array.isArray(goalie.events) ? goalie.events : [];
+    const shots = events.length;
+    const goals = events.filter(event => event.type === 'goal').length;
+    const saves = Math.max(0, shots - goals);
+    const iceMinutes = parseGoalieIceMinutes(goalie.iceTime || '60:00');
+    return {
+        shots,
+        goals,
+        saves,
+        ice: formatGoalieIce(goalie.iceTime || '0:00'),
+        sv: shots ? saves / shots * 100 : 100,
+        gaa: iceMinutes > 0 ? goals * 60 / iceMinutes : 0
+    };
+}
+
+function syncGoalieInputs() {
+    goalieGoalies.forEach((goalie, index) => {
+        const nameInput = document.getElementById(`goalieName${index}`);
+        const timeInput = document.getElementById(`goalieTime${index}`);
+        if (nameInput) goalie.name = nameInput.value.trim();
+        if (timeInput) goalie.iceTime = timeInput.value.trim() || (index === 0 ? '60:00' : '0:00');
+    });
+}
+
+function goalieName(index) {
+    const goalie = goalieGoalies[index] || {};
+    return goalie.name || (index === 0 ? 'Иванов' : 'Вратарь 2');
+}
+
+function setGoalieMode(mode) {
+    goalieMode = mode === 'goal' ? 'goal' : 'shot';
+    renderGoaliePage();
+}
+
+function setGoalieActive(index) {
+    syncGoalieInputs();
+    goalieActiveIndex = index === 1 ? 1 : 0;
+    renderGoaliePage();
+}
+
+function recordGoalieEvent(zone) {
+    syncGoalieInputs();
+    const goalie = goalieGoalies[goalieActiveIndex];
+    const type = goalieMode === 'goal' ? 'goal' : 'save';
+    goalie.events.push({
+        zone: Number(zone),
+        type,
+        at: new Date().toISOString()
+    });
+    goalie.undone = [];
+    if (type === 'goal') goalieMode = 'shot';
+    renderGoaliePage();
+}
+
+function undoGoalieEvent() {
+    const goalie = goalieGoalies[goalieActiveIndex];
+    if (!goalie.events.length) return;
+    goalie.undone.push(goalie.events.pop());
+    renderGoaliePage();
+}
+
+function redoGoalieEvent() {
+    const goalie = goalieGoalies[goalieActiveIndex];
+    if (!goalie.undone.length) return;
+    goalie.events.push(goalie.undone.pop());
+    renderGoaliePage();
+}
+
+function loadGoalieMatches() {
+    try {
+        const raw = localStorage.getItem(GOALIE_STORAGE_KEY);
+        goalieSavedMatches = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(goalieSavedMatches)) goalieSavedMatches = [];
+    } catch (_) {
+        goalieSavedMatches = [];
+    }
+}
+
+function persistGoalieMatches() {
+    try {
+        localStorage.setItem(GOALIE_STORAGE_KEY, JSON.stringify(goalieSavedMatches.slice(0, 60)));
+    } catch (_) {}
+}
+
+function saveGoalieMatch() {
+    syncGoalieInputs();
+    const title = document.getElementById('goalieMatchInput').value.trim() || 'Матч';
+    const goalies = goalieGoalies
+        .map((goalie, index) => ({
+            name: goalie.name || goalieName(index),
+            iceTime: goalie.iceTime || (index === 0 ? '60:00' : '0:00'),
+            events: Array.isArray(goalie.events) ? goalie.events.slice() : [],
+            stats: goalieStats(goalie)
+        }))
+        .filter((goalie, index) => index === 0 || goalie.events.length || goalie.name !== 'Вратарь 2');
+    if (!goalies.length) return;
+    goalieSavedMatches.unshift({
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        title,
+        createdAt: new Date().toISOString(),
+        goalies
+    });
+    persistGoalieMatches();
+    renderGoaliePage();
+}
+
+function goalieGoalCounts(events) {
+    const counts = new Map();
+    (events || []).forEach(event => {
+        if (event.type !== 'goal') return;
+        counts.set(Number(event.zone), (counts.get(Number(event.zone)) || 0) + 1);
+    });
+    return counts;
+}
+
+function renderGoalieSavedList() {
+    const list = document.getElementById('goalieSavedList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!goalieSavedMatches.length) {
+        const empty = document.createElement('div');
+        empty.className = 'goalie-saved-empty';
+        empty.textContent = 'Сохранённых матчей пока нет. Наберите броски по зонам и нажмите «Сохранить Матч».';
+        list.appendChild(empty);
+        return;
+    }
+    goalieSavedMatches.slice(0, 12).forEach(match => {
+        (match.goalies || []).forEach(goalie => {
+            const stats = goalie.stats || goalieStats(goalie);
+            const counts = goalieGoalCounts(goalie.events);
+            const card = document.createElement('article');
+            card.className = 'goalie-saved-card';
+            const mini = document.createElement('div');
+            mini.className = 'goalie-mini-net';
+            [9, 8, 7, 6, 5, 4, 3, 2, 1].forEach(zone => {
+                const cell = document.createElement('div');
+                cell.className = 'goalie-mini-zone';
+                cell.textContent = counts.get(zone) ? String(counts.get(zone)) : '';
+                mini.appendChild(cell);
+            });
+            const meta = document.createElement('div');
+            meta.className = 'goalie-saved-meta';
+            meta.innerHTML = `
+                <h3></h3>
+                <p data-role="date"></p>
+                <p>Сейвы: ${stats.saves} · Бросков: ${stats.shots} · Голов: ${stats.goals}</p>
+                <p>SV: ${stats.sv.toFixed(1)}% · GAA: ${stats.gaa.toFixed(2)} · Время: ${stats.ice}</p>`;
+            meta.querySelector('h3').textContent = `${match.title || 'Матч'} · ${goalie.name || 'Вратарь'}`;
+            meta.querySelector('[data-role="date"]').textContent = trainingDateLabel(match.createdAt || new Date().toISOString());
+            card.appendChild(mini);
+            card.appendChild(meta);
+            list.appendChild(card);
+        });
+    });
+}
+
+function renderGoaliePage() {
+    const statsRoot = document.getElementById('goalieStats');
+    if (!statsRoot) return;
+    const active = goalieGoalies[goalieActiveIndex];
+    const stats = goalieStats(active);
+    const activeLabel = document.getElementById('goalieActiveLabel');
+    if (activeLabel) activeLabel.textContent = `Вратарь ${goalieName(goalieActiveIndex)}`;
+    document.querySelectorAll('.goalie-tab').forEach(btn => {
+        const index = Number(btn.dataset.goalieIndex);
+        btn.classList.toggle('active', index === goalieActiveIndex);
+        btn.textContent = index === 0 ? `1 · ${goalieName(0)}` : `2 · ${goalieName(1)}`;
+    });
+    document.getElementById('btnGoalieShot').classList.toggle('active', goalieMode === 'shot');
+    document.getElementById('btnGoalieGoal').classList.toggle('active', goalieMode === 'goal');
+    document.querySelector('[data-goalie-stat="saves"]').textContent = String(stats.saves);
+    document.querySelector('[data-goalie-stat="shots"]').textContent = String(stats.shots);
+    document.querySelector('[data-goalie-stat="goals"]').textContent = String(stats.goals);
+    document.querySelector('[data-goalie-stat="ice"]').textContent = stats.ice;
+    document.querySelector('[data-goalie-stat="sv"]').textContent = stats.sv.toFixed(1);
+    document.querySelector('[data-goalie-stat="gaa"]').textContent = stats.gaa.toFixed(2);
+    const goalCounts = goalieGoalCounts(active.events);
+    document.querySelectorAll('.goalie-zone').forEach(zoneBtn => {
+        const zone = Number(zoneBtn.dataset.zone);
+        const hits = goalCounts.get(zone) || 0;
+        zoneBtn.classList.toggle('goal-hit', hits > 0);
+        zoneBtn.title = hits ? `Голов в зону ${zone}: ${hits}` : `Зона ${zone}`;
+    });
+    document.getElementById('btnGoalieUndo').disabled = !active.events.length;
+    document.getElementById('btnGoalieRedo').disabled = !active.undone.length;
+    renderGoalieSavedList();
+}
+
 function updateTrainingModeControls() {
     document.querySelectorAll('[data-training-mode]').forEach(btn => {
         btn.classList.toggle('on', btn.dataset.trainingMode === trainingMode);
@@ -3495,6 +4551,7 @@ function renderPlannedTrainings(groups, empty, q) {
                     <span><i class="fa-solid fa-list-check"></i><b data-role="names"></b></span>
                 </div>
             </div>
+            <div class="training-collection-preview" data-role="preview"></div>
             <div class="training-row-actions">
                 <button class="training-icon-btn" type="button" data-action="edit" title="Редактировать план"><i class="fa-regular fa-pen-to-square"></i></button>
                 <button class="training-icon-btn danger" type="button" data-action="delete" title="Удалить из календаря"><i class="fa-regular fa-trash-can"></i></button>
@@ -3508,6 +4565,7 @@ function renderPlannedTrainings(groups, empty, q) {
         row.querySelector('[data-role="place"]').textContent = plan.place || 'Лёд';
         row.querySelector('[data-role="exercises"]').textContent = `${exerciseIds.length} упражнений`;
         row.querySelector('[data-role="names"]').textContent = planExerciseSummary(plan) || 'Без упражнений';
+        fillCollectionPreview(row.querySelector('[data-role="preview"]'), exerciseIds);
         row.addEventListener('click', () => openCollectionEditor('plan', plan.id));
         row.addEventListener('keydown', e => {
             if (e.key === 'Enter') openCollectionEditor('plan', plan.id);
@@ -3562,6 +4620,7 @@ function renderTrainingBlocks(groups, empty, q) {
                     <span><i class="fa-regular fa-clipboard"></i><b data-role="names"></b></span>
                 </div>
             </div>
+            <div class="training-collection-preview" data-role="preview"></div>
             <div class="training-row-actions">
                 <button class="training-icon-btn" type="button" data-action="edit" title="Редактировать блок"><i class="fa-regular fa-pen-to-square"></i></button>
                 <button class="training-icon-btn" type="button" data-action="duplicate" title="Дублировать блок"><i class="fa-regular fa-copy"></i></button>
@@ -3577,6 +4636,7 @@ function renderTrainingBlocks(groups, empty, q) {
             .filter(Boolean)
             .map(record => record.title || 'Тренировка')
             .join(', ') || 'Без упражнений';
+        fillCollectionPreview(row.querySelector('[data-role="preview"]'), exerciseIds);
         row.addEventListener('click', () => openCollectionEditor('block', block.id));
         row.addEventListener('keydown', e => {
             if (e.key === 'Enter') openCollectionEditor('block', block.id);
@@ -3880,28 +4940,35 @@ function selectedExerciseIds() {
 function todayInputValue() {
     return new Date().toISOString().slice(0, 10);
 }
-function openScheduleModal() {
+function openScheduleModal(dateOverride = '') {
     const ids = selectedExerciseIds();
-    if (!ids.length) return;
+    if (!ids.length && !dateOverride) return;
+    scheduleDateOverride = dateOverride || '';
     const overlay = document.getElementById('scheduleOverlay');
-    document.getElementById('scheduleSelectedCount').textContent = `${ids.length} ${ids.length === 1 ? 'упражнение' : 'упражнений'}`;
+    document.getElementById('scheduleSelectedCount').textContent = ids.length
+        ? `${ids.length} ${ids.length === 1 ? 'упражнение' : 'упражнений'}`
+        : '0 упражнений';
     document.getElementById('schedulePlanTitle').value = 'Ледовая тренировка';
     document.getElementById('schedulePlanPlace').value = 'Лёд';
-    document.getElementById('schedulePlanDate').value = todayInputValue();
+    document.getElementById('schedulePlanDate').value = scheduleDateOverride || todayInputValue();
     document.getElementById('schedulePlanStart').value = '18:30';
     document.getElementById('schedulePlanEnd').value = '20:00';
     overlay.hidden = false;
     document.getElementById('schedulePlanTitle').focus();
     document.getElementById('schedulePlanTitle').select();
 }
+function openScheduleModalForDate(dateValue) {
+    openScheduleModal(dateValue);
+}
 function closeScheduleModal() {
     document.getElementById('scheduleOverlay').hidden = true;
+    scheduleDateOverride = '';
 }
 function saveScheduleModal() {
     const ids = selectedExerciseIds();
-    if (!ids.length) return;
+    if (!ids.length && !scheduleDateOverride) return;
     const title = document.getElementById('schedulePlanTitle').value.trim() || 'Ледовая тренировка';
-    const scheduledDate = document.getElementById('schedulePlanDate').value || todayInputValue();
+    const scheduledDate = document.getElementById('schedulePlanDate').value || scheduleDateOverride || todayInputValue();
     plannedTrainings.unshift({
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         title,
@@ -3917,7 +4984,8 @@ function saveScheduleModal() {
     selectedTrainingIds.clear();
     trainingMode = 'planned';
     closeScheduleModal();
-    renderTrainingList();
+    if (document.body.dataset.view === 'calendar') renderCalendar();
+    else renderTrainingList();
 }
 function setBlockModalFlow(flow) {
     blockModalFlow = flow;
@@ -3999,39 +5067,88 @@ function collectionTarget() {
         ? trainingBlocks.find(item => item.id === collectionEditing.id)
         : plannedTrainings.find(item => item.id === collectionEditing.id);
 }
-function renderCollectionExerciseList(selectedIds = []) {
+function exerciseMetaText(record) {
+    const tag = trainingTagMeta(record.tag);
+    return `${trainingDateLabel(record.createdAt || new Date().toISOString())}${tag ? ` · ${tag.label}` : ''}`;
+}
+function exerciseThumbMarkup(record) {
+    return record && record.screen
+        ? `<img class="exercise-thumb" alt="" src="${record.screen}">`
+        : '<div class="exercise-thumb placeholder"><i class="fa-regular fa-image"></i></div>';
+}
+function renderCollectionExerciseList() {
     const list = document.getElementById('collectionExerciseList');
     if (!list) return;
     list.innerHTML = '';
-    if (!trainingRecords.length) {
+    const records = exerciseRecordsByIds(collectionExerciseIds);
+    if (!records.length) {
         const empty = document.createElement('div');
         empty.className = 'exercise-empty';
-        empty.textContent = 'Сохранённых упражнений пока нет';
+        empty.textContent = 'В этот список пока ничего не добавлено';
         list.appendChild(empty);
         return;
     }
-    const selected = new Set(selectedIds);
-    trainingRecords.forEach(record => {
-        const row = document.createElement('label');
+    records.forEach(record => {
+        const row = document.createElement('div');
         row.className = 'exercise-check';
         row.innerHTML = `
-            <input type="checkbox" value="">
+            ${exerciseThumbMarkup(record)}
             <span>
                 <strong></strong>
                 <span data-role="meta"></span>
-            </span>`;
-        row.querySelector('input').value = record.id;
-        row.querySelector('input').checked = selected.has(record.id);
+            </span>
+            <button class="exercise-remove" type="button" data-remove-exercise="">Убрать</button>`;
+        row.querySelector('[data-remove-exercise]').dataset.removeExercise = record.id;
         row.querySelector('strong').textContent = record.title || 'Тренировка';
-        const tag = trainingTagMeta(record.tag);
-        row.querySelector('[data-role="meta"]').textContent = `${trainingDateLabel(record.createdAt || new Date().toISOString())}${tag ? ` · ${tag.label}` : ''}`;
+        row.querySelector('[data-role="meta"]').textContent = exerciseMetaText(record);
+        list.appendChild(row);
+    });
+}
+function renderCollectionAddList() {
+    const list = document.getElementById('collectionAddList');
+    if (!list) return;
+    list.innerHTML = '';
+    const selected = new Set(collectionExerciseIds);
+    const candidates = sortedByDate(trainingRecords)
+        .filter(record => !selected.has(record.id))
+        .slice(0, 10);
+    if (!candidates.length) {
+        const empty = document.createElement('div');
+        empty.className = 'exercise-empty';
+        empty.textContent = trainingRecords.length ? 'Все последние упражнения уже добавлены' : 'Сохранённых упражнений пока нет';
+        list.appendChild(empty);
+        return;
+    }
+    candidates.forEach(record => {
+        const row = document.createElement('div');
+        row.className = 'exercise-check';
+        row.innerHTML = `
+            ${exerciseThumbMarkup(record)}
+            <span>
+                <strong></strong>
+                <span data-role="meta"></span>
+            </span>
+            <button class="exercise-add-btn" type="button" data-add-exercise="">Добавить</button>`;
+        row.querySelector('[data-add-exercise]').dataset.addExercise = record.id;
+        row.querySelector('strong').textContent = record.title || 'Тренировка';
+        row.querySelector('[data-role="meta"]').textContent = exerciseMetaText(record);
         list.appendChild(row);
     });
 }
 function selectedCollectionExerciseIds() {
-    return Array.from(document.querySelectorAll('#collectionExerciseList input[type="checkbox"]:checked'))
-        .map(input => input.value)
-        .filter(Boolean);
+    const knownIds = new Set(trainingRecords.map(record => record.id));
+    return collectionExerciseIds.filter(id => knownIds.has(id));
+}
+function addCollectionExercise(id) {
+    if (!id || collectionExerciseIds.includes(id)) return;
+    collectionExerciseIds.push(id);
+    renderCollectionExerciseList();
+    renderCollectionAddList();
+}
+function removeCollectionExercise(id) {
+    collectionExerciseIds = collectionExerciseIds.filter(item => item !== id);
+    renderCollectionExerciseList();
+    renderCollectionAddList();
 }
 function openCollectionEditor(type, id) {
     const target = type === 'block'
@@ -4042,7 +5159,9 @@ function openCollectionEditor(type, id) {
     const overlay = document.getElementById('collectionOverlay');
     const blockFields = document.getElementById('collectionBlockFields');
     const planFields = document.getElementById('collectionPlanFields');
-    const ids = Array.isArray(target.exerciseIds) ? target.exerciseIds : [];
+    const knownIds = new Set(trainingRecords.map(record => record.id));
+    const ids = (Array.isArray(target.exerciseIds) ? target.exerciseIds : []).filter(exerciseId => knownIds.has(exerciseId));
+    collectionExerciseIds = ids.slice();
     document.getElementById('collectionTitle').textContent = type === 'block' ? 'Редактировать блок' : 'Редактировать план';
     document.getElementById('collectionSubtitle').textContent = type === 'block'
         ? 'Название, ярлык и список упражнений блока'
@@ -4058,7 +5177,9 @@ function openCollectionEditor(type, id) {
         document.getElementById('collectionPlanStart').value = target.startTime || '18:30';
         document.getElementById('collectionPlanEnd').value = target.endTime || '20:00';
     }
-    renderCollectionExerciseList(ids);
+    document.getElementById('collectionAddPanel').hidden = true;
+    renderCollectionExerciseList();
+    renderCollectionAddList();
     overlay.hidden = false;
     document.getElementById('collectionName').focus();
     document.getElementById('collectionName').select();
@@ -4066,6 +5187,7 @@ function openCollectionEditor(type, id) {
 function closeCollectionEditor() {
     document.getElementById('collectionOverlay').hidden = true;
     collectionEditing = null;
+    collectionExerciseIds = [];
 }
 function saveCollectionEditor() {
     const target = collectionTarget();
@@ -4192,10 +5314,56 @@ document.getElementById('btnCollectionCancel').addEventListener('click', closeCo
 document.getElementById('collectionOverlay').addEventListener('click', e => {
     if (e.target.id === 'collectionOverlay') closeCollectionEditor();
 });
+document.getElementById('btnCollectionAddExercise').addEventListener('click', () => {
+    const panel = document.getElementById('collectionAddPanel');
+    panel.hidden = !panel.hidden;
+    renderCollectionAddList();
+});
+document.getElementById('collectionExerciseList').addEventListener('click', e => {
+    const btn = e.target.closest('[data-remove-exercise]');
+    if (!btn) return;
+    removeCollectionExercise(btn.dataset.removeExercise);
+});
+document.getElementById('collectionAddList').addEventListener('click', e => {
+    const btn = e.target.closest('[data-add-exercise]');
+    if (!btn) return;
+    addCollectionExercise(btn.dataset.addExercise);
+});
 document.querySelectorAll('[data-training-mode]').forEach(btn => {
     btn.addEventListener('click', () => setTrainingMode(btn.dataset.trainingMode));
 });
 document.getElementById('btnBackToTrainings').addEventListener('click', () => setView('trainings'));
+document.getElementById('btnCalendarPrev').addEventListener('click', () => {
+    calendarCursor.setMonth(calendarCursor.getMonth() - 1);
+    renderCalendar();
+});
+document.getElementById('btnCalendarNext').addEventListener('click', () => {
+    calendarCursor.setMonth(calendarCursor.getMonth() + 1);
+    renderCalendar();
+});
+document.getElementById('btnCalendarToday').addEventListener('click', () => {
+    calendarCursor = new Date();
+    calendarCursor.setDate(1);
+    renderCalendar();
+});
+document.querySelectorAll('.goalie-zone').forEach(btn => {
+    btn.addEventListener('click', () => recordGoalieEvent(btn.dataset.zone));
+});
+document.getElementById('btnGoalieShot').addEventListener('click', () => setGoalieMode('shot'));
+document.getElementById('btnGoalieGoal').addEventListener('click', () => setGoalieMode('goal'));
+document.getElementById('btnGoalieUndo').addEventListener('click', undoGoalieEvent);
+document.getElementById('btnGoalieRedo').addEventListener('click', redoGoalieEvent);
+document.getElementById('btnGoalieSaveMatch').addEventListener('click', saveGoalieMatch);
+document.getElementById('btnGoalieSwitch').addEventListener('click', () => setGoalieActive(goalieActiveIndex === 0 ? 1 : 0));
+document.querySelectorAll('.goalie-tab').forEach(btn => {
+    btn.addEventListener('click', () => setGoalieActive(Number(btn.dataset.goalieIndex)));
+});
+['goalieName0', 'goalieName1', 'goalieTime0', 'goalieTime1'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+        syncGoalieInputs();
+        renderGoaliePage();
+    });
+});
 
 document.getElementById('btnRink').addEventListener('click', () => {
     rinkMode = (rinkMode === 'full') ? 'half' : 'full';
@@ -4210,7 +5378,9 @@ document.getElementById('btnRink').addEventListener('click', () => {
 loadTrainingRecords();
 loadTrainingBlocks();
 loadPlannedTrainings();
+loadGoalieMatches();
 renderTrainingList();
+renderGoaliePage();
 initNumberPicker();
 initSidePanelToggle();
 setBackground(() => {
