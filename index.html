@@ -343,6 +343,18 @@
         font-size: 13px;
         font-weight: 700;
     }
+    .btn-export.pdf-spacing { margin-left: 8px; }
+    .btn-share {
+        border-color: #34383f;
+        background: #1c1f26;
+        font-size: 15px;
+    }
+    .btn-share.telegram { color: #60a5fa; }
+    .btn-share.whatsapp { color: #34d399; }
+    .btn-share:hover {
+        border-color: currentColor;
+        background: rgba(255,255,255,.06);
+    }
     .training-start-block {
         margin-right: 22px;
         padding-right: 22px;
@@ -1110,6 +1122,75 @@
         text-align: left;
         font-size: 10px;
     }
+    .opponent-panel-icon {
+        width: 29px;
+        height: 29px;
+        border-radius: 50%;
+        border: 2px solid #c0392b;
+        background: #fff;
+        color: #c0392b;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 17px;
+        font-weight: 900;
+        line-height: 1;
+        box-shadow: 0 0 0 1px rgba(255,255,255,.06);
+        pointer-events: none;
+    }
+    .number-picker {
+        position: fixed;
+        z-index: 86;
+        width: 178px;
+        padding: 9px;
+        border: 1px solid #34383f;
+        border-radius: 11px;
+        background: #1c1f26;
+        box-shadow: 0 20px 46px rgba(0,0,0,.48);
+        display: grid;
+        gap: 8px;
+    }
+    .number-picker[hidden] { display: none; }
+    .number-picker input {
+        width: 100%;
+        height: 32px;
+        border: 1px solid #34383f;
+        border-radius: 8px;
+        background: #14171d;
+        color: #f4f8ff;
+        padding: 0 10px;
+        font-size: 13px;
+        font-weight: 800;
+        outline: none;
+    }
+    .number-picker input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59,130,246,.16);
+    }
+    .number-grid {
+        max-height: 75px;
+        overflow-y: auto;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 5px;
+        padding-right: 2px;
+    }
+    .number-option {
+        height: 30px;
+        border: 1px solid #262a32;
+        border-radius: 8px;
+        background: #171a20;
+        color: #d4d4d8;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background .15s, border-color .15s, color .15s;
+    }
+    .number-option:hover {
+        border-color: #3b82f6;
+        background: rgba(37,99,235,.18);
+        color: #fff;
+    }
     .comp-item[data-comp="barrierH"] { order: 10; }
     .comp-item[data-comp="barrierV"] { order: 11; }
     .comp-item[data-comp="stand"] { order: 12; }
@@ -1306,6 +1387,63 @@
         gap: 10px;
         margin-top: 18px;
     }
+    .workflow-dialog.collection-dialog {
+        width: min(660px, calc(100vw - 48px));
+    }
+    .collection-fields[hidden] { display: none; }
+    .exercise-checklist {
+        max-height: 242px;
+        overflow-y: auto;
+        display: grid;
+        gap: 7px;
+        padding: 4px 2px 2px;
+    }
+    .exercise-check {
+        min-height: 44px;
+        border: 1px solid #262a32;
+        border-radius: 9px;
+        background: #171a20;
+        padding: 7px 9px;
+        display: grid;
+        grid-template-columns: 22px minmax(0, 1fr);
+        gap: 9px;
+        align-items: center;
+        color: #d4d4d8;
+        cursor: pointer;
+    }
+    .exercise-check:hover {
+        border-color: rgba(59,130,246,.55);
+        background: #1b2029;
+    }
+    .exercise-check input {
+        width: 18px;
+        height: 18px;
+        accent-color: #2563eb;
+    }
+    .exercise-check strong {
+        display: block;
+        color: #f4f8ff;
+        font-size: 12.5px;
+        line-height: 1.2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .exercise-check span {
+        display: block;
+        margin-top: 3px;
+        color: #8b8f98;
+        font-size: 11px;
+        line-height: 1.2;
+    }
+    .exercise-empty {
+        border: 1px dashed #34383f;
+        border-radius: 9px;
+        color: #8b8f98;
+        padding: 14px;
+        text-align: center;
+        font-size: 12px;
+    }
 
     @media (max-width: 1300px), (max-height: 760px) {
         body { --side-panel-width: 158px; }
@@ -1321,6 +1459,7 @@
         .tool-btn { width: 34px; height: 34px; border-radius: 8px; font-size: 1em; }
         .tool-btn.btn-primary,
         .tool-btn.btn-export { width: auto; min-width: 68px; padding: 0 12px; }
+        .tool-btn.btn-share { width: 34px; min-width: 0; padding: 0; }
         .btn-record { min-width: 156px; padding: 0 12px; font-size: 12px; }
         .training-start-block { margin-right: 16px; padding-right: 16px; }
         .custom-icon { width: 22px; height: 22px; }
@@ -1356,6 +1495,7 @@
         .tool-btn { width: 30px; height: 30px; font-size: 0.9em; }
         .tool-btn.btn-primary,
         .tool-btn.btn-export { width: auto; min-width: 58px; padding: 0 9px; }
+        .tool-btn.btn-share { width: 30px; min-width: 0; padding: 0; }
         .btn-record { min-width: 128px; padding: 0 10px; font-size: 10.5px; }
         .training-start-block { margin-right: 10px; padding-right: 10px; }
         .training-editor { top: calc(50% + 78px); width: min(420px, calc(100% - 24px)); grid-template-columns: 1fr; }
@@ -1389,9 +1529,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.4" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.5" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.5.4</span>
+            <span class="version-tooltip">v0.5.5</span>
         </button>
         <h1 class="app-title">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -1551,7 +1691,9 @@
                 <button class="tool-btn" id="btnLoadJson" title="Открыть упражнение"><i class="fa-regular fa-folder-open"></i></button>
                 <button class="tool-btn" id="btnSaveJson" title="Сохранить упражнение (файл)"><i class="fa-regular fa-floppy-disk"></i></button>
                 <button class="tool-btn btn-primary" id="btnSavePng" title="Скачать PNG"><i class="fa-solid fa-download"></i><span>PNG</span></button>
-                <button class="tool-btn btn-export" id="btnSavePdf" title="Скачать PDF"><i class="fa-regular fa-file-lines"></i><span>PDF</span></button>
+                <button class="tool-btn btn-export pdf-spacing" id="btnSavePdf" title="Скачать PDF"><i class="fa-regular fa-file-lines"></i><span>PDF</span></button>
+                <button class="tool-btn btn-share telegram" id="btnShareTelegram" type="button" title="Отправить в Telegram"><i class="fa-brands fa-telegram"></i></button>
+                <button class="tool-btn btn-share whatsapp" id="btnShareWhatsapp" type="button" title="Отправить в WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
                 <input type="file" id="jsonInput" accept=".json" style="display:none">
             </div>
         </div>
@@ -1572,8 +1714,8 @@
     <div class="comp-item" draggable="true" data-comp="mD2" title="Защитник 2"><div class="marker-icon" style="background:#c0392b">D2</div></div>
     <div class="comp-item" draggable="true" data-comp="mC"  title="Тренер"><div class="marker-icon" style="background:#111">C</div></div>
     <div class="comp-item" draggable="true" data-comp="mG"  title="Вратарь"><div class="marker-icon" style="background:#7d3c98">G</div></div>
-    <div class="comp-item" draggable="true" data-comp="oppX" title="Соперник (X)"><b style="color:#c0392b; font-size:1.3em;">X</b></div>
-    <div class="comp-item" draggable="true" data-comp="mNum" title="Игрок с номером (1, 2, 3...)"><b style="font-size:1.05em; color:#555;">№</b></div>
+    <div class="comp-item" draggable="true" data-comp="oppX" title="Соперник (X)"><span class="opponent-panel-icon">X</span></div>
+    <div class="comp-item" draggable="true" data-comp="mNum" id="numberPlayerItem" title="Игрок с номером"><b style="font-size:1.05em; color:#d4d4d8;">№</b></div>
 
     <div class="panel-title">Оборудование</div>
     <div class="comp-item" draggable="true" data-comp="barrierH" title="Борт / барьер (горизонтальный)">
@@ -1611,6 +1753,11 @@
     </div>
 </div>
 
+<div class="number-picker" id="numberPicker" hidden>
+    <input id="numberPickerInput" type="text" inputmode="numeric" maxlength="3" placeholder="Номер">
+    <div class="number-grid" id="numberPickerGrid" aria-label="Номера игроков"></div>
+</div>
+
 <div class="confirm-overlay" id="confirmOverlay" hidden>
     <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
         <h2 class="confirm-title" id="confirmTitle">Подтвердите действие</h2>
@@ -1630,6 +1777,10 @@
             <label class="workflow-field-label wide">
                 Название
                 <input class="training-form-field" id="schedulePlanTitle" type="text" maxlength="60">
+            </label>
+            <label class="workflow-field-label wide">
+                Место
+                <input class="training-form-field" id="schedulePlanPlace" type="text" maxlength="60" placeholder="Лёд">
             </label>
             <label class="workflow-field-label">
                 Дата
@@ -1674,6 +1825,55 @@
         <div class="workflow-actions">
             <button class="confirm-btn primary" id="btnBlockSave" type="button">Сохранить</button>
             <button class="confirm-btn cancel" id="btnBlockCancel" type="button">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<div class="workflow-overlay" id="collectionOverlay" hidden>
+    <div class="workflow-dialog collection-dialog" role="dialog" aria-modal="true" aria-labelledby="collectionTitle">
+        <h2 class="workflow-title" id="collectionTitle">Редактировать</h2>
+        <p class="workflow-subtitle" id="collectionSubtitle">Откройте список упражнений и обновите детали</p>
+        <div class="workflow-grid">
+            <label class="workflow-field-label wide">
+                Название
+                <input class="training-form-field" id="collectionName" type="text" maxlength="70">
+            </label>
+            <label class="workflow-field-label wide collection-fields" id="collectionBlockFields">
+                Ярлык
+                <select class="training-form-field" id="collectionBlockTag">
+                    <option value="">Блок</option>
+                    <option value="attack">Атака</option>
+                    <option value="defense">Защита</option>
+                    <option value="dribbling">Дриблинг</option>
+                    <option value="goalies">Вратари</option>
+                </select>
+            </label>
+            <div class="workflow-grid wide collection-fields" id="collectionPlanFields">
+                <label class="workflow-field-label wide">
+                    Место
+                    <input class="training-form-field" id="collectionPlanPlace" type="text" maxlength="60">
+                </label>
+                <label class="workflow-field-label">
+                    Дата
+                    <input class="training-form-field" id="collectionPlanDate" type="date">
+                </label>
+                <label class="workflow-field-label">
+                    Начало
+                    <input class="training-form-field" id="collectionPlanStart" type="time">
+                </label>
+                <label class="workflow-field-label">
+                    Конец
+                    <input class="training-form-field" id="collectionPlanEnd" type="time">
+                </label>
+            </div>
+            <label class="workflow-field-label wide">
+                Упражнения
+                <div class="exercise-checklist" id="collectionExerciseList"></div>
+            </label>
+        </div>
+        <div class="workflow-actions">
+            <button class="confirm-btn primary" id="btnCollectionSave" type="button">Сохранить</button>
+            <button class="confirm-btn cancel" id="btnCollectionCancel" type="button">Отмена</button>
         </div>
     </div>
 </div>
@@ -1783,6 +1983,9 @@ let selectedTrainingTag = '';
 let blockModalSource = 'selected';
 let blockModalFlow = 'new';
 let lineLabelsEnabled = false;
+let pendingNumberValue = null;
+let activePlayerHalo = null;
+let collectionEditing = null;
 let confirmResolve = null;
 let confirmPreviousFocus = null;
 const TRAINING_TAGS = {
@@ -1927,13 +2130,24 @@ document.addEventListener('keydown', e => {
     if (e.key !== 'Escape' || confirmResolve) return;
     const scheduleOverlay = document.getElementById('scheduleOverlay');
     const blockOverlay = document.getElementById('blockOverlay');
+    const collectionOverlay = document.getElementById('collectionOverlay');
     if (scheduleOverlay && !scheduleOverlay.hidden) {
         e.preventDefault();
+        e.stopPropagation();
         closeScheduleModal();
+        return;
     }
     if (blockOverlay && !blockOverlay.hidden) {
         e.preventDefault();
+        e.stopPropagation();
         closeBlockModal();
+        return;
+    }
+    if (collectionOverlay && !collectionOverlay.hidden) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeCollectionEditor();
+        return;
     }
 }, true);
 
@@ -2186,6 +2400,33 @@ function pointAlongPath(pts, ratio) {
 function makeLineLabel(pts, type, color) {
     const text = LINE_LABELS[type];
     if (!text) return null;
+    if (type === 'stop') {
+        const at = pointAlongPath(pts, 0.96);
+        if (!at) return null;
+        const len = Math.hypot(at.dir.x, at.dir.y) || 1;
+        let nx = -at.dir.y / len, ny = at.dir.x / len;
+        if (ny > 0) { nx = -nx; ny = -ny; }
+        let angle = Math.atan2(at.dir.y, at.dir.x) * 180 / Math.PI + 90;
+        if (angle > 90 || angle < -90) angle += 180;
+        return new fabric.Text(text, {
+            left: at.point.x + nx * 31,
+            top: at.point.y + ny * 31,
+            originX: 'center',
+            originY: 'center',
+            angle,
+            fill: color,
+            stroke: '#ffffff',
+            strokeWidth: 3,
+            paintFirst: 'stroke',
+            fontSize: 17,
+            fontWeight: 700,
+            fontFamily: 'Segoe UI, Arial, sans-serif',
+            selectable: false,
+            evented: false,
+            objectCaching: false,
+            customType: 'line-label'
+        });
+    }
     const ratio = type === 'stop' ? 0.88 : (type === 'shot' ? 0.58 : 0.52);
     const at = pointAlongPath(pts, ratio);
     if (!at) return null;
@@ -2391,8 +2632,37 @@ canvas.on('mouse:up', () => {
 // ================= INTERACTIVE COMPONENTS =================
 function makeMarker(text, color) {
     const circle = new fabric.Circle({ radius: 16, fill: color, originX: 'center', originY: 'center', stroke: 'rgba(0,0,0,0.25)', strokeWidth: 1 });
-    const label = new fabric.Text(text, { fontSize: text.length > 1 ? 13 : 15, fontWeight: 'bold', fill: 'white', originX: 'center', originY: 'center', fontFamily: 'Arial' });
+    const label = new fabric.Text(text, { fontSize: text.length > 2 ? 10.5 : (text.length > 1 ? 13 : 15), fontWeight: 'bold', fill: 'white', originX: 'center', originY: 'center', fontFamily: 'Arial' });
     return new fabric.Group([circle, label], { customType: 'marker' });
+}
+
+function nextNumberMarkerText() {
+    const chosen = pendingNumberValue;
+    pendingNumberValue = null;
+    if (chosen !== null && String(chosen).trim()) return String(chosen).trim();
+    const text = String(numCounter);
+    numCounter = numCounter % 99 + 1;
+    return text;
+}
+
+function makeOpponentMarker() {
+    const circle = new fabric.Circle({
+        radius: 16,
+        fill: '#ffffff',
+        originX: 'center',
+        originY: 'center',
+        stroke: '#c0392b',
+        strokeWidth: 2.4
+    });
+    const label = new fabric.Text('X', {
+        fontSize: 19,
+        fontWeight: 'bold',
+        fill: '#c0392b',
+        originX: 'center',
+        originY: 'center',
+        fontFamily: 'Arial'
+    });
+    return new fabric.Group([circle, label], { customType: 'opponent' });
 }
 
 function makeImageComponent(src, targetW, targetH, customType, done) {
@@ -2412,8 +2682,8 @@ const COMPONENTS = {
     mD2: () => makeMarker('D2', '#c0392b'),
     mC:  () => makeMarker('C',  '#111111'),
     mG:  () => makeMarker('G',  '#7d3c98'),
-    mNum: () => { const m = makeMarker(String(numCounter), '#6c7a89'); numCounter = numCounter % 12 + 1; return m; },
-    oppX: () => new fabric.Text('X', { fontSize: 26, fontWeight: 'bold', fill: '#c0392b', fontFamily: 'Arial', customType: 'opponent' }),
+    mNum: () => makeMarker(nextNumberMarkerText(), '#6c7a89'),
+    oppX: () => makeOpponentMarker(),
 
     puck: () => new fabric.Circle({ radius: 5, fill: '#111', customType: 'obj-puck' }),
     pucks: () => {
@@ -2461,6 +2731,62 @@ function applyComponentLocks(o) {
     o.hasBorders = true;
     o.transparentCorners = false;
 }
+
+function isPlayerLikeObject(o) {
+    return o && (o.customType === 'marker' || o.customType === 'opponent');
+}
+
+function hidePlayerHalo() {
+    if (!activePlayerHalo) return;
+    canvas.remove(activePlayerHalo);
+    activePlayerHalo = null;
+    canvas.requestRenderAll();
+}
+
+function updatePlayerHalo() {
+    const obj = canvas.getActiveObject();
+    if (!isPlayerLikeObject(obj)) {
+        hidePlayerHalo();
+        return;
+    }
+    const box = obj.getBoundingRect(true, true);
+    const radius = Math.max(box.width, box.height) / 2 + 8;
+    if (!activePlayerHalo) {
+        activePlayerHalo = new fabric.Circle({
+            radius,
+            left: box.left + box.width / 2,
+            top: box.top + box.height / 2,
+            originX: 'center',
+            originY: 'center',
+            fill: 'rgba(96,165,250,.14)',
+            stroke: '#60a5fa',
+            strokeWidth: 2,
+            selectable: false,
+            evented: false,
+            objectCaching: false,
+            excludeFromExport: true,
+            __temp: true
+        });
+        canvas.add(activePlayerHalo);
+        activePlayerHalo.sendToBack();
+    } else {
+        activePlayerHalo.set({
+            radius,
+            left: box.left + box.width / 2,
+            top: box.top + box.height / 2
+        });
+        activePlayerHalo.setCoords();
+        activePlayerHalo.sendToBack();
+    }
+    canvas.requestRenderAll();
+}
+
+canvas.on('selection:created', updatePlayerHalo);
+canvas.on('selection:updated', updatePlayerHalo);
+canvas.on('selection:cleared', hidePlayerHalo);
+canvas.on('object:moving', updatePlayerHalo);
+canvas.on('object:rotating', updatePlayerHalo);
+canvas.on('object:modified', updatePlayerHalo);
 
 function addComponent(id, x, y, keepMode = false) {
     const factory = COMPONENTS[id];
@@ -2512,6 +2838,68 @@ const COMPONENT_LABELS = {
     net: 'Ворота'
 };
 
+function closeNumberPicker() {
+    const picker = document.getElementById('numberPicker');
+    if (picker) picker.hidden = true;
+}
+
+function chooseNumberPlayer(value) {
+    const cleaned = String(value || '').replace(/[^\d]/g, '').slice(0, 3);
+    pendingNumberValue = cleaned || String(numCounter);
+    const p = dropPos();
+    addComponent('mNum', p.x, p.y);
+    closeNumberPicker();
+}
+
+function openNumberPicker(anchor) {
+    const picker = document.getElementById('numberPicker');
+    const input = document.getElementById('numberPickerInput');
+    if (!picker || !input || !anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    picker.hidden = false;
+    const pickerRect = picker.getBoundingClientRect();
+    const left = Math.max(10, Math.min(window.innerWidth - pickerRect.width - 10, rect.left - pickerRect.width - 10));
+    const top = Math.max(10, Math.min(window.innerHeight - pickerRect.height - 10, rect.top));
+    picker.style.left = `${left}px`;
+    picker.style.top = `${top}px`;
+    input.value = '';
+    input.focus();
+}
+
+function initNumberPicker() {
+    const grid = document.getElementById('numberPickerGrid');
+    const input = document.getElementById('numberPickerInput');
+    if (!grid || !input) return;
+    for (let i = 1; i <= 99; i++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'number-option';
+        btn.textContent = String(i);
+        btn.addEventListener('click', () => chooseNumberPlayer(i));
+        grid.appendChild(btn);
+    }
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            chooseNumberPlayer(input.value);
+        }
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            closeNumberPicker();
+        }
+    });
+    input.addEventListener('input', () => {
+        input.value = input.value.replace(/[^\d]/g, '').slice(0, 3);
+    });
+    document.addEventListener('pointerdown', e => {
+        const picker = document.getElementById('numberPicker');
+        const trigger = document.getElementById('numberPlayerItem');
+        if (!picker || picker.hidden) return;
+        if (picker.contains(e.target) || (trigger && trigger.contains(e.target))) return;
+        closeNumberPicker();
+    });
+}
+
 // stamp включается только для серийного инвентаря; остальные компоненты по клику добавляются разово.
 // drag&drop всегда остаётся разовым размещением в точке сброса.
 document.querySelectorAll('.comp-item').forEach(el => {
@@ -2519,6 +2907,10 @@ document.querySelectorAll('.comp-item').forEach(el => {
     el.dataset.label = COMPONENT_LABELS[id] || el.title || '';
     el.classList.toggle('stampable', STAMP_COMPONENTS.has(id));
     el.addEventListener('click', () => {
+        if (id === 'mNum') {
+            openNumberPicker(el);
+            return;
+        }
         if (STAMP_COMPONENTS.has(id)) {
             if (currentMode === 'place' && currentComponent === id) {
                 setMode('select'); // повторный клик по тому же элементу выключает штамп
@@ -2631,16 +3023,19 @@ document.getElementById('btnClear').addEventListener('click', e => {
 window.addEventListener('keydown', e => {
     const ao = canvas.getActiveObject();
     const editing = ao && ao.isEditing;
+    const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName);
     if (e.key === 'Escape') {
         closeToolMenus();
+        closeNumberPicker();
         if (document.body.dataset.view === 'trainings') { setView('field'); return; }
         if (currentMode !== 'select') { setMode('select'); return; }
     }
     if ((e.key === 'Delete' || e.key === 'Backspace') && !editing &&
-        !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        !typing) {
         e.preventDefault(); deleteSelected();
     }
-    if (e.ctrlKey && !editing) {
+    if ((e.ctrlKey || e.metaKey) && !editing && !typing) {
+        if (e.key.toLowerCase() === 'z' && e.shiftKey) { e.preventDefault(); redo(); return; }
         if (e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
         if (e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
     }
@@ -2777,6 +3172,40 @@ function buildPdfFromJpeg(dataUrl, imgW, imgH) {
     add(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
     return new Blob([stringToBytes(chunks.join(''))], { type: 'application/pdf' });
 }
+function dataUrlToBlob(dataUrl) {
+    const parts = dataUrl.split(',');
+    const mimeMatch = parts[0].match(/data:(.*?);base64/);
+    const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+    const bin = atob(parts[1] || '');
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
+}
+async function shareBoard(platform) {
+    const meta = currentExportMeta();
+    const shot = captureBoardWithFooter('png', 2, 0.95, meta);
+    const filename = `${safeFileStamp(meta.title || activeTrainingTitle || 'benchreview')}.png`;
+    const blob = dataUrlToBlob(shot.dataUrl);
+    const text = `BenchReview Lite${meta.title ? `: ${meta.title}` : ''}`;
+    try {
+        if (navigator.share && window.File) {
+            const file = new File([blob], filename, { type: blob.type || 'image/png' });
+            if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+                await navigator.share({ title: 'BenchReview Lite', text, files: [file] });
+                return;
+            }
+        }
+    } catch (err) {
+        if (err && err.name === 'AbortError') return;
+    }
+    downloadBlob(filename, blob);
+    const shareText = `${text}. Скрин скачан, прикрепите его к сообщению.`;
+    const pageUrl = location.href.split('#')[0];
+    const url = platform === 'telegram'
+        ? `https://t.me/share/url?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(shareText)}`
+        : `https://wa.me/?text=${encodeURIComponent(`${shareText} ${pageUrl}`)}`;
+    window.open(url, '_blank', 'noopener');
+}
 document.getElementById('btnSavePng').addEventListener('click', () => {
     const shot = captureBoardWithFooter('png', 2, 0.95, currentExportMeta());
     download(`${safeFileStamp(activeTrainingTitle || 'drill')}.png`, shot.dataUrl);
@@ -2793,6 +3222,8 @@ document.getElementById('btnSavePdf').addEventListener('click', () => {
         alert('Не удалось сохранить PDF: ' + err.message);
     }
 });
+document.getElementById('btnShareTelegram').addEventListener('click', () => shareBoard('telegram'));
+document.getElementById('btnShareWhatsapp').addEventListener('click', () => shareBoard('whatsapp'));
 document.getElementById('btnSaveJson').addEventListener('click', () => {
     const data = { rinkMode, numCounter, canvas: canvas.toJSON(EXTRA_PROPS) };
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
@@ -2931,6 +3362,19 @@ function setTagChip(chip, tag) {
     chip.textContent = meta.label;
     chip.classList.add(meta.className);
 }
+function setBlockTagChip(chip, tag) {
+    if (!chip) return;
+    const meta = trainingTagMeta(tag);
+    chip.hidden = false;
+    chip.className = 'training-chip';
+    if (meta) {
+        chip.textContent = meta.label;
+        chip.classList.add(meta.className);
+    } else {
+        chip.textContent = 'Блок';
+        chip.classList.add('tag-block');
+    }
+}
 function planDateParts(dateValue) {
     const date = new Date(`${dateValue || new Date().toISOString().slice(0, 10)}T00:00:00`);
     return {
@@ -3015,7 +3459,7 @@ function renderPlannedTrainings(groups, empty, q) {
         .sort((a, b) => new Date(a.scheduledDate || 0) - new Date(b.scheduledDate || 0))
         .filter(plan => {
             const exercises = planExerciseSummary(plan);
-            const hay = `${plan.title || ''} ${trainingDateLabel(plan.scheduledDate || new Date().toISOString())} ${exercises}`.toLowerCase();
+            const hay = `${plan.title || ''} ${plan.place || ''} ${trainingDateLabel(plan.scheduledDate || new Date().toISOString())} ${exercises}`.toLowerCase();
             return !q || hay.includes(q);
         });
 
@@ -3046,11 +3490,13 @@ function renderPlannedTrainings(groups, empty, q) {
                 </div>
                 <div class="training-meta">
                     <span><i class="fa-regular fa-clock"></i><b data-role="time"></b></span>
+                    <span><i class="fa-solid fa-location-dot"></i><b data-role="place"></b></span>
                     <span><i class="fa-regular fa-clipboard"></i><b data-role="exercises"></b></span>
                     <span><i class="fa-solid fa-list-check"></i><b data-role="names"></b></span>
                 </div>
             </div>
             <div class="training-row-actions">
+                <button class="training-icon-btn" type="button" data-action="edit" title="Редактировать план"><i class="fa-regular fa-pen-to-square"></i></button>
                 <button class="training-icon-btn danger" type="button" data-action="delete" title="Удалить из календаря"><i class="fa-regular fa-trash-can"></i></button>
             </div>`;
 
@@ -3059,8 +3505,13 @@ function renderPlannedTrainings(groups, empty, q) {
         row.querySelector('h3').textContent = plan.title || 'Ледовая тренировка';
         row.querySelector('[data-role="distance"]').textContent = plan.completed ? 'Отмечено' : planDistanceLabel(dateValue);
         row.querySelector('[data-role="time"]').textContent = `${plan.startTime || '18:30'} - ${plan.endTime || '20:00'}`;
+        row.querySelector('[data-role="place"]').textContent = plan.place || 'Лёд';
         row.querySelector('[data-role="exercises"]').textContent = `${exerciseIds.length} упражнений`;
         row.querySelector('[data-role="names"]').textContent = planExerciseSummary(plan) || 'Без упражнений';
+        row.addEventListener('click', () => openCollectionEditor('plan', plan.id));
+        row.addEventListener('keydown', e => {
+            if (e.key === 'Enter') openCollectionEditor('plan', plan.id);
+        });
         row.querySelectorAll('.training-icon-btn, .training-select-box').forEach(btn => {
             btn.addEventListener('click', e => {
                 e.stopPropagation();
@@ -3072,7 +3523,14 @@ function renderPlannedTrainings(groups, empty, q) {
 }
 function renderTrainingBlocks(groups, empty, q) {
     const filtered = sortedByDate(trainingBlocks.filter(block => {
-        const hay = `${block.title || ''} ${trainingDateLabel(block.createdAt || new Date().toISOString())}`.toLowerCase();
+        const ids = Array.isArray(block.exerciseIds) ? block.exerciseIds : [];
+        const exercises = ids
+            .map(id => trainingRecords.find(record => record.id === id))
+            .filter(Boolean)
+            .map(record => record.title || '')
+            .join(' ');
+        const tag = trainingTagMeta(block.tag);
+        const hay = `${block.title || ''} ${tag ? tag.label : ''} ${exercises} ${trainingDateLabel(block.createdAt || new Date().toISOString())}`.toLowerCase();
         return !q || hay.includes(q);
     }));
 
@@ -3096,21 +3554,33 @@ function renderTrainingBlocks(groups, empty, q) {
             <div class="training-row-main">
                 <div class="training-row-title">
                     <h3></h3>
-                    <span class="training-chip tag-block">Блок</span>
+                    <span class="training-chip tag-block" data-role="blockTag">Блок</span>
                 </div>
                 <div class="training-meta">
                     <span><i class="fa-regular fa-calendar"></i><b data-role="time"></b></span>
                     <span><i class="fa-solid fa-list-check"></i><b data-role="exercises"></b></span>
+                    <span><i class="fa-regular fa-clipboard"></i><b data-role="names"></b></span>
                 </div>
             </div>
             <div class="training-row-actions">
+                <button class="training-icon-btn" type="button" data-action="edit" title="Редактировать блок"><i class="fa-regular fa-pen-to-square"></i></button>
                 <button class="training-icon-btn" type="button" data-action="duplicate" title="Дублировать блок"><i class="fa-regular fa-copy"></i></button>
                 <button class="training-icon-btn danger" type="button" data-action="delete" title="Удалить блок"><i class="fa-regular fa-trash-can"></i></button>
             </div>`;
 
         row.querySelector('h3').textContent = block.title || 'Блок тренировок';
+        setBlockTagChip(row.querySelector('[data-role="blockTag"]'), block.tag);
         row.querySelector('[data-role="time"]').textContent = trainingDateLabel(block.createdAt || new Date().toISOString());
         row.querySelector('[data-role="exercises"]').textContent = `${exerciseIds.length} упражнений`;
+        row.querySelector('[data-role="names"]').textContent = exerciseIds
+            .map(id => trainingRecords.find(record => record.id === id))
+            .filter(Boolean)
+            .map(record => record.title || 'Тренировка')
+            .join(', ') || 'Без упражнений';
+        row.addEventListener('click', () => openCollectionEditor('block', block.id));
+        row.addEventListener('keydown', e => {
+            if (e.key === 'Enter') openCollectionEditor('block', block.id);
+        });
         row.querySelectorAll('.training-icon-btn').forEach(btn => {
             btn.addEventListener('click', e => {
                 e.stopPropagation();
@@ -3416,6 +3886,7 @@ function openScheduleModal() {
     const overlay = document.getElementById('scheduleOverlay');
     document.getElementById('scheduleSelectedCount').textContent = `${ids.length} ${ids.length === 1 ? 'упражнение' : 'упражнений'}`;
     document.getElementById('schedulePlanTitle').value = 'Ледовая тренировка';
+    document.getElementById('schedulePlanPlace').value = 'Лёд';
     document.getElementById('schedulePlanDate').value = todayInputValue();
     document.getElementById('schedulePlanStart').value = '18:30';
     document.getElementById('schedulePlanEnd').value = '20:00';
@@ -3434,6 +3905,7 @@ function saveScheduleModal() {
     plannedTrainings.unshift({
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         title,
+        place: document.getElementById('schedulePlanPlace').value.trim() || 'Лёд',
         scheduledDate,
         startTime: document.getElementById('schedulePlanStart').value || '18:30',
         endTime: document.getElementById('schedulePlanEnd').value || '20:00',
@@ -3521,6 +3993,107 @@ function togglePlannedComplete(id) {
     persistPlannedTrainings();
     renderTrainingList();
 }
+function collectionTarget() {
+    if (!collectionEditing) return null;
+    return collectionEditing.type === 'block'
+        ? trainingBlocks.find(item => item.id === collectionEditing.id)
+        : plannedTrainings.find(item => item.id === collectionEditing.id);
+}
+function renderCollectionExerciseList(selectedIds = []) {
+    const list = document.getElementById('collectionExerciseList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!trainingRecords.length) {
+        const empty = document.createElement('div');
+        empty.className = 'exercise-empty';
+        empty.textContent = 'Сохранённых упражнений пока нет';
+        list.appendChild(empty);
+        return;
+    }
+    const selected = new Set(selectedIds);
+    trainingRecords.forEach(record => {
+        const row = document.createElement('label');
+        row.className = 'exercise-check';
+        row.innerHTML = `
+            <input type="checkbox" value="">
+            <span>
+                <strong></strong>
+                <span data-role="meta"></span>
+            </span>`;
+        row.querySelector('input').value = record.id;
+        row.querySelector('input').checked = selected.has(record.id);
+        row.querySelector('strong').textContent = record.title || 'Тренировка';
+        const tag = trainingTagMeta(record.tag);
+        row.querySelector('[data-role="meta"]').textContent = `${trainingDateLabel(record.createdAt || new Date().toISOString())}${tag ? ` · ${tag.label}` : ''}`;
+        list.appendChild(row);
+    });
+}
+function selectedCollectionExerciseIds() {
+    return Array.from(document.querySelectorAll('#collectionExerciseList input[type="checkbox"]:checked'))
+        .map(input => input.value)
+        .filter(Boolean);
+}
+function openCollectionEditor(type, id) {
+    const target = type === 'block'
+        ? trainingBlocks.find(item => item.id === id)
+        : plannedTrainings.find(item => item.id === id);
+    if (!target) return;
+    collectionEditing = { type, id };
+    const overlay = document.getElementById('collectionOverlay');
+    const blockFields = document.getElementById('collectionBlockFields');
+    const planFields = document.getElementById('collectionPlanFields');
+    const ids = Array.isArray(target.exerciseIds) ? target.exerciseIds : [];
+    document.getElementById('collectionTitle').textContent = type === 'block' ? 'Редактировать блок' : 'Редактировать план';
+    document.getElementById('collectionSubtitle').textContent = type === 'block'
+        ? 'Название, ярлык и список упражнений блока'
+        : 'Дата, время, место и список упражнений тренировки';
+    document.getElementById('collectionName').value = target.title || (type === 'block' ? 'Блок тренировок' : 'Ледовая тренировка');
+    blockFields.hidden = type !== 'block';
+    planFields.hidden = type !== 'plan';
+    if (type === 'block') {
+        document.getElementById('collectionBlockTag').value = target.tag || '';
+    } else {
+        document.getElementById('collectionPlanPlace').value = target.place || 'Лёд';
+        document.getElementById('collectionPlanDate').value = target.scheduledDate || todayInputValue();
+        document.getElementById('collectionPlanStart').value = target.startTime || '18:30';
+        document.getElementById('collectionPlanEnd').value = target.endTime || '20:00';
+    }
+    renderCollectionExerciseList(ids);
+    overlay.hidden = false;
+    document.getElementById('collectionName').focus();
+    document.getElementById('collectionName').select();
+}
+function closeCollectionEditor() {
+    document.getElementById('collectionOverlay').hidden = true;
+    collectionEditing = null;
+}
+function saveCollectionEditor() {
+    const target = collectionTarget();
+    if (!target || !collectionEditing) {
+        closeCollectionEditor();
+        return;
+    }
+    const title = document.getElementById('collectionName').value.trim();
+    const exerciseIds = selectedCollectionExerciseIds();
+    if (collectionEditing.type === 'block') {
+        target.title = title || 'Блок тренировок';
+        target.tag = document.getElementById('collectionBlockTag').value;
+        target.exerciseIds = exerciseIds;
+        target.updatedAt = new Date().toISOString();
+        persistTrainingBlocks();
+    } else {
+        target.title = title || 'Ледовая тренировка';
+        target.place = document.getElementById('collectionPlanPlace').value.trim() || 'Лёд';
+        target.scheduledDate = document.getElementById('collectionPlanDate').value || todayInputValue();
+        target.startTime = document.getElementById('collectionPlanStart').value || '18:30';
+        target.endTime = document.getElementById('collectionPlanEnd').value || '20:00';
+        target.exerciseIds = exerciseIds;
+        target.updatedAt = new Date().toISOString();
+        persistPlannedTrainings();
+    }
+    closeCollectionEditor();
+    renderTrainingList();
+}
 async function deletePlannedTraining(id) {
     const plan = plannedTrainings.find(item => item.id === id);
     if (!plan) return;
@@ -3531,6 +4104,7 @@ async function deletePlannedTraining(id) {
     renderTrainingList();
 }
 async function handlePlannedAction(id, action) {
+    if (action === 'edit') openCollectionEditor('plan', id);
     if (action === 'toggleComplete') togglePlannedComplete(id);
     if (action === 'delete') await deletePlannedTraining(id);
 }
@@ -3544,6 +4118,7 @@ function duplicateTrainingBlock(id) {
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         title: `${block.title || 'Блок тренировок'} копия`,
         createdAt: new Date().toISOString(),
+        tag: block.tag || '',
         exerciseIds: Array.isArray(block.exerciseIds) ? block.exerciseIds.slice() : []
     }));
     persistTrainingBlocks();
@@ -3559,6 +4134,7 @@ async function deleteTrainingBlock(id) {
     renderTrainingList();
 }
 async function handleBlockAction(id, action) {
+    if (action === 'edit') openCollectionEditor('block', id);
     if (action === 'duplicate') duplicateTrainingBlock(id);
     if (action === 'delete') await deleteTrainingBlock(id);
 }
@@ -3611,6 +4187,11 @@ document.getElementById('btnBlockCancel').addEventListener('click', closeBlockMo
 document.getElementById('blockOverlay').addEventListener('click', e => {
     if (e.target.id === 'blockOverlay') closeBlockModal();
 });
+document.getElementById('btnCollectionSave').addEventListener('click', saveCollectionEditor);
+document.getElementById('btnCollectionCancel').addEventListener('click', closeCollectionEditor);
+document.getElementById('collectionOverlay').addEventListener('click', e => {
+    if (e.target.id === 'collectionOverlay') closeCollectionEditor();
+});
 document.querySelectorAll('[data-training-mode]').forEach(btn => {
     btn.addEventListener('click', () => setTrainingMode(btn.dataset.trainingMode));
 });
@@ -3630,6 +4211,7 @@ loadTrainingRecords();
 loadTrainingBlocks();
 loadPlannedTrainings();
 renderTrainingList();
+initNumberPicker();
 initSidePanelToggle();
 setBackground(() => {
     fitCanvas();
