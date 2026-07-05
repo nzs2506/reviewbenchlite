@@ -989,6 +989,7 @@
         width: 6px;
         background: rgba(220,38,38,.78);
         z-index: 1;
+        display: none;
     }
     .goalie-zone-grid {
         position: absolute;
@@ -1066,15 +1067,45 @@
         display: grid;
         gap: 12px;
     }
+    .goalie-match-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        background: #fff;
+        padding: 10px;
+    }
+    .goalie-match-tab {
+        height: 34px;
+        border: 1px solid #d1d5db;
+        border-radius: 999px;
+        background: #fff;
+        color: #374151;
+        padding: 0 14px;
+        font-size: 12px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+    .goalie-match-tab.active {
+        background: #111827;
+        border-color: #111827;
+        color: #fff;
+    }
     .goalie-saved-card {
         display: grid;
-        grid-template-columns: 220px minmax(0, 1fr);
-        gap: 16px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
         align-items: center;
         border: 1px solid #e5e7eb;
         border-radius: 12px;
         background: #fff;
-        padding: 12px;
+        padding: 14px;
+    }
+    .goalie-saved-card.expanded {
+        align-items: start;
     }
     .goalie-saved-empty {
         border: 1px dashed #d1d5db;
@@ -1099,6 +1130,26 @@
         grid-template-rows: repeat(3, 1fr);
         overflow: hidden;
     }
+    .goalie-saved-detail {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(180px, 260px)) minmax(0, 1fr);
+        gap: 14px;
+        align-items: start;
+        border-top: 1px solid #e5e7eb;
+        padding-top: 12px;
+    }
+    .goalie-mini-block {
+        display: grid;
+        gap: 6px;
+    }
+    .goalie-mini-title {
+        color: #6b7280;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
     .goalie-mini-zone {
         border: 1px solid #111;
         display: grid;
@@ -1116,6 +1167,31 @@
         color: #111827;
         font-size: 13px;
         font-weight: 800;
+    }
+    .goalie-row-actions {
+        display: flex;
+        gap: 7px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+    .goalie-row-btn {
+        height: 31px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fff;
+        color: #374151;
+        padding: 0 10px;
+        font-size: 11px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+    .goalie-row-btn:hover {
+        border-color: #2563eb;
+        color: #111827;
+    }
+    .goalie-row-btn.danger:hover {
+        border-color: #dc2626;
+        color: #b91c1c;
     }
     .training-controls {
         display: flex;
@@ -1905,6 +1981,9 @@
     .workflow-dialog.collection-dialog {
         width: min(780px, calc(100vw - 48px));
     }
+    .workflow-dialog.schedule-dialog {
+        width: min(820px, calc(100vw - 48px));
+    }
     .collection-fields[hidden] { display: none; }
     .exercise-checklist {
         max-height: 340px;
@@ -2005,6 +2084,29 @@
         padding: 9px;
     }
     .collection-add-panel[hidden] { display: none; }
+    .schedule-source-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 8px 0;
+    }
+    .schedule-source-btn {
+        height: 30px;
+        border: 1px solid #34383f;
+        border-radius: 999px;
+        background: #171a20;
+        color: #aeb4bf;
+        padding: 0 10px;
+        font-size: 11px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+    .schedule-source-btn.active,
+    .schedule-source-btn:hover {
+        border-color: #3b82f6;
+        background: rgba(37,99,235,.18);
+        color: #fff;
+    }
     .exercise-pick-list {
         max-height: 260px;
         overflow-y: auto;
@@ -2116,6 +2218,7 @@
         .goalie-undo-row { grid-column: 1 / -1; }
         .goalie-stats { grid-template-columns: 1fr; font-size: 15px; }
         .goalie-saved-card { grid-template-columns: 1fr; }
+        .goalie-saved-detail { grid-template-columns: 1fr; }
         .exercise-check { grid-template-columns: 82px minmax(0, 1fr); }
         .exercise-remove,
         .exercise-add-btn { grid-column: 1 / -1; justify-self: end; }
@@ -2131,16 +2234,16 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.7" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.8" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.5.7</span>
+            <span class="version-tooltip">v0.5.8</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
             <button type="button" id="btnNavTrainings" data-view-target="trainings">Тренировки</button>
             <button type="button" class="current" id="btnNavField" data-view-target="field">Поле</button>
-            <button type="button" id="btnNavGoalie" data-view-target="goalie">Вратарь</button>
             <button type="button" id="btnNavCalendar" data-view-target="calendar">Календарь</button>
+            <button type="button" id="btnNavGoalie" data-view-target="goalie">Вратарь</button>
             <button type="button" id="btnNavStats">Статистика</button>
         </nav>
     </header>
@@ -2236,8 +2339,16 @@
                         <h2 class="goalie-title">Вратарь</h2>
                         <div class="goalie-fields">
                             <label class="goalie-field">
-                                Матч
-                                <input class="goalie-input" id="goalieMatchInput" type="text" value="МАТЧ 19-02 соперник">
+                                Название матча
+                                <input class="goalie-input" id="goalieMatchInput" type="text" value="Матч">
+                            </label>
+                            <label class="goalie-field">
+                                Дата
+                                <input class="goalie-input" id="goalieMatchDate" type="date">
+                            </label>
+                            <label class="goalie-field">
+                                Соперник
+                                <input class="goalie-input" id="goalieOpponentInput" type="text" value="Соперник">
                             </label>
                             <label class="goalie-field">
                                 Вратарь 1
@@ -2306,7 +2417,14 @@
                 </div>
             </section>
 
-            <section class="goalie-saved-list" id="goalieSavedList" aria-label="Сохранённые матчи"></section>
+            <section class="goalie-saved-list" aria-label="Сохранённые матчи">
+                <div class="goalie-match-tabs" aria-label="Тип матчей">
+                    <button class="goalie-match-tab active" type="button" data-goalie-season="friendly">Товарищеские матчи</button>
+                    <button class="goalie-match-tab" type="button" data-goalie-season="regular">Регулярный сезон</button>
+                    <button class="goalie-match-tab" type="button" data-goalie-season="playoff">Плей-офф</button>
+                </div>
+                <div class="goalie-saved-list" id="goalieSavedList"></div>
+            </section>
         </div>
     </main>
 
@@ -2479,7 +2597,7 @@
 </div>
 
 <div class="workflow-overlay" id="scheduleOverlay" hidden>
-    <div class="workflow-dialog" role="dialog" aria-modal="true" aria-labelledby="scheduleTitle">
+    <div class="workflow-dialog schedule-dialog" role="dialog" aria-modal="true" aria-labelledby="scheduleTitle">
         <h2 class="workflow-title" id="scheduleTitle">Запланировать тренировку</h2>
         <p class="workflow-subtitle"><span id="scheduleSelectedCount">0 упражнений</span> попадут в календарь</p>
         <div class="workflow-grid">
@@ -2503,6 +2621,24 @@
                 Конец
                 <input class="training-form-field" id="schedulePlanEnd" type="time" value="20:00">
             </label>
+            <div class="wide">
+                <div class="collection-exercise-toolbar">
+                    <span>Упражнения в плане</span>
+                </div>
+                <div class="exercise-checklist" id="scheduleExerciseList"></div>
+                <div class="collection-add-panel">
+                    <div class="collection-exercise-toolbar">
+                        <span>Добавить</span>
+                    </div>
+                    <div class="schedule-source-row" aria-label="Источники упражнений">
+                        <button class="schedule-source-btn active" type="button" data-schedule-source="saved">Из тренировок</button>
+                        <button class="schedule-source-btn" type="button" data-schedule-source="blocks">Добавить блок</button>
+                        <button class="schedule-source-btn" type="button" data-schedule-source="completed">Прошедшие</button>
+                        <button class="schedule-source-btn" type="button" data-schedule-source="planned">Запланированные</button>
+                    </div>
+                    <div class="exercise-pick-list" id="scheduleAddList"></div>
+                </div>
+            </div>
         </div>
         <div class="workflow-actions">
             <button class="confirm-btn primary" id="btnScheduleSave" type="button">Добавить в календарь</button>
@@ -2708,8 +2844,14 @@ let collectionExerciseIds = [];
 let calendarCursor = new Date();
 calendarCursor.setDate(1);
 let scheduleDateOverride = '';
+let scheduleExerciseIds = [];
+let scheduleSource = 'saved';
 let goalieMode = 'shot';
 let goalieActiveIndex = 0;
+let goalieSeasonMode = 'friendly';
+let goalieExpandedMatchId = '';
+let goalieEditingMatchId = '';
+let goalieLastGoalZone = null;
 let goalieGoalies = [
     { name: 'Иванов', iceTime: '60:00', events: [], undone: [] },
     { name: '', iceTime: '0:00', events: [], undone: [] }
@@ -3932,30 +4074,20 @@ function shareTargetUrl(platform, text) {
         ? `https://t.me/share/url?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(text)}`
         : `https://api.whatsapp.com/send?text=${encodeURIComponent(`${text} ${pageUrl}`)}`;
 }
-async function shareBoard(platform) {
+function shareBoard(platform) {
     const meta = currentExportMeta();
-    const shot = captureBoardWithFooter('png', 2, 0.95, meta);
-    const filename = `${safeFileStamp(meta.title || activeTrainingTitle || 'benchreview')}.png`;
-    const blob = dataUrlToBlob(shot.dataUrl);
     const text = `BenchReview Lite${meta.title ? `: ${meta.title}` : ''}`;
-    const file = window.File ? new File([blob], filename, { type: 'image/png' }) : null;
-
-    try {
-        if (navigator.share && file) {
-            const payload = { title: 'BenchReview Lite', text, files: [file] };
-            if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-                await navigator.share(payload);
-                return;
-            }
-        }
-    } catch (err) {
-        if (err && err.name === 'AbortError') return;
+    const shareUrl = shareTargetUrl(platform, `${text}. PDF сохранён отдельно для отправки.`);
+    const popup = window.open(shareUrl, '_blank');
+    if (!popup) {
+        window.location.href = shareUrl;
     }
 
-    downloadBlob(filename, blob);
-    const shareUrl = shareTargetUrl(platform, `${text}. Скрин скачан, прикрепите PNG к сообщению.`);
-    const popup = window.open(shareUrl, '_blank');
-    if (!popup) window.location.href = shareUrl;
+    try {
+        const shot = captureBoardWithFooter('jpeg', 2, 0.94, meta);
+        const filename = `${safeFileStamp(meta.title || activeTrainingTitle || 'benchreview')}.pdf`;
+        downloadBlob(filename, buildPdfFromJpeg(shot.dataUrl, shot.width, shot.height));
+    } catch (_) {}
 }
 document.getElementById('btnSavePng').addEventListener('click', () => {
     const shot = captureBoardWithFooter('png', 2, 0.95, currentExportMeta());
@@ -4317,6 +4449,7 @@ function recordGoalieEvent(zone) {
         at: new Date().toISOString()
     });
     goalie.undone = [];
+    goalieLastGoalZone = type === 'goal' ? Number(zone) : null;
     if (type === 'goal') goalieMode = 'shot';
     renderGoaliePage();
 }
@@ -4325,13 +4458,16 @@ function undoGoalieEvent() {
     const goalie = goalieGoalies[goalieActiveIndex];
     if (!goalie.events.length) return;
     goalie.undone.push(goalie.events.pop());
+    goalieLastGoalZone = null;
     renderGoaliePage();
 }
 
 function redoGoalieEvent() {
     const goalie = goalieGoalies[goalieActiveIndex];
     if (!goalie.undone.length) return;
-    goalie.events.push(goalie.undone.pop());
+    const event = goalie.undone.pop();
+    goalie.events.push(event);
+    goalieLastGoalZone = event.type === 'goal' ? Number(event.zone) : null;
     renderGoaliePage();
 }
 
@@ -4351,9 +4487,43 @@ function persistGoalieMatches() {
     } catch (_) {}
 }
 
+function goalieSeasonLabel(type) {
+    if (type === 'regular') return 'Регулярный сезон';
+    if (type === 'playoff') return 'Плей-офф';
+    return 'Товарищеский матч';
+}
+
+function goalieMatchDateValue() {
+    return document.getElementById('goalieMatchDate').value || todayInputValue();
+}
+
+function resetGoalieMapData() {
+    goalieGoalies = [
+        { name: document.getElementById('goalieName0').value.trim() || 'Иванов', iceTime: document.getElementById('goalieTime0').value.trim() || '60:00', events: [], undone: [] },
+        { name: document.getElementById('goalieName1').value.trim(), iceTime: document.getElementById('goalieTime1').value.trim() || '0:00', events: [], undone: [] }
+    ];
+    goalieActiveIndex = 0;
+    goalieMode = 'shot';
+    goalieLastGoalZone = null;
+}
+
+function goalieMatchTotals(match) {
+    const goalies = Array.isArray(match.goalies) ? match.goalies : [];
+    return goalies.reduce((acc, goalie) => {
+        const stats = goalie.stats || goalieStats(goalie);
+        acc.shots += stats.shots || 0;
+        acc.goals += stats.goals || 0;
+        acc.saves += stats.saves || 0;
+        acc.ice += parseGoalieIceMinutes(goalie.iceTime || stats.ice || '0:00');
+        return acc;
+    }, { shots: 0, goals: 0, saves: 0, ice: 0 });
+}
+
 function saveGoalieMatch() {
     syncGoalieInputs();
     const title = document.getElementById('goalieMatchInput').value.trim() || 'Матч';
+    const opponent = document.getElementById('goalieOpponentInput').value.trim() || 'Соперник';
+    const matchDate = goalieMatchDateValue();
     const goalies = goalieGoalies
         .map((goalie, index) => ({
             name: goalie.name || goalieName(index),
@@ -4363,63 +4533,161 @@ function saveGoalieMatch() {
         }))
         .filter((goalie, index) => index === 0 || goalie.events.length || goalie.name !== 'Вратарь 2');
     if (!goalies.length) return;
-    goalieSavedMatches.unshift({
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    const previous = goalieEditingMatchId ? goalieSavedMatches.find(match => match.id === goalieEditingMatchId) : null;
+    const saved = {
+        id: goalieEditingMatchId || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         title,
-        createdAt: new Date().toISOString(),
+        opponent,
+        matchDate,
+        seasonType: goalieSeasonMode,
+        createdAt: previous?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         goalies
-    });
+    };
+    if (goalieEditingMatchId) {
+        goalieSavedMatches = goalieSavedMatches.map(match => match.id === goalieEditingMatchId ? saved : match);
+    } else {
+        goalieSavedMatches.unshift(saved);
+    }
+    goalieEditingMatchId = '';
+    goalieExpandedMatchId = saved.id;
+    resetGoalieMapData();
     persistGoalieMatches();
     renderGoaliePage();
 }
 
-function goalieGoalCounts(events) {
+function goalieEventCounts(events, mode = 'goals') {
     const counts = new Map();
     (events || []).forEach(event => {
-        if (event.type !== 'goal') return;
+        if (mode === 'goals' && event.type !== 'goal') return;
         counts.set(Number(event.zone), (counts.get(Number(event.zone)) || 0) + 1);
     });
     return counts;
+}
+
+function goalieGoalCounts(events) {
+    return goalieEventCounts(events, 'goals');
+}
+
+function goalieMiniNet(counts) {
+    const mini = document.createElement('div');
+    mini.className = 'goalie-mini-net';
+    [9, 8, 7, 6, 5, 4, 3, 2, 1].forEach(zone => {
+        const cell = document.createElement('div');
+        cell.className = 'goalie-mini-zone';
+        cell.textContent = counts.get(zone) ? String(counts.get(zone)) : '';
+        mini.appendChild(cell);
+    });
+    return mini;
+}
+
+function openGoalieMatchForEdit(id) {
+    const match = goalieSavedMatches.find(item => item.id === id);
+    if (!match) return;
+    goalieEditingMatchId = id;
+    goalieSeasonMode = match.seasonType || 'friendly';
+    document.getElementById('goalieMatchInput').value = match.title || 'Матч';
+    document.getElementById('goalieOpponentInput').value = match.opponent || 'Соперник';
+    document.getElementById('goalieMatchDate').value = match.matchDate || todayInputValue();
+    goalieGoalies = [0, 1].map(index => {
+        const source = (match.goalies || [])[index] || {};
+        return {
+            name: source.name || (index === 0 ? 'Иванов' : ''),
+            iceTime: source.iceTime || (index === 0 ? '60:00' : '0:00'),
+            events: Array.isArray(source.events) ? source.events.slice() : [],
+            undone: []
+        };
+    });
+    document.getElementById('goalieName0').value = goalieGoalies[0].name || 'Иванов';
+    document.getElementById('goalieTime0').value = goalieGoalies[0].iceTime || '60:00';
+    document.getElementById('goalieName1').value = goalieGoalies[1].name || '';
+    document.getElementById('goalieTime1').value = goalieGoalies[1].iceTime || '0:00';
+    goalieActiveIndex = 0;
+    goalieMode = 'shot';
+    goalieLastGoalZone = null;
+    renderGoaliePage();
+}
+
+async function deleteGoalieMatch(id) {
+    const match = goalieSavedMatches.find(item => item.id === id);
+    if (!match) return;
+    const confirmed = await showConfirm(`Удалить матч "${match.title || 'Матч'}"?`, { okLabel: 'Удалить' });
+    if (!confirmed) return;
+    goalieSavedMatches = goalieSavedMatches.filter(item => item.id !== id);
+    if (goalieExpandedMatchId === id) goalieExpandedMatchId = '';
+    if (goalieEditingMatchId === id) goalieEditingMatchId = '';
+    persistGoalieMatches();
+    renderGoaliePage();
 }
 
 function renderGoalieSavedList() {
     const list = document.getElementById('goalieSavedList');
     if (!list) return;
     list.innerHTML = '';
-    if (!goalieSavedMatches.length) {
+    document.querySelectorAll('[data-goalie-season]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.goalieSeason === goalieSeasonMode);
+    });
+    const matches = goalieSavedMatches
+        .map(match => Object.assign({ seasonType: 'friendly', opponent: '', matchDate: '' }, match))
+        .filter(match => (match.seasonType || 'friendly') === goalieSeasonMode);
+    if (!matches.length) {
         const empty = document.createElement('div');
         empty.className = 'goalie-saved-empty';
-        empty.textContent = 'Сохранённых матчей пока нет. Наберите броски по зонам и нажмите «Сохранить Матч».';
+        empty.textContent = `В разделе «${goalieSeasonLabel(goalieSeasonMode)}» матчей пока нет.`;
         list.appendChild(empty);
         return;
     }
-    goalieSavedMatches.slice(0, 12).forEach(match => {
-        (match.goalies || []).forEach(goalie => {
-            const stats = goalie.stats || goalieStats(goalie);
-            const counts = goalieGoalCounts(goalie.events);
-            const card = document.createElement('article');
-            card.className = 'goalie-saved-card';
-            const mini = document.createElement('div');
-            mini.className = 'goalie-mini-net';
-            [9, 8, 7, 6, 5, 4, 3, 2, 1].forEach(zone => {
-                const cell = document.createElement('div');
-                cell.className = 'goalie-mini-zone';
-                cell.textContent = counts.get(zone) ? String(counts.get(zone)) : '';
-                mini.appendChild(cell);
-            });
-            const meta = document.createElement('div');
-            meta.className = 'goalie-saved-meta';
-            meta.innerHTML = `
-                <h3></h3>
-                <p data-role="date"></p>
-                <p>Сейвы: ${stats.saves} · Бросков: ${stats.shots} · Голов: ${stats.goals}</p>
-                <p>SV: ${stats.sv.toFixed(1)}% · GAA: ${stats.gaa.toFixed(2)} · Время: ${stats.ice}</p>`;
-            meta.querySelector('h3').textContent = `${match.title || 'Матч'} · ${goalie.name || 'Вратарь'}`;
-            meta.querySelector('[data-role="date"]').textContent = trainingDateLabel(match.createdAt || new Date().toISOString());
-            card.appendChild(mini);
-            card.appendChild(meta);
-            list.appendChild(card);
-        });
+    matches.slice(0, 30).forEach(match => {
+        const totals = goalieMatchTotals(match);
+        const sv = totals.shots ? (totals.saves / totals.shots * 100) : 100;
+        const gaa = totals.ice > 0 ? (totals.goals * 60 / totals.ice) : 0;
+        const card = document.createElement('article');
+        const expanded = goalieExpandedMatchId === match.id;
+        card.className = `goalie-saved-card${expanded ? ' expanded' : ''}`;
+        card.dataset.matchId = match.id;
+        const meta = document.createElement('div');
+        meta.className = 'goalie-saved-meta';
+        meta.innerHTML = `
+            <h3></h3>
+            <p data-role="date"></p>
+            <p>Бросков: ${totals.shots} · Голов: ${totals.goals} · Сейвы: ${totals.saves}</p>
+            <p>SV: ${sv.toFixed(1)}% · GAA: ${gaa.toFixed(2)} · Вратари: ${(match.goalies || []).map(g => g.name || 'Вратарь').join(', ')}</p>`;
+        meta.querySelector('h3').textContent = `${match.title || 'Матч'} · ${match.opponent || 'Соперник'}`;
+        meta.querySelector('[data-role="date"]').textContent = match.matchDate
+            ? trainingDateLabel(`${match.matchDate}T00:00:00`)
+            : trainingDateLabel(match.createdAt || new Date().toISOString());
+        const actions = document.createElement('div');
+        actions.className = 'goalie-row-actions';
+        actions.innerHTML = `
+            <button class="goalie-row-btn" type="button" data-goalie-action="toggle">${expanded ? 'Свернуть' : 'Открыть'}</button>
+            <button class="goalie-row-btn" type="button" data-goalie-action="edit">Редактировать</button>
+            <button class="goalie-row-btn danger" type="button" data-goalie-action="delete">Удалить</button>`;
+        card.appendChild(meta);
+        card.appendChild(actions);
+        if (expanded) {
+            const detail = document.createElement('div');
+            detail.className = 'goalie-saved-detail';
+            const allEvents = (match.goalies || []).flatMap(goalie => Array.isArray(goalie.events) ? goalie.events : []);
+            const shotBlock = document.createElement('div');
+            shotBlock.className = 'goalie-mini-block';
+            shotBlock.innerHTML = '<div class="goalie-mini-title">Карта бросков</div>';
+            shotBlock.appendChild(goalieMiniNet(goalieEventCounts(allEvents, 'all')));
+            const goalBlock = document.createElement('div');
+            goalBlock.className = 'goalie-mini-block';
+            goalBlock.innerHTML = '<div class="goalie-mini-title">Карта голов</div>';
+            goalBlock.appendChild(goalieMiniNet(goalieGoalCounts(allEvents)));
+            const statBlock = document.createElement('div');
+            statBlock.className = 'goalie-saved-meta';
+            statBlock.innerHTML = (match.goalies || []).map(goalie => {
+                const stats = goalie.stats || goalieStats(goalie);
+                return `<p><strong>${goalie.name || 'Вратарь'}:</strong> ${stats.shots} бросков, ${stats.goals} голов, SV ${stats.sv.toFixed(1)}%, GAA ${stats.gaa.toFixed(2)}, лёд ${stats.ice}</p>`;
+            }).join('');
+            detail.appendChild(shotBlock);
+            detail.appendChild(goalBlock);
+            detail.appendChild(statBlock);
+            card.appendChild(detail);
+        }
+        list.appendChild(card);
     });
 }
 
@@ -4443,15 +4711,14 @@ function renderGoaliePage() {
     document.querySelector('[data-goalie-stat="ice"]').textContent = stats.ice;
     document.querySelector('[data-goalie-stat="sv"]').textContent = stats.sv.toFixed(1);
     document.querySelector('[data-goalie-stat="gaa"]').textContent = stats.gaa.toFixed(2);
-    const goalCounts = goalieGoalCounts(active.events);
     document.querySelectorAll('.goalie-zone').forEach(zoneBtn => {
         const zone = Number(zoneBtn.dataset.zone);
-        const hits = goalCounts.get(zone) || 0;
-        zoneBtn.classList.toggle('goal-hit', hits > 0);
-        zoneBtn.title = hits ? `Голов в зону ${zone}: ${hits}` : `Зона ${zone}`;
+        zoneBtn.classList.toggle('goal-hit', goalieLastGoalZone === zone);
+        zoneBtn.title = `Зона ${zone}`;
     });
     document.getElementById('btnGoalieUndo').disabled = !active.events.length;
     document.getElementById('btnGoalieRedo').disabled = !active.undone.length;
+    document.getElementById('btnGoalieSaveMatch').innerHTML = goalieEditingMatchId ? 'Обновить<br>Матч' : 'Сохранить<br>Матч';
     renderGoalieSavedList();
 }
 
@@ -4940,19 +5207,144 @@ function selectedExerciseIds() {
 function todayInputValue() {
     return new Date().toISOString().slice(0, 10);
 }
+function uniqueExerciseIds(ids = []) {
+    const knownIds = new Set(trainingRecords.map(record => record.id));
+    const seen = new Set();
+    const out = [];
+    ids.forEach(id => {
+        if (!knownIds.has(id) || seen.has(id)) return;
+        seen.add(id);
+        out.push(id);
+    });
+    return out;
+}
+function addScheduleExerciseIds(ids = []) {
+    scheduleExerciseIds = uniqueExerciseIds(scheduleExerciseIds.concat(ids));
+    renderScheduleExerciseList();
+    renderScheduleAddList();
+}
+function removeScheduleExercise(id) {
+    scheduleExerciseIds = scheduleExerciseIds.filter(item => item !== id);
+    renderScheduleExerciseList();
+    renderScheduleAddList();
+}
+function scheduleSourceItems() {
+    const selected = new Set(scheduleExerciseIds);
+    if (scheduleSource === 'blocks') {
+        return trainingBlocks
+            .map(block => ({
+                type: 'collection',
+                id: block.id,
+                title: block.title || 'Блок тренировок',
+                meta: `${(block.exerciseIds || []).length} упражнений${block.tag ? ` · ${trainingTagMeta(block.tag)?.label || ''}` : ''}`,
+                exerciseIds: Array.isArray(block.exerciseIds) ? block.exerciseIds : []
+            }))
+            .filter(item => item.exerciseIds.some(id => !selected.has(id)));
+    }
+    if (scheduleSource === 'completed' || scheduleSource === 'planned') {
+        const completedOnly = scheduleSource === 'completed';
+        return plannedTrainings
+            .filter(plan => completedOnly ? plan.completed : true)
+            .map(plan => ({
+                type: 'collection',
+                id: plan.id,
+                title: plan.title || 'Ледовая тренировка',
+                meta: `${trainingDateLabel(`${plan.scheduledDate || todayInputValue()}T00:00:00`)} · ${(plan.exerciseIds || []).length} упражнений`,
+                exerciseIds: Array.isArray(plan.exerciseIds) ? plan.exerciseIds : []
+            }))
+            .filter(item => item.exerciseIds.some(id => !selected.has(id)));
+    }
+    return sortedByDate(trainingRecords)
+        .filter(record => !selected.has(record.id))
+        .map(record => ({
+            type: 'record',
+            id: record.id,
+            title: record.title || 'Тренировка',
+            meta: exerciseMetaText(record),
+            screen: record.screen,
+            exerciseIds: [record.id]
+        }));
+}
+function renderScheduleExerciseList() {
+    const list = document.getElementById('scheduleExerciseList');
+    if (!list) return;
+    list.innerHTML = '';
+    const records = exerciseRecordsByIds(scheduleExerciseIds);
+    document.getElementById('scheduleSelectedCount').textContent = `${records.length} ${records.length === 1 ? 'упражнение' : 'упражнений'}`;
+    if (!records.length) {
+        const empty = document.createElement('div');
+        empty.className = 'exercise-empty';
+        empty.textContent = 'Можно сохранить пустой план или добавить упражнения ниже';
+        list.appendChild(empty);
+        return;
+    }
+    records.forEach(record => {
+        const row = document.createElement('div');
+        row.className = 'exercise-check';
+        row.innerHTML = `
+            ${exerciseThumbMarkup(record)}
+            <span>
+                <strong></strong>
+                <span data-role="meta"></span>
+            </span>
+            <button class="exercise-remove" type="button" data-remove-schedule-exercise="">Убрать</button>`;
+        row.querySelector('[data-remove-schedule-exercise]').dataset.removeScheduleExercise = record.id;
+        row.querySelector('strong').textContent = record.title || 'Тренировка';
+        row.querySelector('[data-role="meta"]').textContent = exerciseMetaText(record);
+        list.appendChild(row);
+    });
+}
+function renderScheduleAddList() {
+    const list = document.getElementById('scheduleAddList');
+    if (!list) return;
+    list.innerHTML = '';
+    document.querySelectorAll('[data-schedule-source]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.scheduleSource === scheduleSource);
+    });
+    const candidates = scheduleSourceItems().slice(0, 14);
+    if (!candidates.length) {
+        const empty = document.createElement('div');
+        empty.className = 'exercise-empty';
+        empty.textContent = scheduleSource === 'blocks'
+            ? 'Нет блоков с новыми упражнениями'
+            : scheduleSource === 'completed'
+                ? 'Нет прошедших планов с новыми упражнениями'
+                : scheduleSource === 'planned'
+                    ? 'Нет запланированных списков с новыми упражнениями'
+                    : 'Нет сохранённых упражнений для добавления';
+        list.appendChild(empty);
+        return;
+    }
+    candidates.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'exercise-check';
+        row.innerHTML = `
+            ${item.screen ? `<img class="exercise-thumb" alt="" src="${item.screen}">` : '<div class="exercise-thumb placeholder"><i class="fa-solid fa-layer-group"></i></div>'}
+            <span>
+                <strong></strong>
+                <span data-role="meta"></span>
+            </span>
+            <button class="exercise-add-btn" type="button" data-add-schedule-item="">Добавить</button>`;
+        row.querySelector('[data-add-schedule-item]').dataset.addScheduleItem = item.exerciseIds.join(',');
+        row.querySelector('strong').textContent = item.title;
+        row.querySelector('[data-role="meta"]').textContent = item.meta;
+        list.appendChild(row);
+    });
+}
 function openScheduleModal(dateOverride = '') {
     const ids = selectedExerciseIds();
     if (!ids.length && !dateOverride) return;
     scheduleDateOverride = dateOverride || '';
+    scheduleExerciseIds = uniqueExerciseIds(ids);
+    scheduleSource = 'saved';
     const overlay = document.getElementById('scheduleOverlay');
-    document.getElementById('scheduleSelectedCount').textContent = ids.length
-        ? `${ids.length} ${ids.length === 1 ? 'упражнение' : 'упражнений'}`
-        : '0 упражнений';
     document.getElementById('schedulePlanTitle').value = 'Ледовая тренировка';
     document.getElementById('schedulePlanPlace').value = 'Лёд';
     document.getElementById('schedulePlanDate').value = scheduleDateOverride || todayInputValue();
     document.getElementById('schedulePlanStart').value = '18:30';
     document.getElementById('schedulePlanEnd').value = '20:00';
+    renderScheduleExerciseList();
+    renderScheduleAddList();
     overlay.hidden = false;
     document.getElementById('schedulePlanTitle').focus();
     document.getElementById('schedulePlanTitle').select();
@@ -4963,9 +5355,10 @@ function openScheduleModalForDate(dateValue) {
 function closeScheduleModal() {
     document.getElementById('scheduleOverlay').hidden = true;
     scheduleDateOverride = '';
+    scheduleExerciseIds = [];
 }
 function saveScheduleModal() {
-    const ids = selectedExerciseIds();
+    const ids = uniqueExerciseIds(scheduleExerciseIds);
     if (!ids.length && !scheduleDateOverride) return;
     const title = document.getElementById('schedulePlanTitle').value.trim() || 'Ледовая тренировка';
     const scheduledDate = document.getElementById('schedulePlanDate').value || scheduleDateOverride || todayInputValue();
@@ -5299,6 +5692,22 @@ document.getElementById('btnScheduleCancel').addEventListener('click', closeSche
 document.getElementById('scheduleOverlay').addEventListener('click', e => {
     if (e.target.id === 'scheduleOverlay') closeScheduleModal();
 });
+document.getElementById('scheduleExerciseList').addEventListener('click', e => {
+    const btn = e.target.closest('[data-remove-schedule-exercise]');
+    if (!btn) return;
+    removeScheduleExercise(btn.dataset.removeScheduleExercise);
+});
+document.getElementById('scheduleAddList').addEventListener('click', e => {
+    const btn = e.target.closest('[data-add-schedule-item]');
+    if (!btn) return;
+    addScheduleExerciseIds((btn.dataset.addScheduleItem || '').split(',').filter(Boolean));
+});
+document.querySelectorAll('[data-schedule-source]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        scheduleSource = btn.dataset.scheduleSource || 'saved';
+        renderScheduleAddList();
+    });
+});
 document.querySelectorAll('[data-block-flow]').forEach(btn => {
     btn.addEventListener('click', () => {
         if (!btn.disabled) setBlockModalFlow(btn.dataset.blockFlow);
@@ -5358,6 +5767,27 @@ document.getElementById('btnGoalieSwitch').addEventListener('click', () => setGo
 document.querySelectorAll('.goalie-tab').forEach(btn => {
     btn.addEventListener('click', () => setGoalieActive(Number(btn.dataset.goalieIndex)));
 });
+document.querySelectorAll('[data-goalie-season]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        goalieSeasonMode = btn.dataset.goalieSeason || 'friendly';
+        goalieExpandedMatchId = '';
+        renderGoaliePage();
+    });
+});
+document.getElementById('goalieSavedList').addEventListener('click', async e => {
+    const btn = e.target.closest('[data-goalie-action]');
+    if (!btn) return;
+    const card = btn.closest('[data-match-id]');
+    if (!card) return;
+    const id = card.dataset.matchId;
+    const action = btn.dataset.goalieAction;
+    if (action === 'toggle') {
+        goalieExpandedMatchId = goalieExpandedMatchId === id ? '' : id;
+        renderGoalieSavedList();
+    }
+    if (action === 'edit') openGoalieMatchForEdit(id);
+    if (action === 'delete') await deleteGoalieMatch(id);
+});
 ['goalieName0', 'goalieName1', 'goalieTime0', 'goalieTime1'].forEach(id => {
     document.getElementById(id).addEventListener('input', () => {
         syncGoalieInputs();
@@ -5379,6 +5809,7 @@ loadTrainingRecords();
 loadTrainingBlocks();
 loadPlannedTrainings();
 loadGoalieMatches();
+document.getElementById('goalieMatchDate').value = todayInputValue();
 renderTrainingList();
 renderGoaliePage();
 initNumberPicker();
