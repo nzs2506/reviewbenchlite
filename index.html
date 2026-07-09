@@ -1309,6 +1309,208 @@
         letter-spacing: .08em;
         text-transform: uppercase;
     }
+    .live-stats-panel {
+        display: grid;
+        gap: 16px;
+    }
+    .live-stats-board {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 220px;
+        gap: 18px;
+        align-items: start;
+    }
+    .live-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+        border: 1px solid #334155;
+        background: #334155;
+        gap: 1px;
+        overflow: hidden;
+        border-radius: 10px;
+    }
+    .live-player-tile {
+        min-height: 108px;
+        border: 0;
+        background: #cfe0f2;
+        color: #020617;
+        padding: 12px;
+        display: grid;
+        grid-template-rows: 1fr auto;
+        cursor: pointer;
+        position: relative;
+        transition: transform .12s, filter .12s, box-shadow .12s;
+    }
+    .live-player-tile.forward { background: #f39a82; }
+    .live-player-tile.goalie { background: #d6c4f2; }
+    .live-player-tile.active {
+        filter: saturate(1.12);
+        box-shadow: inset 0 0 0 4px rgba(37,99,235,.75);
+    }
+    .live-player-tile:hover {
+        transform: translateY(-1px);
+        z-index: 1;
+    }
+    .live-player-num {
+        align-self: center;
+        justify-self: center;
+        font-size: 40px;
+        line-height: 1;
+        font-weight: 800;
+        letter-spacing: 0;
+    }
+    .live-player-name {
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        top: 8px;
+        color: rgba(2,6,23,.58);
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .live-player-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 12px;
+        font-weight: 800;
+        color: rgba(2,6,23,.82);
+    }
+    .live-side {
+        display: grid;
+        gap: 12px;
+        justify-items: stretch;
+    }
+    .live-toggle {
+        min-height: 54px;
+        border: 0;
+        border-radius: 0;
+        background: #5fbf45;
+        color: #fff;
+        font-size: 20px;
+        font-weight: 1000;
+        text-transform: uppercase;
+        cursor: pointer;
+        box-shadow: 0 14px 34px rgba(0,0,0,.25);
+    }
+    .live-toggle.running {
+        background: #ba4f42;
+    }
+    .live-clock {
+        border: 1px solid #262a32;
+        border-radius: 12px;
+        background: #171a20;
+        padding: 18px 16px;
+        text-align: center;
+    }
+    .live-clock span {
+        display: block;
+        color: #8f96a3;
+        font-size: 12px;
+        font-weight: 1000;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+    }
+    .live-clock strong {
+        display: block;
+        margin-top: 10px;
+        color: #fff;
+        font-size: 42px;
+        line-height: 1;
+        font-weight: 500;
+    }
+    .live-legend {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        color: #9aa2b1;
+        font-size: 11px;
+        font-weight: 800;
+    }
+    .live-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .live-legend i {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+        background: #cfe0f2;
+    }
+    .live-legend .forward i { background: #f39a82; }
+    .live-legend .goalie i { background: #d6c4f2; }
+    .live-edit-panel {
+        border: 1px solid #262a32;
+        border-radius: 12px;
+        background: #171a20;
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+    }
+    .live-edit-title {
+        color: #fff;
+        font-size: 12px;
+        font-weight: 1000;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+    }
+    .live-edit-grid {
+        display: grid;
+        grid-template-columns: 1fr 90px 96px auto;
+        gap: 8px;
+        align-items: end;
+    }
+    .live-edit-grid label {
+        display: grid;
+        gap: 5px;
+        color: #8f96a3;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+    .live-edit-grid select,
+    .live-edit-grid input {
+        height: 32px;
+        border: 1px solid #303642;
+        border-radius: 8px;
+        background: #111419;
+        color: #f4f8ff;
+        padding: 0 10px;
+        font-weight: 800;
+        outline: none;
+    }
+    .live-edit-grid select:focus,
+    .live-edit-grid input:focus {
+        border-color: #3b82f6;
+    }
+    .live-edit-grid button {
+        height: 32px;
+        border: 1px solid #2563eb;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #fff;
+        padding: 0 14px;
+        font-size: 12px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+    .live-empty {
+        min-height: 220px;
+        border: 1px dashed #334155;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        color: #8f96a3;
+        text-align: center;
+        padding: 24px;
+        font-size: 13px;
+        font-weight: 800;
+    }
     .stats-summary {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2479,6 +2681,10 @@
         .stats-view { padding: 16px 18px 30px; }
         .stats-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .stats-table { min-width: 820px; }
+        .live-stats-board { grid-template-columns: minmax(0, 1fr) 190px; }
+        .live-grid { grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); }
+        .live-player-tile { min-height: 96px; }
+        .live-player-num { font-size: 34px; }
         .training-row { grid-template-columns: 30px 142px minmax(0, 1fr) auto; gap: 13px; }
         .training-row.block-row { grid-template-columns: 142px minmax(0, 1fr) 118px auto; }
         .training-row.plan-row { grid-template-columns: 30px 64px minmax(0, 1fr) 118px auto; }
@@ -2537,6 +2743,12 @@
         .stats-add-row { grid-template-columns: 1fr; }
         .stats-table { min-width: 760px; }
         .stats-input.name { width: 150px; }
+        .live-stats-board { grid-template-columns: 1fr; }
+        .live-grid { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+        .live-player-tile { min-height: 86px; padding: 10px; }
+        .live-player-num { font-size: 30px; }
+        .live-clock strong { font-size: 34px; }
+        .live-edit-grid { grid-template-columns: 1fr; }
         .training-row { grid-template-columns: 30px 112px minmax(0, 1fr); gap: 11px; }
         .training-row.block-row { grid-template-columns: 112px minmax(0, 1fr); }
         .training-row.plan-row { grid-template-columns: 30px 56px minmax(0, 1fr); }
@@ -2575,9 +2787,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.0" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.1" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.6.0</span>
+            <span class="version-tooltip">v0.6.1</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -2792,7 +3004,46 @@
             </div>
 
             <section class="stats-panel" id="statsLivePanel" hidden>
-                <div class="stats-live-card">Live-stats</div>
+                <div class="live-stats-panel">
+                    <div class="live-stats-board">
+                        <div>
+                            <div class="live-grid" id="liveStatsGrid"></div>
+                            <div class="live-empty" id="liveStatsEmpty" hidden>
+                                Добавьте игроков в обычной статистике — их номера появятся здесь для тайминга смен.
+                            </div>
+                        </div>
+                        <aside class="live-side">
+                            <button class="live-toggle" id="btnLiveToggle" type="button">Старт</button>
+                            <div class="live-clock">
+                                <span>Время</span>
+                                <strong id="liveStatsClock">0:00</strong>
+                            </div>
+                            <div class="live-legend">
+                                <span><i></i>Защитники</span>
+                                <span class="forward"><i></i>Нападающие</span>
+                                <span class="goalie"><i></i>Вратари</span>
+                            </div>
+                        </aside>
+                    </div>
+                    <div class="live-edit-panel">
+                        <div class="live-edit-title">Ручная правка</div>
+                        <div class="live-edit-grid">
+                            <label>
+                                Игрок
+                                <select id="liveEditPlayer"></select>
+                            </label>
+                            <label>
+                                Смены
+                                <input id="liveEditShifts" type="text" inputmode="numeric" placeholder="0">
+                            </label>
+                            <label>
+                                Время
+                                <input id="liveEditTime" type="text" placeholder="8:02">
+                            </label>
+                            <button id="btnLiveEditApply" type="button">Сохранить</button>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <section class="stats-panel" id="statsRosterPanel">
@@ -3293,6 +3544,12 @@ let scheduleSource = 'saved';
 let planPreviewActiveId = '';
 let statsPage = 'roster';
 let rosterPlayers = [];
+let liveRunning = false;
+let liveActiveIds = new Set();
+let liveShiftStartedIds = new Set();
+let liveClockSeconds = 0;
+let liveLastTickAt = 0;
+let liveTimerId = null;
 let goalieMode = 'shot';
 let goalieActiveIndex = 0;
 let goalieSeasonMode = 'friendly';
@@ -4938,6 +5195,24 @@ function formatGoalieIce(value) {
     return `${whole}:${String(seconds).padStart(2, '0')}`;
 }
 
+function parseTimeSeconds(value) {
+    const raw = String(value || '').trim().replace(',', '.');
+    if (!raw) return 0;
+    const timeMatch = raw.match(/^(\d+)\s*[:\-]\s*(\d{1,2})$/);
+    if (timeMatch) {
+        return (Number(timeMatch[1]) || 0) * 60 + Math.min(59, Number(timeMatch[2]) || 0);
+    }
+    const numeric = Number.parseFloat(raw);
+    return Number.isFinite(numeric) ? Math.max(0, Math.round(numeric * 60)) : 0;
+}
+
+function formatTimeSeconds(value) {
+    const total = Math.max(0, Math.round(Number(value) || 0));
+    const minutes = Math.floor(total / 60);
+    const seconds = total % 60;
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
 function formatIceMinutesValue(minutes) {
     const safe = Math.max(0, Number(minutes) || 0);
     let whole = Math.floor(safe);
@@ -5053,6 +5328,7 @@ function defaultRosterPlayer(role = 'forward', name = '', number = '') {
         faceoffs: 0,
         faceoffWins: 0,
         toi: '0:00',
+        shifts: 0,
         goalieGames: 0,
         goalieWins: 0,
         goalieLosses: 0,
@@ -5241,6 +5517,179 @@ function renderGoalieRosterSelects(extraNames = []) {
     });
 }
 
+function liveRosterPlayers() {
+    const roleOrder = { defense: 0, forward: 1, goalie: 2 };
+    return rosterPlayers
+        .filter(player => cleanStatName(player.name) || String(player.number || '').trim())
+        .slice()
+        .sort((a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9) || rosterSort(a, b));
+}
+
+function playerLiveTimeSeconds(player) {
+    if (!player) return 0;
+    if (player.role === 'goalie') return Math.round(combinedGoalieStats(player).iceMinutes * 60);
+    return parseTimeSeconds(player.toi);
+}
+
+function setPlayerLiveTimeSeconds(player, seconds) {
+    if (!player) return;
+    if (player.role === 'goalie') {
+        const aggregate = goalieAggregateFor(player);
+        player.goalieIce = formatTimeSeconds(Math.max(0, Math.round(seconds - aggregate.iceMinutes * 60)));
+    } else {
+        player.toi = formatTimeSeconds(seconds);
+    }
+}
+
+function addPlayerLiveSeconds(player, seconds) {
+    if (!player || seconds <= 0) return;
+    setPlayerLiveTimeSeconds(player, playerLiveTimeSeconds(player) + seconds);
+}
+
+function incrementPlayerShift(player) {
+    if (!player) return;
+    player.shifts = Math.max(0, Math.round(safeStatNumber(player.shifts) + 1));
+}
+
+function renderLiveStats() {
+    const players = liveRosterPlayers();
+    const grid = document.getElementById('liveStatsGrid');
+    const empty = document.getElementById('liveStatsEmpty');
+    if (!grid || !empty) return;
+    grid.innerHTML = '';
+    empty.hidden = players.length > 0;
+    grid.hidden = !players.length;
+    players.forEach(player => {
+        const tile = document.createElement('button');
+        tile.type = 'button';
+        tile.className = `live-player-tile ${player.role}${liveActiveIds.has(player.id) ? ' active' : ''}`;
+        tile.dataset.livePlayer = player.id;
+        tile.innerHTML = `
+            <span class="live-player-name"></span>
+            <span class="live-player-num"></span>
+            <span class="live-player-meta"><span data-role="shifts"></span><span data-role="time"></span></span>`;
+        tile.querySelector('.live-player-name').textContent = player.name || rosterRoleLabel(player.role);
+        tile.querySelector('.live-player-num').textContent = player.number || '№';
+        tile.querySelector('[data-role="shifts"]').textContent = String(player.shifts || 0);
+        tile.querySelector('[data-role="time"]').textContent = formatTimeSeconds(playerLiveTimeSeconds(player));
+        grid.appendChild(tile);
+    });
+    const toggle = document.getElementById('btnLiveToggle');
+    if (toggle) {
+        toggle.textContent = liveRunning ? 'Стоп' : 'Старт';
+        toggle.classList.toggle('running', liveRunning);
+        toggle.disabled = !players.length;
+    }
+    const clock = document.getElementById('liveStatsClock');
+    if (clock) clock.textContent = formatTimeSeconds(liveClockSeconds);
+    renderLiveEditOptions();
+}
+
+function renderLiveEditOptions() {
+    const select = document.getElementById('liveEditPlayer');
+    if (!select) return;
+    const current = select.value;
+    const players = liveRosterPlayers();
+    select.innerHTML = '';
+    players.forEach(player => {
+        const option = document.createElement('option');
+        option.value = player.id;
+        option.textContent = `${player.number ? `#${player.number} ` : ''}${player.name || rosterRoleLabel(player.role)}`;
+        select.appendChild(option);
+    });
+    if (players.some(player => player.id === current)) select.value = current;
+    else if (players[0]) select.value = players[0].id;
+    fillLiveEditFields();
+}
+
+function fillLiveEditFields() {
+    const select = document.getElementById('liveEditPlayer');
+    const shifts = document.getElementById('liveEditShifts');
+    const time = document.getElementById('liveEditTime');
+    if (!select || !shifts || !time) return;
+    const player = rosterPlayers.find(item => item.id === select.value);
+    shifts.value = player ? String(player.shifts || 0) : '';
+    time.value = player ? formatTimeSeconds(playerLiveTimeSeconds(player)) : '';
+}
+
+function applyLiveEdit() {
+    const select = document.getElementById('liveEditPlayer');
+    const shiftsInput = document.getElementById('liveEditShifts');
+    const timeInput = document.getElementById('liveEditTime');
+    const player = rosterPlayers.find(item => item.id === select?.value);
+    if (!player) return;
+    player.shifts = Math.max(0, Math.round(safeStatNumber(shiftsInput.value)));
+    setPlayerLiveTimeSeconds(player, parseTimeSeconds(timeInput.value));
+    persistRosterPlayers();
+    renderLiveStats();
+    if (!document.getElementById('statsRosterPanel').hidden) renderStatsRoster();
+}
+
+function applyLiveElapsed() {
+    if (!liveRunning) return false;
+    const now = Date.now();
+    if (!liveLastTickAt) liveLastTickAt = now;
+    const elapsed = Math.floor((now - liveLastTickAt) / 1000);
+    if (elapsed <= 0) return false;
+    liveLastTickAt += elapsed * 1000;
+    liveClockSeconds += elapsed;
+    liveActiveIds.forEach(id => addPlayerLiveSeconds(rosterPlayers.find(player => player.id === id), elapsed));
+    persistRosterPlayers();
+    return true;
+}
+
+function startLiveTimer() {
+    if (liveRunning) return;
+    liveRunning = true;
+    liveLastTickAt = Date.now();
+    liveActiveIds.forEach(id => {
+        if (liveShiftStartedIds.has(id)) return;
+        incrementPlayerShift(rosterPlayers.find(player => player.id === id));
+        liveShiftStartedIds.add(id);
+    });
+    persistRosterPlayers();
+    if (!liveTimerId) {
+        liveTimerId = setInterval(() => {
+            if (applyLiveElapsed()) renderLiveStats();
+        }, 1000);
+    }
+    renderLiveStats();
+}
+
+function stopLiveTimer() {
+    applyLiveElapsed();
+    liveRunning = false;
+    liveLastTickAt = 0;
+    if (liveTimerId) {
+        clearInterval(liveTimerId);
+        liveTimerId = null;
+    }
+    renderLiveStats();
+}
+
+function toggleLiveTimer() {
+    if (liveRunning) stopLiveTimer();
+    else startLiveTimer();
+}
+
+function toggleLivePlayer(id) {
+    const player = rosterPlayers.find(item => item.id === id);
+    if (!player) return;
+    applyLiveElapsed();
+    if (liveActiveIds.has(id)) {
+        liveActiveIds.delete(id);
+        liveShiftStartedIds.delete(id);
+    } else {
+        liveActiveIds.add(id);
+        if (liveRunning) {
+            incrementPlayerShift(player);
+            liveShiftStartedIds.add(id);
+        }
+    }
+    persistRosterPlayers();
+    renderLiveStats();
+}
+
 function setStatsPage(page) {
     statsPage = page === 'live' ? 'live' : 'roster';
     document.querySelectorAll('[data-stats-page]').forEach(btn => {
@@ -5248,6 +5697,7 @@ function setStatsPage(page) {
     });
     document.getElementById('statsLivePanel').hidden = statsPage !== 'live';
     document.getElementById('statsRosterPanel').hidden = statsPage !== 'roster';
+    if (statsPage === 'live') renderLiveStats();
     if (statsPage === 'roster') renderStatsRoster();
 }
 
@@ -5282,6 +5732,7 @@ function renderStatsRoster() {
     renderSkaterStatsTable('defense');
     renderSkaterStatsTable('forward');
     renderGoalieRosterSelects();
+    renderLiveStats();
 }
 
 function renderStatsSummary(aggregateMap = goalieAggregatesByName()) {
@@ -5325,7 +5776,7 @@ function renderGoalieStatsTable(aggregateMap = goalieAggregatesByName()) {
     }
     const table = document.createElement('table');
     table.className = 'stats-table';
-    table.innerHTML = '<thead><tr><th>№</th><th>Игрок</th><th title="Игры">И</th><th title="Победы">В</th><th title="Поражения">П</th><th title="Овертайм/буллиты">ОТ</th><th title="Броски в створ">БВ</th><th title="Пропущенные шайбы">ПШ</th><th title="Отбитые броски">ОБ</th><th>%ОБ</th><th>КН</th><th title="Сухие матчи">0</th><th>Штр</th><th>Время</th><th></th></tr></thead>';
+    table.innerHTML = '<thead><tr><th>№</th><th>Игрок</th><th title="Игры">И</th><th title="Смены">См</th><th title="Победы">В</th><th title="Поражения">П</th><th title="Овертайм/буллиты">ОТ</th><th title="Броски в створ">БВ</th><th title="Пропущенные шайбы">ПШ</th><th title="Отбитые броски">ОБ</th><th>%ОБ</th><th>КН</th><th title="Сухие матчи">0</th><th>Штр</th><th>Время</th><th></th></tr></thead>';
     const tbody = document.createElement('tbody');
     players.forEach(player => {
         const stats = combinedGoalieStats(player, aggregateMap);
@@ -5333,6 +5784,7 @@ function renderGoalieStatsTable(aggregateMap = goalieAggregatesByName()) {
         appendCell(row, statInput(player, 'number', player.number, 'number'));
         appendCell(row, statInput(player, 'name', player.name, 'name'));
         appendCell(row, statInput(player, 'goalieGames', stats.games));
+        appendCell(row, statInput(player, 'shifts', player.shifts || 0));
         appendCell(row, statInput(player, 'goalieWins', stats.wins));
         appendCell(row, statInput(player, 'goalieLosses', stats.losses));
         appendCell(row, statInput(player, 'goalieOt', stats.ot));
@@ -5367,7 +5819,7 @@ function renderSkaterStatsTable(role) {
     }
     const table = document.createElement('table');
     table.className = 'stats-table';
-    table.innerHTML = '<thead><tr><th>№</th><th>Игрок</th><th title="Игры">И</th><th title="Шайбы">Ш</th><th title="Передачи">П</th><th title="Очки">О</th><th>+/-</th><th>Штр</th><th title="Броски в створ">БВ</th><th>Вбр</th><th>ВВбр</th><th>%Вбр</th><th>Время</th><th></th></tr></thead>';
+    table.innerHTML = '<thead><tr><th>№</th><th>Игрок</th><th title="Игры">И</th><th title="Шайбы">Ш</th><th title="Передачи">П</th><th title="Очки">О</th><th>+/-</th><th>Штр</th><th title="Броски в створ">БВ</th><th>Вбр</th><th>ВВбр</th><th>%Вбр</th><th title="Смены">См</th><th>Время</th><th></th></tr></thead>';
     const tbody = document.createElement('tbody');
     players.forEach(player => {
         const goals = safeStatNumber(player.goals);
@@ -5387,6 +5839,7 @@ function renderSkaterStatsTable(role) {
         appendCell(row, statInput(player, 'faceoffs', player.faceoffs));
         appendCell(row, statInput(player, 'faceoffWins', player.faceoffWins));
         appendCell(row, faceoffs ? (faceoffWins / faceoffs * 100).toFixed(1) : '0.0', 'stats-derived');
+        appendCell(row, statInput(player, 'shifts', player.shifts || 0));
         appendCell(row, statInput(player, 'toi', player.toi, 'time'));
         const remove = document.createElement('button');
         remove.className = 'stats-remove';
@@ -5451,6 +5904,7 @@ function handleStatsFieldChange(input) {
     updateStatsPlayerField(player, input.dataset.statsField, input.value);
     persistRosterPlayers();
     renderStatsRoster();
+    if (statsPage === 'live') renderLiveStats();
 }
 
 function handleStatsFieldInput(input) {
@@ -5461,6 +5915,7 @@ function handleStatsFieldInput(input) {
     persistRosterPlayers();
     refreshStatsDerivedForRow(input.closest('tr'), player);
     renderStatsSummary();
+    if (statsPage === 'live') renderLiveStats();
 }
 
 function addStatsPlayer(role) {
@@ -5474,6 +5929,7 @@ function addStatsPlayer(role) {
     if (nameInput) nameInput.value = '';
     renderStatsRoster();
     renderGoalieRosterSelects();
+    if (statsPage === 'live') renderLiveStats();
 }
 
 async function removeStatsPlayer(id) {
@@ -5482,9 +5938,12 @@ async function removeStatsPlayer(id) {
     const confirmed = await showConfirm(`Удалить игрока "${player.name || rosterRoleLabel(player.role)}" из статистики?`, { okLabel: 'Удалить' });
     if (!confirmed) return;
     rosterPlayers = rosterPlayers.filter(item => item.id !== id);
+    liveActiveIds.delete(id);
+    liveShiftStartedIds.delete(id);
     persistRosterPlayers();
     renderStatsRoster();
     renderGoalieRosterSelects();
+    if (statsPage === 'live') renderLiveStats();
 }
 
 function goalieSeasonLabel(type) {
@@ -5559,6 +6018,7 @@ function saveGoalieMatch() {
     persistRosterPlayers();
     renderGoaliePage();
     if (document.body.dataset.view === 'stats') renderStatsRoster();
+    if (statsPage === 'live') renderLiveStats();
 }
 
 function goalieEventCounts(events, mode = 'goals') {
@@ -6788,6 +7248,18 @@ document.querySelectorAll('[data-stats-page]').forEach(btn => {
 });
 document.querySelectorAll('[data-stats-add]').forEach(btn => {
     btn.addEventListener('click', () => addStatsPlayer(btn.dataset.statsAdd));
+});
+document.getElementById('btnLiveToggle').addEventListener('click', toggleLiveTimer);
+document.getElementById('liveStatsGrid').addEventListener('click', e => {
+    const tile = e.target.closest('[data-live-player]');
+    if (tile) toggleLivePlayer(tile.dataset.livePlayer);
+});
+document.getElementById('liveEditPlayer').addEventListener('change', fillLiveEditFields);
+document.getElementById('btnLiveEditApply').addEventListener('click', applyLiveEdit);
+['liveEditShifts', 'liveEditTime'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') applyLiveEdit();
+    });
 });
 document.getElementById('statsRosterPanel').addEventListener('change', e => {
     const input = e.target.closest('[data-stats-player][data-stats-field]');
