@@ -185,7 +185,8 @@
     .field-return[hidden] { display: none; }
     body[data-view="field"] .trainings-view,
     body[data-view="field"] .calendar-view,
-    body[data-view="field"] .goalie-view { display: none; }
+    body[data-view="field"] .goalie-view,
+    body[data-view="field"] .stats-view { display: none; }
     body[data-view="trainings"] {
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: auto minmax(0, 1fr);
@@ -195,7 +196,8 @@
     body[data-view="trainings"] .side-panel,
     body[data-view="trainings"] .side-toggle,
     body[data-view="trainings"] .calendar-view,
-    body[data-view="trainings"] .goalie-view {
+    body[data-view="trainings"] .goalie-view,
+    body[data-view="trainings"] .stats-view {
         display: none;
     }
     body[data-view="calendar"] {
@@ -207,7 +209,8 @@
     body[data-view="calendar"] .side-panel,
     body[data-view="calendar"] .side-toggle,
     body[data-view="calendar"] .trainings-view,
-    body[data-view="calendar"] .goalie-view {
+    body[data-view="calendar"] .goalie-view,
+    body[data-view="calendar"] .stats-view {
         display: none;
     }
     body[data-view="goalie"] {
@@ -219,7 +222,21 @@
     body[data-view="goalie"] .side-panel,
     body[data-view="goalie"] .side-toggle,
     body[data-view="goalie"] .trainings-view,
-    body[data-view="goalie"] .calendar-view {
+    body[data-view="goalie"] .calendar-view,
+    body[data-view="goalie"] .stats-view {
+        display: none;
+    }
+    body[data-view="stats"] {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+    body[data-view="stats"] .canvas-wrapper,
+    body[data-view="stats"] .bottom-toolbar,
+    body[data-view="stats"] .side-panel,
+    body[data-view="stats"] .side-toggle,
+    body[data-view="stats"] .trainings-view,
+    body[data-view="stats"] .calendar-view,
+    body[data-view="stats"] .goalie-view {
         display: none;
     }
     .canvas-container-wrapper {
@@ -1215,6 +1232,243 @@
     .goalie-row-btn.danger:hover {
         border-color: #dc2626;
         color: #b91c1c;
+    }
+    .stats-view {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        min-height: 0;
+        overflow: auto;
+        background: #111419;
+        color: #eef4ff;
+        padding: 24px 34px 42px;
+    }
+    .stats-shell {
+        width: min(1220px, 100%);
+        margin: 0 auto;
+        display: grid;
+        gap: 18px;
+    }
+    .stats-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+    .stats-title {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1;
+        font-weight: 1000;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        text-shadow: 0 4px 0 rgba(37,99,235,.35);
+    }
+    .stats-tabs {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        padding: 3px;
+        border: 1px solid #262a32;
+        border-radius: 10px;
+        background: #1a1d24;
+    }
+    .stats-tab {
+        height: 34px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: #8f96a3;
+        padding: 0 14px;
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        cursor: pointer;
+    }
+    .stats-tab.active {
+        background: #2563eb;
+        color: #fff;
+        box-shadow: 0 10px 24px rgba(37,99,235,.28);
+    }
+    .stats-panel[hidden] { display: none; }
+    .stats-live-card,
+    .stats-block {
+        border: 1px solid #262a32;
+        border-radius: 12px;
+        background: #171a20;
+        box-shadow: 0 20px 50px rgba(0,0,0,.22);
+    }
+    .stats-live-card {
+        min-height: 260px;
+        display: grid;
+        place-items: center;
+        padding: 28px;
+        color: #8f96a3;
+        font-weight: 800;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+    .stats-summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .stats-summary-card {
+        border: 1px solid #262a32;
+        border-radius: 10px;
+        background: #171a20;
+        padding: 13px 14px;
+    }
+    .stats-summary-card span {
+        display: block;
+        color: #818896;
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .12em;
+    }
+    .stats-summary-card strong {
+        display: block;
+        margin-top: 5px;
+        color: #fff;
+        font-size: 24px;
+        line-height: 1;
+    }
+    .stats-block {
+        overflow: hidden;
+    }
+    .stats-block-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid #262a32;
+    }
+    .stats-block-title {
+        margin: 0;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 1000;
+        text-transform: uppercase;
+        letter-spacing: .14em;
+    }
+    .stats-table-wrap {
+        overflow-x: auto;
+    }
+    .stats-table {
+        width: 100%;
+        min-width: 900px;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+    .stats-table th,
+    .stats-table td {
+        border-bottom: 1px solid #232730;
+        padding: 7px 6px;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .stats-table th {
+        color: #7f8795;
+        font-size: 10px;
+        font-weight: 1000;
+        text-transform: uppercase;
+        letter-spacing: .1em;
+    }
+    .stats-table td:first-child,
+    .stats-table th:first-child,
+    .stats-table td:nth-child(2),
+    .stats-table th:nth-child(2) {
+        text-align: left;
+    }
+    .stats-table tbody tr:hover {
+        background: rgba(37,99,235,.08);
+    }
+    .stats-input {
+        width: 64px;
+        height: 28px;
+        border: 1px solid transparent;
+        border-radius: 7px;
+        background: #111419;
+        color: #eaf1ff;
+        padding: 0 7px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 800;
+        outline: none;
+    }
+    .stats-input.name {
+        width: 190px;
+        text-align: left;
+    }
+    .stats-input.number {
+        width: 52px;
+    }
+    .stats-input.time {
+        width: 74px;
+    }
+    .stats-input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.16);
+    }
+    .stats-derived {
+        color: #d9e7ff;
+        font-weight: 900;
+    }
+    .stats-remove {
+        width: 30px;
+        height: 28px;
+        border: 1px solid #303642;
+        border-radius: 7px;
+        background: transparent;
+        color: #8f96a3;
+        cursor: pointer;
+    }
+    .stats-remove:hover {
+        border-color: #ef4444;
+        color: #f87171;
+    }
+    .stats-add-row {
+        display: grid;
+        grid-template-columns: 74px minmax(180px, 1fr) auto;
+        gap: 8px;
+        padding: 12px 16px 15px;
+        background: #151820;
+    }
+    .stats-add-row input {
+        height: 32px;
+        border: 1px solid #303642;
+        border-radius: 8px;
+        background: #111419;
+        color: #f4f8ff;
+        padding: 0 10px;
+        outline: none;
+        font-weight: 800;
+    }
+    .stats-add-row input:focus {
+        border-color: #3b82f6;
+    }
+    .stats-add-row button {
+        height: 32px;
+        border: 1px solid #2563eb;
+        border-radius: 8px;
+        background: #2563eb;
+        color: #fff;
+        padding: 0 13px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+    .stats-empty {
+        padding: 18px 16px;
+        color: #858c99;
+        font-size: 12px;
+        font-weight: 800;
     }
     .training-controls {
         display: flex;
@@ -2222,6 +2476,9 @@
         .marker-icon { width: 26px; height: 26px; font-size: 10px; }
         .asset-icon-img { max-width: 28px; max-height: 28px; }
         .trainings-view { padding: 16px 18px 30px; }
+        .stats-view { padding: 16px 18px 30px; }
+        .stats-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .stats-table { min-width: 820px; }
         .training-row { grid-template-columns: 30px 142px minmax(0, 1fr) auto; gap: 13px; }
         .training-row.block-row { grid-template-columns: 142px minmax(0, 1fr) 118px auto; }
         .training-row.plan-row { grid-template-columns: 30px 64px minmax(0, 1fr) 118px auto; }
@@ -2271,6 +2528,15 @@
         .asset-icon-img { max-width: 25px; max-height: 25px; }
         .stamp-hint { bottom: 10px; font-size: 11px; padding: 6px 7px 6px 11px; }
         .trainings-view { padding: 12px 12px 24px; }
+        .stats-view { padding: 12px 12px 24px; }
+        .stats-head,
+        .stats-block-head { align-items: stretch; flex-direction: column; }
+        .stats-tabs { width: 100%; }
+        .stats-tab { flex: 1; padding: 0 8px; }
+        .stats-summary { grid-template-columns: 1fr; }
+        .stats-add-row { grid-template-columns: 1fr; }
+        .stats-table { min-width: 760px; }
+        .stats-input.name { width: 150px; }
         .training-row { grid-template-columns: 30px 112px minmax(0, 1fr); gap: 11px; }
         .training-row.block-row { grid-template-columns: 112px minmax(0, 1fr); }
         .training-row.plan-row { grid-template-columns: 30px 56px minmax(0, 1fr); }
@@ -2309,9 +2575,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.5.9" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.0" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.5.9</span>
+            <span class="version-tooltip">v0.6.0</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -2319,7 +2585,7 @@
             <button type="button" class="current" id="btnNavField" data-view-target="field">Поле</button>
             <button type="button" id="btnNavCalendar" data-view-target="calendar">Календарь</button>
             <button type="button" id="btnNavGoalie" data-view-target="goalie">Вратарь</button>
-            <button type="button" id="btnNavStats">Статистика</button>
+            <button type="button" id="btnNavStats" data-view-target="stats">Статистика</button>
         </nav>
     </header>
     <div class="canvas-wrapper">
@@ -2436,7 +2702,9 @@
                         <div class="goalie-keeper-fields">
                             <label class="goalie-field">
                                 Вратарь 1
-                                <input class="goalie-input" id="goalieName0" type="text" value="Иванов">
+                                <select class="goalie-input" id="goalieName0">
+                                    <option value="Иванов">Иванов</option>
+                                </select>
                             </label>
                             <label class="goalie-field">
                                 Время 1
@@ -2444,7 +2712,9 @@
                             </label>
                             <label class="goalie-field">
                                 Вратарь 2
-                                <input class="goalie-input" id="goalieName1" type="text" placeholder="Фамилия">
+                                <select class="goalie-input" id="goalieName1">
+                                    <option value="">Фамилия</option>
+                                </select>
                             </label>
                             <label class="goalie-field">
                                 Время 2
@@ -2507,6 +2777,67 @@
                     <button class="goalie-match-tab" type="button" data-goalie-season="playoff">Плей-офф</button>
                 </div>
                 <div class="goalie-saved-list" id="goalieSavedList"></div>
+            </section>
+        </div>
+    </main>
+
+    <main class="stats-view" id="statsView">
+        <div class="stats-shell">
+            <div class="stats-head">
+                <h2 class="stats-title">Статистика</h2>
+                <div class="stats-tabs" aria-label="Страницы статистики">
+                    <button class="stats-tab" type="button" data-stats-page="live">Live-stats</button>
+                    <button class="stats-tab active" type="button" data-stats-page="roster">Статистика</button>
+                </div>
+            </div>
+
+            <section class="stats-panel" id="statsLivePanel" hidden>
+                <div class="stats-live-card">Live-stats</div>
+            </section>
+
+            <section class="stats-panel" id="statsRosterPanel">
+                <div class="stats-summary">
+                    <div class="stats-summary-card"><span>Игроков</span><strong id="statsTotalPlayers">0</strong></div>
+                    <div class="stats-summary-card"><span>Вратарей</span><strong id="statsGoalieCount">0</strong></div>
+                    <div class="stats-summary-card"><span>Матчей вратарей</span><strong id="statsGoalieGames">0</strong></div>
+                    <div class="stats-summary-card"><span>Общий %ОБ</span><strong id="statsTeamSv">100.0</strong></div>
+                </div>
+
+                <section class="stats-block" data-stats-role="goalie">
+                    <div class="stats-block-head">
+                        <h3 class="stats-block-title">Вратари</h3>
+                    </div>
+                    <div class="stats-table-wrap" id="statsGoalieTable"></div>
+                    <div class="stats-add-row">
+                        <input type="text" inputmode="numeric" maxlength="3" placeholder="№" data-stats-add-number="goalie">
+                        <input type="text" maxlength="40" placeholder="Фамилия" data-stats-add-name="goalie">
+                        <button type="button" data-stats-add="goalie"><i class="fa-solid fa-plus"></i>Добавить вратаря</button>
+                    </div>
+                </section>
+
+                <section class="stats-block" data-stats-role="defense">
+                    <div class="stats-block-head">
+                        <h3 class="stats-block-title">Защитники</h3>
+                    </div>
+                    <div class="stats-table-wrap" id="statsDefenseTable"></div>
+                    <div class="stats-add-row">
+                        <input type="text" inputmode="numeric" maxlength="3" placeholder="№" data-stats-add-number="defense">
+                        <input type="text" maxlength="40" placeholder="Фамилия" data-stats-add-name="defense">
+                        <button type="button" data-stats-add="defense"><i class="fa-solid fa-plus"></i>Добавить защитника</button>
+                    </div>
+                </section>
+
+                <section class="stats-block" data-stats-role="forward">
+                    <div class="stats-block-head">
+                        <h3 class="stats-block-title">Нападающие</h3>
+                    </div>
+                    <div class="stats-table-wrap" id="statsForwardTable"></div>
+                    <div class="stats-add-row">
+                        <input type="text" inputmode="numeric" maxlength="3" placeholder="№" data-stats-add-number="forward">
+                        <input type="text" maxlength="40" placeholder="Фамилия" data-stats-add-name="forward">
+                        <button type="button" data-stats-add="forward"><i class="fa-solid fa-plus"></i>Добавить нападающего</button>
+                    </div>
+                </section>
             </section>
         </div>
     </main>
@@ -2934,6 +3265,7 @@ const TRAINING_STORAGE_KEY = 'benchreview-lite.trainings.v1';
 const BLOCK_STORAGE_KEY = 'benchreview-lite.blocks.v1';
 const PLANNED_STORAGE_KEY = 'benchreview-lite.planned.v1';
 const GOALIE_STORAGE_KEY = 'benchreview-lite.goalie-matches.v1';
+const ROSTER_STORAGE_KEY = 'benchreview-lite.roster.v1';
 const SIDE_PANEL_STORAGE_KEY = 'benchreview-lite.side-panel-collapsed.v1';
 let trainingDraft = null;
 let trainingRecords = [];
@@ -2959,6 +3291,8 @@ let scheduleDateOverride = '';
 let scheduleExerciseIds = [];
 let scheduleSource = 'saved';
 let planPreviewActiveId = '';
+let statsPage = 'roster';
+let rosterPlayers = [];
 let goalieMode = 'shot';
 let goalieActiveIndex = 0;
 let goalieSeasonMode = 'friendly';
@@ -3029,6 +3363,8 @@ function setView(view) {
         renderCalendar();
     } else if (view === 'goalie') {
         renderGoaliePage();
+    } else if (view === 'stats') {
+        renderStatsPage();
     } else {
         requestAnimationFrame(fitCanvas);
     }
@@ -3038,7 +3374,7 @@ document.getElementById('btnNavTrainings').addEventListener('click', () => setVi
 document.getElementById('btnNavCalendar').addEventListener('click', () => setView('calendar'));
 document.getElementById('btnNavField').addEventListener('click', () => setView('field'));
 document.getElementById('btnNavGoalie').addEventListener('click', () => setView('goalie'));
-document.getElementById('btnNavStats').addEventListener('click', () => setView('field'));
+document.getElementById('btnNavStats').addEventListener('click', () => setView('stats'));
 document.getElementById('appTitle').addEventListener('click', () => setView('field'));
 document.getElementById('appTitle').addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -4602,6 +4938,17 @@ function formatGoalieIce(value) {
     return `${whole}:${String(seconds).padStart(2, '0')}`;
 }
 
+function formatIceMinutesValue(minutes) {
+    const safe = Math.max(0, Number(minutes) || 0);
+    let whole = Math.floor(safe);
+    let seconds = Math.round((safe - whole) * 60);
+    if (seconds >= 60) {
+        whole += 1;
+        seconds = 0;
+    }
+    return `${whole}:${String(seconds).padStart(2, '0')}`;
+}
+
 function goalieStats(goalie) {
     const events = Array.isArray(goalie.events) ? goalie.events : [];
     const shots = events.length;
@@ -4691,6 +5038,455 @@ function persistGoalieMatches() {
     } catch (_) {}
 }
 
+function defaultRosterPlayer(role = 'forward', name = '', number = '') {
+    return {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        role,
+        number: String(number || ''),
+        name: String(name || ''),
+        games: 0,
+        goals: 0,
+        assists: 0,
+        plusMinus: 0,
+        pim: 0,
+        shots: 0,
+        faceoffs: 0,
+        faceoffWins: 0,
+        toi: '0:00',
+        goalieGames: 0,
+        goalieWins: 0,
+        goalieLosses: 0,
+        goalieOt: 0,
+        goalieShotsAgainst: 0,
+        goalieGoalsAgainst: 0,
+        goalieSaves: 0,
+        goalieShutouts: 0,
+        goaliePim: 0,
+        goalieIce: '0:00',
+        createdAt: new Date().toISOString()
+    };
+}
+
+function normalizeRosterPlayer(player) {
+    const role = ['goalie', 'defense', 'forward'].includes(player?.role) ? player.role : 'forward';
+    return Object.assign(defaultRosterPlayer(role), player || {}, { role });
+}
+
+function loadRosterPlayers() {
+    try {
+        const raw = localStorage.getItem(ROSTER_STORAGE_KEY);
+        rosterPlayers = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(rosterPlayers)) rosterPlayers = [];
+        rosterPlayers = rosterPlayers.map(normalizeRosterPlayer);
+    } catch (_) {
+        rosterPlayers = [];
+    }
+}
+
+function persistRosterPlayers() {
+    try {
+        localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(rosterPlayers.slice(0, 120)));
+    } catch (_) {}
+}
+
+function rosterRoleLabel(role) {
+    if (role === 'goalie') return 'Вратарь';
+    if (role === 'defense') return 'Защитник';
+    return 'Нападающий';
+}
+
+function safeStatNumber(value) {
+    const num = Number(String(value || '').replace(',', '.'));
+    return Number.isFinite(num) ? num : 0;
+}
+
+function cleanStatName(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ');
+}
+
+function rosterSort(a, b) {
+    const an = Number(a.number);
+    const bn = Number(b.number);
+    if (Number.isFinite(an) && Number.isFinite(bn) && an !== bn) return an - bn;
+    if (Number.isFinite(an) && !Number.isFinite(bn)) return -1;
+    if (!Number.isFinite(an) && Number.isFinite(bn)) return 1;
+    return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
+}
+
+function goalieAggregatesByName() {
+    const map = new Map();
+    goalieSavedMatches.forEach(match => {
+        (match.goalies || []).forEach(goalie => {
+            const name = cleanStatName(goalie.name);
+            if (!name) return;
+            const stats = goalie.stats || goalieStats(goalie);
+            const current = map.get(name.toLowerCase()) || {
+                games: 0,
+                shotsAgainst: 0,
+                goalsAgainst: 0,
+                saves: 0,
+                iceMinutes: 0
+            };
+            const hasWork = (stats.shots || stats.goals || stats.saves || parseGoalieIceMinutes(goalie.iceTime || stats.ice || '0:00')) > 0;
+            if (hasWork) current.games += 1;
+            current.shotsAgainst += safeStatNumber(stats.shots);
+            current.goalsAgainst += safeStatNumber(stats.goals);
+            current.saves += safeStatNumber(stats.saves);
+            current.iceMinutes += parseGoalieIceMinutes(goalie.iceTime || stats.ice || '0:00');
+            map.set(name.toLowerCase(), current);
+        });
+    });
+    return map;
+}
+
+function goalieAggregateFor(player, aggregateMap = goalieAggregatesByName()) {
+    return aggregateMap.get(cleanStatName(player.name).toLowerCase()) || {
+        games: 0,
+        shotsAgainst: 0,
+        goalsAgainst: 0,
+        saves: 0,
+        iceMinutes: 0
+    };
+}
+
+function combinedGoalieStats(player, aggregateMap = goalieAggregatesByName()) {
+    const agg = goalieAggregateFor(player, aggregateMap);
+    const games = safeStatNumber(player.goalieGames) + agg.games;
+    const shotsAgainst = safeStatNumber(player.goalieShotsAgainst) + agg.shotsAgainst;
+    const goalsAgainst = safeStatNumber(player.goalieGoalsAgainst) + agg.goalsAgainst;
+    const saves = safeStatNumber(player.goalieSaves) + agg.saves;
+    const iceMinutes = parseGoalieIceMinutes(player.goalieIce) + agg.iceMinutes;
+    const svDenominator = shotsAgainst || (saves + goalsAgainst);
+    return {
+        games,
+        wins: safeStatNumber(player.goalieWins),
+        losses: safeStatNumber(player.goalieLosses),
+        ot: safeStatNumber(player.goalieOt),
+        shotsAgainst,
+        goalsAgainst,
+        saves,
+        sv: svDenominator ? saves / svDenominator * 100 : 100,
+        gaa: iceMinutes > 0 ? goalsAgainst * 60 / iceMinutes : 0,
+        shutouts: safeStatNumber(player.goalieShutouts),
+        pim: safeStatNumber(player.goaliePim),
+        ice: formatIceMinutesValue(iceMinutes),
+        iceMinutes
+    };
+}
+
+function ensureRosterPlayer(role, name, number = '') {
+    const cleanName = cleanStatName(name);
+    if (!cleanName) return null;
+    let player = rosterPlayers.find(item => item.role === role && cleanStatName(item.name).toLowerCase() === cleanName.toLowerCase());
+    if (!player) {
+        player = defaultRosterPlayer(role, cleanName, number);
+        rosterPlayers.push(player);
+    } else if (number && !player.number) {
+        player.number = String(number);
+    }
+    persistRosterPlayers();
+    return player;
+}
+
+function syncRosterGoaliesFromMatches() {
+    let changed = false;
+    goalieSavedMatches.forEach(match => {
+        (match.goalies || []).forEach(goalie => {
+            const name = cleanStatName(goalie.name);
+            if (!name) return;
+            const exists = rosterPlayers.some(player => player.role === 'goalie' && cleanStatName(player.name).toLowerCase() === name.toLowerCase());
+            if (!exists) {
+                rosterPlayers.push(defaultRosterPlayer('goalie', name));
+                changed = true;
+            }
+        });
+    });
+    if (changed) persistRosterPlayers();
+}
+
+function renderGoalieRosterSelects(extraNames = []) {
+    const names = rosterPlayers
+        .filter(player => player.role === 'goalie' && cleanStatName(player.name))
+        .sort(rosterSort)
+        .map(player => cleanStatName(player.name));
+    extraNames.forEach(name => {
+        const clean = cleanStatName(name);
+        if (clean && !names.some(item => item.toLowerCase() === clean.toLowerCase())) names.push(clean);
+    });
+    if (!names.length) names.push('Иванов');
+    [0, 1].forEach(index => {
+        const select = document.getElementById(`goalieName${index}`);
+        if (!select) return;
+        const current = cleanStatName(select.value || goalieGoalies[index]?.name || (index === 0 ? names[0] : ''));
+        select.innerHTML = '';
+        if (index === 1) {
+            const blank = document.createElement('option');
+            blank.value = '';
+            blank.textContent = 'Фамилия';
+            select.appendChild(blank);
+        }
+        names.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+        });
+        if (current && !names.some(name => name.toLowerCase() === current.toLowerCase())) {
+            const option = document.createElement('option');
+            option.value = current;
+            option.textContent = current;
+            select.appendChild(option);
+        }
+        select.value = current || (index === 0 ? names[0] : '');
+    });
+}
+
+function setStatsPage(page) {
+    statsPage = page === 'live' ? 'live' : 'roster';
+    document.querySelectorAll('[data-stats-page]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.statsPage === statsPage);
+    });
+    document.getElementById('statsLivePanel').hidden = statsPage !== 'live';
+    document.getElementById('statsRosterPanel').hidden = statsPage !== 'roster';
+    if (statsPage === 'roster') renderStatsRoster();
+}
+
+function renderStatsPage() {
+    setStatsPage(statsPage);
+}
+
+function statInput(player, field, value, className = '') {
+    const input = document.createElement('input');
+    input.className = `stats-input${className ? ` ${className}` : ''}`;
+    input.value = value ?? '';
+    input.dataset.statsPlayer = player.id;
+    input.dataset.statsField = field;
+    input.type = 'text';
+    if (className !== 'name' && field !== 'plusMinus' && !field.toLowerCase().includes('ice') && field !== 'toi') input.inputMode = 'numeric';
+    return input;
+}
+
+function appendCell(row, child, className = '') {
+    const td = document.createElement('td');
+    if (className) td.className = className;
+    if (child instanceof Node) td.appendChild(child);
+    else td.textContent = child;
+    row.appendChild(td);
+    return td;
+}
+
+function renderStatsRoster() {
+    const aggregateMap = goalieAggregatesByName();
+    renderStatsSummary(aggregateMap);
+    renderGoalieStatsTable(aggregateMap);
+    renderSkaterStatsTable('defense');
+    renderSkaterStatsTable('forward');
+    renderGoalieRosterSelects();
+}
+
+function renderStatsSummary(aggregateMap = goalieAggregatesByName()) {
+    const goalies = rosterPlayers.filter(player => player.role === 'goalie');
+    const goalieTotals = goalies.reduce((acc, player) => {
+        const stats = combinedGoalieStats(player, aggregateMap);
+        acc.games += stats.games;
+        acc.saves += stats.saves;
+        acc.shots += stats.shotsAgainst || (stats.saves + stats.goalsAgainst);
+        return acc;
+    }, { games: 0, saves: 0, shots: 0 });
+    document.getElementById('statsTotalPlayers').textContent = String(rosterPlayers.length);
+    document.getElementById('statsGoalieCount').textContent = String(goalies.length);
+    document.getElementById('statsGoalieGames').textContent = String(goalieTotals.games);
+    document.getElementById('statsTeamSv').textContent = (goalieTotals.shots ? goalieTotals.saves / goalieTotals.shots * 100 : 100).toFixed(1);
+}
+
+function refreshStatsDerivedForRow(row, player) {
+    if (!row || !player) return;
+    const derived = row.querySelectorAll('.stats-derived');
+    if (player.role === 'goalie') {
+        const stats = combinedGoalieStats(player);
+        if (derived[0]) derived[0].textContent = stats.sv.toFixed(1);
+        if (derived[1]) derived[1].textContent = stats.gaa.toFixed(2);
+    } else {
+        const goals = safeStatNumber(player.goals);
+        const assists = safeStatNumber(player.assists);
+        const faceoffs = safeStatNumber(player.faceoffs);
+        const faceoffWins = safeStatNumber(player.faceoffWins);
+        if (derived[0]) derived[0].textContent = String(goals + assists);
+        if (derived[1]) derived[1].textContent = faceoffs ? (faceoffWins / faceoffs * 100).toFixed(1) : '0.0';
+    }
+}
+
+function renderGoalieStatsTable(aggregateMap = goalieAggregatesByName()) {
+    const target = document.getElementById('statsGoalieTable');
+    const players = rosterPlayers.filter(player => player.role === 'goalie').sort(rosterSort);
+    if (!players.length) {
+        target.innerHTML = '<div class="stats-empty">Добавьте первого вратаря ниже — он появится в дроп-меню на странице «Вратарь».</div>';
+        return;
+    }
+    const table = document.createElement('table');
+    table.className = 'stats-table';
+    table.innerHTML = '<thead><tr><th>№</th><th>Игрок</th><th title="Игры">И</th><th title="Победы">В</th><th title="Поражения">П</th><th title="Овертайм/буллиты">ОТ</th><th title="Броски в створ">БВ</th><th title="Пропущенные шайбы">ПШ</th><th title="Отбитые броски">ОБ</th><th>%ОБ</th><th>КН</th><th title="Сухие матчи">0</th><th>Штр</th><th>Время</th><th></th></tr></thead>';
+    const tbody = document.createElement('tbody');
+    players.forEach(player => {
+        const stats = combinedGoalieStats(player, aggregateMap);
+        const row = document.createElement('tr');
+        appendCell(row, statInput(player, 'number', player.number, 'number'));
+        appendCell(row, statInput(player, 'name', player.name, 'name'));
+        appendCell(row, statInput(player, 'goalieGames', stats.games));
+        appendCell(row, statInput(player, 'goalieWins', stats.wins));
+        appendCell(row, statInput(player, 'goalieLosses', stats.losses));
+        appendCell(row, statInput(player, 'goalieOt', stats.ot));
+        appendCell(row, statInput(player, 'goalieShotsAgainst', stats.shotsAgainst));
+        appendCell(row, statInput(player, 'goalieGoalsAgainst', stats.goalsAgainst));
+        appendCell(row, statInput(player, 'goalieSaves', stats.saves));
+        appendCell(row, stats.sv.toFixed(1), 'stats-derived');
+        appendCell(row, stats.gaa.toFixed(2), 'stats-derived');
+        appendCell(row, statInput(player, 'goalieShutouts', stats.shutouts));
+        appendCell(row, statInput(player, 'goaliePim', stats.pim));
+        appendCell(row, statInput(player, 'goalieIce', stats.ice, 'time'));
+        const remove = document.createElement('button');
+        remove.className = 'stats-remove';
+        remove.type = 'button';
+        remove.title = 'Удалить игрока';
+        remove.dataset.statsRemove = player.id;
+        remove.innerHTML = '<i class="fa-regular fa-trash-can"></i>';
+        appendCell(row, remove);
+        tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    target.innerHTML = '';
+    target.appendChild(table);
+}
+
+function renderSkaterStatsTable(role) {
+    const target = document.getElementById(role === 'defense' ? 'statsDefenseTable' : 'statsForwardTable');
+    const players = rosterPlayers.filter(player => player.role === role).sort(rosterSort);
+    if (!players.length) {
+        target.innerHTML = `<div class="stats-empty">Добавьте первого игрока в блок «${role === 'defense' ? 'Защитники' : 'Нападающие'}» ниже.</div>`;
+        return;
+    }
+    const table = document.createElement('table');
+    table.className = 'stats-table';
+    table.innerHTML = '<thead><tr><th>№</th><th>Игрок</th><th title="Игры">И</th><th title="Шайбы">Ш</th><th title="Передачи">П</th><th title="Очки">О</th><th>+/-</th><th>Штр</th><th title="Броски в створ">БВ</th><th>Вбр</th><th>ВВбр</th><th>%Вбр</th><th>Время</th><th></th></tr></thead>';
+    const tbody = document.createElement('tbody');
+    players.forEach(player => {
+        const goals = safeStatNumber(player.goals);
+        const assists = safeStatNumber(player.assists);
+        const faceoffs = safeStatNumber(player.faceoffs);
+        const faceoffWins = safeStatNumber(player.faceoffWins);
+        const row = document.createElement('tr');
+        appendCell(row, statInput(player, 'number', player.number, 'number'));
+        appendCell(row, statInput(player, 'name', player.name, 'name'));
+        appendCell(row, statInput(player, 'games', player.games));
+        appendCell(row, statInput(player, 'goals', player.goals));
+        appendCell(row, statInput(player, 'assists', player.assists));
+        appendCell(row, goals + assists, 'stats-derived');
+        appendCell(row, statInput(player, 'plusMinus', player.plusMinus));
+        appendCell(row, statInput(player, 'pim', player.pim));
+        appendCell(row, statInput(player, 'shots', player.shots));
+        appendCell(row, statInput(player, 'faceoffs', player.faceoffs));
+        appendCell(row, statInput(player, 'faceoffWins', player.faceoffWins));
+        appendCell(row, faceoffs ? (faceoffWins / faceoffs * 100).toFixed(1) : '0.0', 'stats-derived');
+        appendCell(row, statInput(player, 'toi', player.toi, 'time'));
+        const remove = document.createElement('button');
+        remove.className = 'stats-remove';
+        remove.type = 'button';
+        remove.title = 'Удалить игрока';
+        remove.dataset.statsRemove = player.id;
+        remove.innerHTML = '<i class="fa-regular fa-trash-can"></i>';
+        appendCell(row, remove);
+        tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    target.innerHTML = '';
+    target.appendChild(table);
+}
+
+function updateStatsPlayerField(player, field, value) {
+    if (field === 'name') {
+        const oldName = cleanStatName(player.name);
+        const newName = cleanStatName(value);
+        if (!newName) return;
+        if (player.role === 'goalie' && oldName && oldName !== newName) {
+            goalieSavedMatches.forEach(match => {
+                (match.goalies || []).forEach(goalie => {
+                    if (cleanStatName(goalie.name).toLowerCase() === oldName.toLowerCase()) goalie.name = newName;
+                });
+            });
+            persistGoalieMatches();
+        }
+        player.name = newName;
+        return;
+    }
+    if (field === 'number') {
+        player.number = String(value || '').trim();
+        return;
+    }
+    if (field === 'goalieIce') {
+        const aggregate = goalieAggregateFor(player);
+        player.goalieIce = formatIceMinutesValue(parseGoalieIceMinutes(value) - aggregate.iceMinutes);
+        return;
+    }
+    if (field === 'toi') {
+        player.toi = formatGoalieIce(value);
+        return;
+    }
+    const aggregateFields = {
+        goalieGames: 'games',
+        goalieShotsAgainst: 'shotsAgainst',
+        goalieGoalsAgainst: 'goalsAgainst',
+        goalieSaves: 'saves'
+    };
+    if (player.role === 'goalie' && aggregateFields[field]) {
+        const aggregate = goalieAggregateFor(player);
+        player[field] = Math.max(0, Math.round(safeStatNumber(value) - aggregate[aggregateFields[field]]));
+        return;
+    }
+    player[field] = field === 'plusMinus' ? Math.round(safeStatNumber(value)) : Math.max(0, Math.round(safeStatNumber(value)));
+}
+
+function handleStatsFieldChange(input) {
+    const player = rosterPlayers.find(item => item.id === input.dataset.statsPlayer);
+    if (!player) return;
+    updateStatsPlayerField(player, input.dataset.statsField, input.value);
+    persistRosterPlayers();
+    renderStatsRoster();
+}
+
+function handleStatsFieldInput(input) {
+    if (input.dataset.statsField === 'name') return;
+    const player = rosterPlayers.find(item => item.id === input.dataset.statsPlayer);
+    if (!player) return;
+    updateStatsPlayerField(player, input.dataset.statsField, input.value);
+    persistRosterPlayers();
+    refreshStatsDerivedForRow(input.closest('tr'), player);
+    renderStatsSummary();
+}
+
+function addStatsPlayer(role) {
+    const numberInput = document.querySelector(`[data-stats-add-number="${role}"]`);
+    const nameInput = document.querySelector(`[data-stats-add-name="${role}"]`);
+    const name = cleanStatName(nameInput?.value) || `Новый ${rosterRoleLabel(role).toLowerCase()}`;
+    const number = String(numberInput?.value || '').trim();
+    rosterPlayers.push(defaultRosterPlayer(role, name, number));
+    persistRosterPlayers();
+    if (numberInput) numberInput.value = '';
+    if (nameInput) nameInput.value = '';
+    renderStatsRoster();
+    renderGoalieRosterSelects();
+}
+
+async function removeStatsPlayer(id) {
+    const player = rosterPlayers.find(item => item.id === id);
+    if (!player) return;
+    const confirmed = await showConfirm(`Удалить игрока "${player.name || rosterRoleLabel(player.role)}" из статистики?`, { okLabel: 'Удалить' });
+    if (!confirmed) return;
+    rosterPlayers = rosterPlayers.filter(item => item.id !== id);
+    persistRosterPlayers();
+    renderStatsRoster();
+    renderGoalieRosterSelects();
+}
+
 function goalieSeasonLabel(type) {
     if (type === 'regular') return 'Регулярный чемпионат';
     if (type === 'playoff') return 'Плей-офф';
@@ -4738,6 +5534,7 @@ function saveGoalieMatch() {
         }))
         .filter((goalie, index) => index === 0 || goalie.events.length || goalie.name !== 'Вратарь 2');
     if (!goalies.length) return;
+    goalies.forEach(goalie => ensureRosterPlayer('goalie', goalie.name));
     const previous = goalieEditingMatchId ? goalieSavedMatches.find(match => match.id === goalieEditingMatchId) : null;
     const saved = {
         id: goalieEditingMatchId || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -4758,7 +5555,10 @@ function saveGoalieMatch() {
     goalieExpandedMatchId = saved.id;
     resetGoalieMapData();
     persistGoalieMatches();
+    syncRosterGoaliesFromMatches();
+    persistRosterPlayers();
     renderGoaliePage();
+    if (document.body.dataset.view === 'stats') renderStatsRoster();
 }
 
 function goalieEventCounts(events, mode = 'goals') {
@@ -4803,6 +5603,7 @@ function openGoalieMatchForEdit(id) {
             undone: []
         };
     });
+    renderGoalieRosterSelects(goalieGoalies.map(goalie => goalie.name));
     document.getElementById('goalieName0').value = goalieGoalies[0].name || 'Иванов';
     document.getElementById('goalieTime0').value = goalieGoalies[0].iceTime || '60:00';
     document.getElementById('goalieName1').value = goalieGoalies[1].name || '';
@@ -4900,6 +5701,7 @@ function renderGoalieSavedList() {
 function renderGoaliePage() {
     const statsRoot = document.getElementById('goalieStats');
     if (!statsRoot) return;
+    renderGoalieRosterSelects(goalieGoalies.map(goalie => goalie.name));
     const active = goalieGoalies[goalieActiveIndex];
     const stats = goalieStats(active);
     const activeLabel = document.getElementById('goalieActiveLabel');
@@ -5981,6 +6783,34 @@ document.getElementById('collectionAddList').addEventListener('click', e => {
 document.querySelectorAll('[data-training-mode]').forEach(btn => {
     btn.addEventListener('click', () => setTrainingMode(btn.dataset.trainingMode));
 });
+document.querySelectorAll('[data-stats-page]').forEach(btn => {
+    btn.addEventListener('click', () => setStatsPage(btn.dataset.statsPage));
+});
+document.querySelectorAll('[data-stats-add]').forEach(btn => {
+    btn.addEventListener('click', () => addStatsPlayer(btn.dataset.statsAdd));
+});
+document.getElementById('statsRosterPanel').addEventListener('change', e => {
+    const input = e.target.closest('[data-stats-player][data-stats-field]');
+    if (input) handleStatsFieldChange(input);
+});
+document.getElementById('statsRosterPanel').addEventListener('input', e => {
+    const input = e.target.closest('[data-stats-player][data-stats-field]');
+    if (input) handleStatsFieldInput(input);
+});
+document.getElementById('statsRosterPanel').addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const input = e.target.closest('[data-stats-player][data-stats-field]');
+    if (input) {
+        input.blur();
+        return;
+    }
+    const addName = e.target.closest('[data-stats-add-name]');
+    if (addName) addStatsPlayer(addName.dataset.statsAddName);
+});
+document.getElementById('statsRosterPanel').addEventListener('click', async e => {
+    const remove = e.target.closest('[data-stats-remove]');
+    if (remove) await removeStatsPlayer(remove.dataset.statsRemove);
+});
 document.getElementById('btnBackToTrainings').addEventListener('click', () => setView('trainings'));
 document.getElementById('btnCalendarPrev').addEventListener('click', () => {
     calendarCursor.setMonth(calendarCursor.getMonth() - 1);
@@ -6070,6 +6900,10 @@ document.getElementById('goalieSeasonSelect').addEventListener('change', e => {
         syncGoalieInputs();
         renderGoaliePage();
     });
+    document.getElementById(id).addEventListener('change', () => {
+        syncGoalieInputs();
+        renderGoaliePage();
+    });
 });
 
 document.getElementById('btnRink').addEventListener('click', () => {
@@ -6085,7 +6919,9 @@ document.getElementById('btnRink').addEventListener('click', () => {
 loadTrainingRecords();
 loadTrainingBlocks();
 loadPlannedTrainings();
+loadRosterPlayers();
 loadGoalieMatches();
+syncRosterGoaliesFromMatches();
 document.getElementById('goalieMatchDate').value = todayInputValue();
 renderTrainingList();
 renderGoaliePage();
