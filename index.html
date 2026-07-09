@@ -1243,7 +1243,7 @@
         padding: 24px 34px 42px;
     }
     .stats-shell {
-        width: min(1220px, 100%);
+        width: min(1480px, 100%);
         margin: 0 auto;
         display: grid;
         gap: 18px;
@@ -1315,8 +1315,8 @@
     }
     .live-stats-board {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 220px;
-        gap: 18px;
+        grid-template-columns: minmax(0, 1fr) 200px;
+        gap: 22px;
         align-items: start;
     }
     .live-section-title {
@@ -1340,14 +1340,14 @@
         border-radius: 10px;
     }
     .live-skater-grid {
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
     .live-goalie-grid {
         grid-template-columns: repeat(2, minmax(132px, 180px));
         justify-content: start;
     }
     .live-player-tile {
-        min-height: 108px;
+        min-height: 124px;
         border: 0;
         background: #cfe0f2;
         color: #020617;
@@ -1358,7 +1358,8 @@
         position: relative;
         transition: transform .12s, filter .12s, box-shadow .12s;
     }
-    .live-player-tile.forward { background: #f39a82; }
+    .live-player-tile.defense { background: #f39a82; }
+    .live-player-tile.forward { background: #cfe0f2; }
     .live-player-tile.goalie { background: #d6c4f2; }
     .live-player-tile.active {
         filter: saturate(1.12);
@@ -1460,9 +1461,9 @@
         width: 12px;
         height: 12px;
         border-radius: 3px;
-        background: #cfe0f2;
+        background: #f39a82;
     }
-    .live-legend .forward i { background: #f39a82; }
+    .live-legend .forward i { background: #cfe0f2; }
     .live-legend .goalie i { background: #d6c4f2; }
     .live-match-panel {
         border: 1px solid #262a32;
@@ -2782,11 +2783,11 @@
         .stats-view { padding: 16px 18px 30px; }
         .stats-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .stats-table { min-width: 820px; }
-        .live-stats-board { grid-template-columns: minmax(0, 1fr) 190px; }
+        .live-stats-board { grid-template-columns: minmax(0, 1fr) 180px; }
         .live-grid,
-        .live-skater-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+        .live-skater-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         .live-goalie-grid { grid-template-columns: repeat(2, minmax(116px, 180px)); }
-        .live-player-tile { min-height: 96px; }
+        .live-player-tile { min-height: 112px; }
         .live-player-num { font-size: 34px; }
         .training-row { grid-template-columns: 30px 142px minmax(0, 1fr) auto; gap: 13px; }
         .training-row.block-row { grid-template-columns: 142px minmax(0, 1fr) 118px auto; }
@@ -2848,7 +2849,7 @@
         .stats-input.name { width: 150px; }
         .live-stats-board { grid-template-columns: 1fr; }
         .live-grid,
-        .live-skater-grid { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+        .live-skater-grid { grid-template-columns: repeat(4, minmax(78px, 1fr)); }
         .live-goalie-grid { grid-template-columns: repeat(2, minmax(96px, 1fr)); }
         .live-player-tile { min-height: 86px; padding: 10px; }
         .live-player-num { font-size: 30px; }
@@ -2892,9 +2893,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.2" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.3" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.6.2</span>
+            <span class="version-tooltip">v0.6.3</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -3140,7 +3141,7 @@
                     <div class="live-match-panel">
                         <div class="live-match-head">
                             <div class="live-edit-title">Состав матча</div>
-                            <div class="live-match-counts" id="liveMatchCounts">Полевые 0/5 · Вратари 0/2</div>
+                            <div class="live-match-counts" id="liveMatchCounts">Полевые 0/20 · Вратари 0/2</div>
                         </div>
                         <div class="live-match-list" id="liveMatchRoster"></div>
                     </div>
@@ -3664,6 +3665,8 @@ let planPreviewActiveId = '';
 let statsPage = 'roster';
 let rosterPlayers = [];
 const LIVE_PERIOD_SECONDS = 20 * 60;
+const LIVE_MAX_SKATERS = 20;
+const LIVE_MAX_GOALIES = 2;
 let liveRunning = false;
 let liveActiveIds = new Set();
 let liveShiftStartedIds = new Set();
@@ -5660,10 +5663,10 @@ function syncLiveMatchSelection() {
             const player = byId.get(id);
             return player && player.role !== 'goalie';
         })
-        .slice(0, 5);
+        .slice(0, LIVE_MAX_SKATERS);
     liveMatchGoalieIds = unique(liveMatchGoalieIds)
         .filter(id => byId.get(id)?.role === 'goalie')
-        .slice(0, 2);
+        .slice(0, LIVE_MAX_GOALIES);
     const visibleIds = new Set([...liveMatchSkaterIds, ...liveMatchGoalieIds]);
     liveActiveIds.forEach(id => {
         if (!visibleIds.has(id)) {
@@ -5696,7 +5699,7 @@ function renderLiveMatchRoster() {
     syncLiveMatchSelection();
     const skaterCount = liveMatchSkaterIds.length;
     const goalieCount = liveMatchGoalieIds.length;
-    if (counts) counts.textContent = `Полевые ${skaterCount}/5 · Вратари ${goalieCount}/2`;
+    if (counts) counts.textContent = `Полевые ${skaterCount}/${LIVE_MAX_SKATERS} · Вратари ${goalieCount}/${LIVE_MAX_GOALIES}`;
     target.innerHTML = '';
     const players = liveRosterPlayers();
     if (!players.length) {
@@ -5709,7 +5712,7 @@ function renderLiveMatchRoster() {
     players.forEach(player => {
         const isGoalie = player.role === 'goalie';
         const checked = isGoalie ? liveMatchGoalieIds.includes(player.id) : liveMatchSkaterIds.includes(player.id);
-        const disabled = !checked && (isGoalie ? goalieCount >= 2 : skaterCount >= 5);
+        const disabled = !checked && (isGoalie ? goalieCount >= LIVE_MAX_GOALIES : skaterCount >= LIVE_MAX_SKATERS);
         const label = document.createElement('label');
         label.className = `live-match-choice ${player.role}`;
         label.innerHTML = `
@@ -5730,11 +5733,11 @@ function toggleLiveMatchPlayer(id, checked) {
     applyLiveElapsed();
     if (player.role === 'goalie') {
         liveMatchGoalieIds = checked
-            ? [...liveMatchGoalieIds.filter(item => item !== id), id].slice(0, 2)
+            ? [...liveMatchGoalieIds.filter(item => item !== id), id].slice(0, LIVE_MAX_GOALIES)
             : liveMatchGoalieIds.filter(item => item !== id);
     } else {
         liveMatchSkaterIds = checked
-            ? [...liveMatchSkaterIds.filter(item => item !== id), id].slice(0, 5)
+            ? [...liveMatchSkaterIds.filter(item => item !== id), id].slice(0, LIVE_MAX_SKATERS)
             : liveMatchSkaterIds.filter(item => item !== id);
     }
     if (!checked) {
