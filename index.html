@@ -1319,6 +1319,17 @@
         gap: 18px;
         align-items: start;
     }
+    .live-section-title {
+        margin: 0 0 7px;
+        color: #8992a1;
+        font-size: 11px;
+        font-weight: 1000;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+    }
+    .live-section + .live-section {
+        margin-top: 14px;
+    }
     .live-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
@@ -1327,6 +1338,13 @@
         gap: 1px;
         overflow: hidden;
         border-radius: 10px;
+    }
+    .live-skater-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+    .live-goalie-grid {
+        grid-template-columns: repeat(2, minmax(132px, 180px));
+        justify-content: start;
     }
     .live-player-tile {
         min-height: 108px;
@@ -1378,6 +1396,9 @@
         font-size: 12px;
         font-weight: 800;
         color: rgba(2,6,23,.82);
+    }
+    .live-player-tile.goalie .live-player-meta {
+        justify-content: flex-end;
     }
     .live-side {
         display: grid;
@@ -1443,6 +1464,86 @@
     }
     .live-legend .forward i { background: #f39a82; }
     .live-legend .goalie i { background: #d6c4f2; }
+    .live-match-panel {
+        border: 1px solid #262a32;
+        border-radius: 12px;
+        background: #171a20;
+        padding: 14px;
+        display: grid;
+        gap: 10px;
+    }
+    .live-match-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .live-match-counts {
+        color: #8f96a3;
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+    .live-match-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+        gap: 7px;
+    }
+    .live-match-list .stats-empty {
+        grid-column: 1 / -1;
+    }
+    .live-match-choice {
+        min-height: 42px;
+        border: 1px solid #2b3039;
+        border-radius: 9px;
+        background: #111419;
+        color: #cbd5e1;
+        padding: 8px 10px;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        gap: 9px;
+        cursor: pointer;
+        transition: border-color .15s, background .15s, color .15s;
+    }
+    .live-match-choice:hover {
+        border-color: rgba(59,130,246,.55);
+        background: #151a22;
+        color: #fff;
+    }
+    .live-match-choice:has(input:checked) {
+        border-color: #3b82f6;
+        background: rgba(37,99,235,.16);
+        color: #fff;
+    }
+    .live-match-choice:has(input:disabled) {
+        opacity: .48;
+        cursor: not-allowed;
+    }
+    .live-match-choice input {
+        width: 15px;
+        height: 15px;
+        accent-color: #2563eb;
+    }
+    .live-match-choice strong {
+        display: block;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+        line-height: 1.15;
+    }
+    .live-match-choice span {
+        display: block;
+        margin-top: 3px;
+        color: #8f96a3;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
     .live-edit-panel {
         border: 1px solid #262a32;
         border-radius: 12px;
@@ -2682,7 +2783,9 @@
         .stats-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .stats-table { min-width: 820px; }
         .live-stats-board { grid-template-columns: minmax(0, 1fr) 190px; }
-        .live-grid { grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); }
+        .live-grid,
+        .live-skater-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+        .live-goalie-grid { grid-template-columns: repeat(2, minmax(116px, 180px)); }
         .live-player-tile { min-height: 96px; }
         .live-player-num { font-size: 34px; }
         .training-row { grid-template-columns: 30px 142px minmax(0, 1fr) auto; gap: 13px; }
@@ -2744,7 +2847,9 @@
         .stats-table { min-width: 760px; }
         .stats-input.name { width: 150px; }
         .live-stats-board { grid-template-columns: 1fr; }
-        .live-grid { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+        .live-grid,
+        .live-skater-grid { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+        .live-goalie-grid { grid-template-columns: repeat(2, minmax(96px, 1fr)); }
         .live-player-tile { min-height: 86px; padding: 10px; }
         .live-player-num { font-size: 30px; }
         .live-clock strong { font-size: 34px; }
@@ -2787,9 +2892,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.1" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.2" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.6.1</span>
+            <span class="version-tooltip">v0.6.2</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -3007,9 +3112,16 @@
                 <div class="live-stats-panel">
                     <div class="live-stats-board">
                         <div>
-                            <div class="live-grid" id="liveStatsGrid"></div>
+                            <div class="live-section">
+                                <div class="live-section-title">В поле</div>
+                                <div class="live-grid live-skater-grid" id="liveSkaterGrid"></div>
+                            </div>
+                            <div class="live-section">
+                                <div class="live-section-title">Вратари</div>
+                                <div class="live-grid live-goalie-grid" id="liveGoalieGrid"></div>
+                            </div>
                             <div class="live-empty" id="liveStatsEmpty" hidden>
-                                Добавьте игроков в обычной статистике — их номера появятся здесь для тайминга смен.
+                                Соберите состав матча ниже — выбранные игроки появятся здесь для тайминга.
                             </div>
                         </div>
                         <aside class="live-side">
@@ -3024,6 +3136,13 @@
                                 <span class="goalie"><i></i>Вратари</span>
                             </div>
                         </aside>
+                    </div>
+                    <div class="live-match-panel">
+                        <div class="live-match-head">
+                            <div class="live-edit-title">Состав матча</div>
+                            <div class="live-match-counts" id="liveMatchCounts">Полевые 0/5 · Вратари 0/2</div>
+                        </div>
+                        <div class="live-match-list" id="liveMatchRoster"></div>
                     </div>
                     <div class="live-edit-panel">
                         <div class="live-edit-title">Ручная правка</div>
@@ -3544,9 +3663,13 @@ let scheduleSource = 'saved';
 let planPreviewActiveId = '';
 let statsPage = 'roster';
 let rosterPlayers = [];
+const LIVE_PERIOD_SECONDS = 20 * 60;
 let liveRunning = false;
 let liveActiveIds = new Set();
 let liveShiftStartedIds = new Set();
+let liveSessionStats = new Map();
+let liveMatchSkaterIds = [];
+let liveMatchGoalieIds = [];
 let liveClockSeconds = 0;
 let liveLastTickAt = 0;
 let liveTimerId = null;
@@ -5525,41 +5648,170 @@ function liveRosterPlayers() {
         .sort((a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9) || rosterSort(a, b));
 }
 
+function livePlayerMap() {
+    return new Map(rosterPlayers.map(player => [player.id, player]));
+}
+
+function syncLiveMatchSelection() {
+    const byId = livePlayerMap();
+    const unique = ids => ids.filter((id, index, arr) => id && arr.indexOf(id) === index);
+    liveMatchSkaterIds = unique(liveMatchSkaterIds)
+        .filter(id => {
+            const player = byId.get(id);
+            return player && player.role !== 'goalie';
+        })
+        .slice(0, 5);
+    liveMatchGoalieIds = unique(liveMatchGoalieIds)
+        .filter(id => byId.get(id)?.role === 'goalie')
+        .slice(0, 2);
+    const visibleIds = new Set([...liveMatchSkaterIds, ...liveMatchGoalieIds]);
+    liveActiveIds.forEach(id => {
+        if (!visibleIds.has(id)) {
+            liveActiveIds.delete(id);
+            liveShiftStartedIds.delete(id);
+        }
+    });
+}
+
+function liveSelectedSkaters() {
+    syncLiveMatchSelection();
+    const byId = livePlayerMap();
+    return liveMatchSkaterIds.map(id => byId.get(id)).filter(Boolean);
+}
+
+function liveSelectedGoalies() {
+    syncLiveMatchSelection();
+    const byId = livePlayerMap();
+    return liveMatchGoalieIds.map(id => byId.get(id)).filter(Boolean);
+}
+
+function liveVisiblePlayers() {
+    return [...liveSelectedSkaters(), ...liveSelectedGoalies()];
+}
+
+function renderLiveMatchRoster() {
+    const target = document.getElementById('liveMatchRoster');
+    const counts = document.getElementById('liveMatchCounts');
+    if (!target) return;
+    syncLiveMatchSelection();
+    const skaterCount = liveMatchSkaterIds.length;
+    const goalieCount = liveMatchGoalieIds.length;
+    if (counts) counts.textContent = `Полевые ${skaterCount}/5 · Вратари ${goalieCount}/2`;
+    target.innerHTML = '';
+    const players = liveRosterPlayers();
+    if (!players.length) {
+        const empty = document.createElement('div');
+        empty.className = 'stats-empty';
+        empty.textContent = 'Добавьте игроков в обычной статистике.';
+        target.appendChild(empty);
+        return;
+    }
+    players.forEach(player => {
+        const isGoalie = player.role === 'goalie';
+        const checked = isGoalie ? liveMatchGoalieIds.includes(player.id) : liveMatchSkaterIds.includes(player.id);
+        const disabled = !checked && (isGoalie ? goalieCount >= 2 : skaterCount >= 5);
+        const label = document.createElement('label');
+        label.className = `live-match-choice ${player.role}`;
+        label.innerHTML = `
+            <input type="checkbox" data-live-match-player="${player.id}">
+            <span><strong></strong><span></span></span>`;
+        const input = label.querySelector('input');
+        input.checked = checked;
+        input.disabled = disabled;
+        label.querySelector('strong').textContent = `${player.number ? `#${player.number} ` : ''}${player.name || rosterRoleLabel(player.role)}`;
+        label.querySelector('span span').textContent = rosterRoleLabel(player.role);
+        target.appendChild(label);
+    });
+}
+
+function toggleLiveMatchPlayer(id, checked) {
+    const player = rosterPlayers.find(item => item.id === id);
+    if (!player) return;
+    applyLiveElapsed();
+    if (player.role === 'goalie') {
+        liveMatchGoalieIds = checked
+            ? [...liveMatchGoalieIds.filter(item => item !== id), id].slice(0, 2)
+            : liveMatchGoalieIds.filter(item => item !== id);
+    } else {
+        liveMatchSkaterIds = checked
+            ? [...liveMatchSkaterIds.filter(item => item !== id), id].slice(0, 5)
+            : liveMatchSkaterIds.filter(item => item !== id);
+    }
+    if (!checked) {
+        liveActiveIds.delete(id);
+        liveShiftStartedIds.delete(id);
+    }
+    renderLiveStats();
+}
+
+function liveSessionFor(id) {
+    if (!liveSessionStats.has(id)) liveSessionStats.set(id, { seconds: 0, shifts: 0 });
+    return liveSessionStats.get(id);
+}
+
 function playerLiveTimeSeconds(player) {
     if (!player) return 0;
-    if (player.role === 'goalie') return Math.round(combinedGoalieStats(player).iceMinutes * 60);
-    return parseTimeSeconds(player.toi);
+    return liveSessionFor(player.id).seconds;
+}
+
+function addPlayerTotalSeconds(player, seconds) {
+    if (!player) return;
+    if (player.role === 'goalie') {
+        player.goalieIce = formatTimeSeconds(parseTimeSeconds(player.goalieIce) + seconds);
+    } else {
+        player.toi = formatTimeSeconds(parseTimeSeconds(player.toi) + seconds);
+    }
 }
 
 function setPlayerLiveTimeSeconds(player, seconds) {
     if (!player) return;
-    if (player.role === 'goalie') {
-        const aggregate = goalieAggregateFor(player);
-        player.goalieIce = formatTimeSeconds(Math.max(0, Math.round(seconds - aggregate.iceMinutes * 60)));
-    } else {
-        player.toi = formatTimeSeconds(seconds);
-    }
+    const session = liveSessionFor(player.id);
+    const safeSeconds = Math.max(0, Math.round(seconds || 0));
+    const delta = safeSeconds - session.seconds;
+    session.seconds = safeSeconds;
+    addPlayerTotalSeconds(player, delta);
 }
 
 function addPlayerLiveSeconds(player, seconds) {
     if (!player || seconds <= 0) return;
-    setPlayerLiveTimeSeconds(player, playerLiveTimeSeconds(player) + seconds);
+    const session = liveSessionFor(player.id);
+    session.seconds += seconds;
+    addPlayerTotalSeconds(player, seconds);
+}
+
+function setPlayerLiveShifts(player, shifts) {
+    if (!player || player.role === 'goalie') return;
+    const session = liveSessionFor(player.id);
+    const safeShifts = Math.max(0, Math.round(safeStatNumber(shifts)));
+    const delta = safeShifts - session.shifts;
+    session.shifts = safeShifts;
+    player.shifts = Math.max(0, Math.round(safeStatNumber(player.shifts) + delta));
 }
 
 function incrementPlayerShift(player) {
-    if (!player) return;
+    if (!player || player.role === 'goalie') return;
+    const session = liveSessionFor(player.id);
+    session.shifts += 1;
     player.shifts = Math.max(0, Math.round(safeStatNumber(player.shifts) + 1));
 }
 
 function renderLiveStats() {
-    const players = liveRosterPlayers();
-    const grid = document.getElementById('liveStatsGrid');
+    syncLiveMatchSelection();
+    const skaters = liveSelectedSkaters();
+    const goalies = liveSelectedGoalies();
+    const visibleIds = new Set([...skaters, ...goalies].map(player => player.id));
+    const skaterGrid = document.getElementById('liveSkaterGrid');
+    const goalieGrid = document.getElementById('liveGoalieGrid');
     const empty = document.getElementById('liveStatsEmpty');
-    if (!grid || !empty) return;
-    grid.innerHTML = '';
-    empty.hidden = players.length > 0;
-    grid.hidden = !players.length;
-    players.forEach(player => {
+    if (!skaterGrid || !goalieGrid || !empty) return;
+    renderLiveMatchRoster();
+    skaterGrid.innerHTML = '';
+    goalieGrid.innerHTML = '';
+    empty.hidden = visibleIds.size > 0;
+    skaterGrid.parentElement.hidden = !skaters.length;
+    goalieGrid.parentElement.hidden = !goalies.length;
+    const renderTile = (player, target) => {
+        const session = liveSessionFor(player.id);
         const tile = document.createElement('button');
         tile.type = 'button';
         tile.className = `live-player-tile ${player.role}${liveActiveIds.has(player.id) ? ' active' : ''}`;
@@ -5570,15 +5822,17 @@ function renderLiveStats() {
             <span class="live-player-meta"><span data-role="shifts"></span><span data-role="time"></span></span>`;
         tile.querySelector('.live-player-name').textContent = player.name || rosterRoleLabel(player.role);
         tile.querySelector('.live-player-num').textContent = player.number || '№';
-        tile.querySelector('[data-role="shifts"]').textContent = String(player.shifts || 0);
+        tile.querySelector('[data-role="shifts"]').textContent = player.role === 'goalie' ? '' : String(session.shifts || 0);
         tile.querySelector('[data-role="time"]').textContent = formatTimeSeconds(playerLiveTimeSeconds(player));
-        grid.appendChild(tile);
-    });
+        target.appendChild(tile);
+    };
+    skaters.forEach(player => renderTile(player, skaterGrid));
+    goalies.forEach(player => renderTile(player, goalieGrid));
     const toggle = document.getElementById('btnLiveToggle');
     if (toggle) {
         toggle.textContent = liveRunning ? 'Стоп' : 'Старт';
         toggle.classList.toggle('running', liveRunning);
-        toggle.disabled = !players.length;
+        toggle.disabled = !visibleIds.size;
     }
     const clock = document.getElementById('liveStatsClock');
     if (clock) clock.textContent = formatTimeSeconds(liveClockSeconds);
@@ -5589,7 +5843,7 @@ function renderLiveEditOptions() {
     const select = document.getElementById('liveEditPlayer');
     if (!select) return;
     const current = select.value;
-    const players = liveRosterPlayers();
+    const players = liveVisiblePlayers();
     select.innerHTML = '';
     players.forEach(player => {
         const option = document.createElement('option');
@@ -5608,7 +5862,9 @@ function fillLiveEditFields() {
     const time = document.getElementById('liveEditTime');
     if (!select || !shifts || !time) return;
     const player = rosterPlayers.find(item => item.id === select.value);
-    shifts.value = player ? String(player.shifts || 0) : '';
+    const session = player ? liveSessionFor(player.id) : null;
+    shifts.disabled = !player || player.role === 'goalie';
+    shifts.value = player && player.role !== 'goalie' ? String(session.shifts || 0) : '';
     time.value = player ? formatTimeSeconds(playerLiveTimeSeconds(player)) : '';
 }
 
@@ -5618,7 +5874,7 @@ function applyLiveEdit() {
     const timeInput = document.getElementById('liveEditTime');
     const player = rosterPlayers.find(item => item.id === select?.value);
     if (!player) return;
-    player.shifts = Math.max(0, Math.round(safeStatNumber(shiftsInput.value)));
+    if (player.role !== 'goalie') setPlayerLiveShifts(player, shiftsInput.value);
     setPlayerLiveTimeSeconds(player, parseTimeSeconds(timeInput.value));
     persistRosterPlayers();
     renderLiveStats();
@@ -5632,7 +5888,7 @@ function applyLiveElapsed() {
     const elapsed = Math.floor((now - liveLastTickAt) / 1000);
     if (elapsed <= 0) return false;
     liveLastTickAt += elapsed * 1000;
-    liveClockSeconds += elapsed;
+    liveClockSeconds = (liveClockSeconds + elapsed) % LIVE_PERIOD_SECONDS;
     liveActiveIds.forEach(id => addPlayerLiveSeconds(rosterPlayers.find(player => player.id === id), elapsed));
     persistRosterPlayers();
     return true;
@@ -5776,7 +6032,7 @@ function renderGoalieStatsTable(aggregateMap = goalieAggregatesByName()) {
     }
     const table = document.createElement('table');
     table.className = 'stats-table';
-    table.innerHTML = '<thead><tr><th>№</th><th>Игрок</th><th title="Игры">И</th><th title="Смены">См</th><th title="Победы">В</th><th title="Поражения">П</th><th title="Овертайм/буллиты">ОТ</th><th title="Броски в створ">БВ</th><th title="Пропущенные шайбы">ПШ</th><th title="Отбитые броски">ОБ</th><th>%ОБ</th><th>КН</th><th title="Сухие матчи">0</th><th>Штр</th><th>Время</th><th></th></tr></thead>';
+    table.innerHTML = '<thead><tr><th>№</th><th>Игрок</th><th title="Игры">И</th><th title="Победы">В</th><th title="Поражения">П</th><th title="Овертайм/буллиты">ОТ</th><th title="Броски в створ">БВ</th><th title="Пропущенные шайбы">ПШ</th><th title="Отбитые броски">ОБ</th><th>%ОБ</th><th>КН</th><th title="Сухие матчи">0</th><th>Штр</th><th>Время</th><th></th></tr></thead>';
     const tbody = document.createElement('tbody');
     players.forEach(player => {
         const stats = combinedGoalieStats(player, aggregateMap);
@@ -5784,7 +6040,6 @@ function renderGoalieStatsTable(aggregateMap = goalieAggregatesByName()) {
         appendCell(row, statInput(player, 'number', player.number, 'number'));
         appendCell(row, statInput(player, 'name', player.name, 'name'));
         appendCell(row, statInput(player, 'goalieGames', stats.games));
-        appendCell(row, statInput(player, 'shifts', player.shifts || 0));
         appendCell(row, statInput(player, 'goalieWins', stats.wins));
         appendCell(row, statInput(player, 'goalieLosses', stats.losses));
         appendCell(row, statInput(player, 'goalieOt', stats.ot));
@@ -5940,6 +6195,8 @@ async function removeStatsPlayer(id) {
     rosterPlayers = rosterPlayers.filter(item => item.id !== id);
     liveActiveIds.delete(id);
     liveShiftStartedIds.delete(id);
+    liveMatchSkaterIds = liveMatchSkaterIds.filter(item => item !== id);
+    liveMatchGoalieIds = liveMatchGoalieIds.filter(item => item !== id);
     persistRosterPlayers();
     renderStatsRoster();
     renderGoalieRosterSelects();
@@ -7250,9 +7507,15 @@ document.querySelectorAll('[data-stats-add]').forEach(btn => {
     btn.addEventListener('click', () => addStatsPlayer(btn.dataset.statsAdd));
 });
 document.getElementById('btnLiveToggle').addEventListener('click', toggleLiveTimer);
-document.getElementById('liveStatsGrid').addEventListener('click', e => {
-    const tile = e.target.closest('[data-live-player]');
-    if (tile) toggleLivePlayer(tile.dataset.livePlayer);
+['liveSkaterGrid', 'liveGoalieGrid'].forEach(id => {
+    document.getElementById(id).addEventListener('click', e => {
+        const tile = e.target.closest('[data-live-player]');
+        if (tile) toggleLivePlayer(tile.dataset.livePlayer);
+    });
+});
+document.getElementById('liveMatchRoster').addEventListener('change', e => {
+    const input = e.target.closest('[data-live-match-player]');
+    if (input) toggleLiveMatchPlayer(input.dataset.liveMatchPlayer, input.checked);
 });
 document.getElementById('liveEditPlayer').addEventListener('change', fillLiveEditFields);
 document.getElementById('btnLiveEditApply').addEventListener('click', applyLiveEdit);
