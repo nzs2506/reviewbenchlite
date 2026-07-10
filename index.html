@@ -2926,9 +2926,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.4" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.5" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.6.4</span>
+            <span class="version-tooltip">v0.6.5</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4416,7 +4416,7 @@ function restoreAnimationOriginals(originals) {
 
 function animateMovementStep(step) {
     const len = pathLen(step.pts);
-    const duration = Math.min(2400, Math.max(850, len * 7));
+    const duration = Math.min(3000, Math.max(1000, len * 8.5));
     const playerStart = objectCenter(step.player);
     const puckStart = step.puck ? objectCenter(step.puck) : null;
     const puckOffset = puckStart ? { x: puckStart.x - playerStart.x, y: puckStart.y - playerStart.y } : null;
