@@ -2926,9 +2926,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.6" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.7" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.6.6</span>
+            <span class="version-tooltip">v0.6.7</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4286,6 +4286,7 @@ function addStyledLine(rawPts, type, color) {
 
 // ================= АНИМАЦИЯ УПРАЖНЕНИЯ =================
 const ANIMATION_LINE_TYPES = new Set(['skate', 'backward', 'puck']);
+const ANIMATION_ACTION_LINE_TYPES = new Set(['pass', 'shot']);
 
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -4340,6 +4341,11 @@ function isMovementLine(obj) {
     return String(obj?.customType || '').startsWith('line-') && ANIMATION_LINE_TYPES.has(type) && adjustedAnimationPoints(obj);
 }
 
+function isPuckActionLine(obj) {
+    const type = obj?.animType || String(obj?.customType || '').replace(/^line-/, '');
+    return String(obj?.customType || '').startsWith('line-') && ANIMATION_ACTION_LINE_TYPES.has(type) && adjustedAnimationPoints(obj);
+}
+
 function isPuckObject(obj) {
     return obj && obj.customType === 'obj-puck';
 }
@@ -4376,25 +4382,104 @@ function nearestAttachedPuck(player, pts, pucks, usedPucks) {
     return best?.puck || null;
 }
 
-function collectAnimationSteps() {
-    const objects = canvas.getObjects().filter(obj => !obj.__temp);
-    const lines = objects.filter(isMovementLine);
-    const pucks = objects.filter(isPuckObject);
-    const usedLines = new Set();
-    const usedPucks = new Set();
-    const steps = [];
-    objects.forEach(obj => {
-        if (!isPlayerLikeObject(obj)) return;
-        const match = nearestAnimationLine(obj, lines, usedLines);
-        if (!match) return;
-        usedLines.add(match.line);
-        const puck = nearestAttachedPuck(obj, match.pts, pucks, usedPucks);
-        if (puck) usedPucks.add(puck);
-        const center = objectCenter(obj);
-        const pts = distance(center, match.pts[0]) > 1.5 ? [center, ...match.pts] : match.pts;
-        steps.push({ player: obj, puck, pts });
+function nearestPuckActionLine(point, lines, usedLines) {
+    let best = null;
+    lines.forEach(line => {
+        if (usedLines.has(line)) return;
+        const pts = adjustedAnimationPoints(line);
+        if (!pts) return;
+        const d = distance(point, pts[0]);
+        if (d <= 82 && (!best || d < best.distance)) {
+            best = {
+                line,
+                pts,
+                type: line.animType || String(line.customType || '').replace(/^line-/, ''),
+                distance: d
+            };
+        }
     });
-    return steps;
+    return best;
+}
+
+function nearestPassReceiver(endPoint, entries, processed, sender) {
+    let best = null;
+    entries.forEach(entry => {
+        if (entry.player === sender || processed.has(entry.player)) return;
+        const playerCenter = objectCenter(entry.player);
+        const routeStart = entry.movement?.pts?.[0] || playerCenter;
+        const d = Math.min(distance(endPoint, playerCenter), distance(endPoint, routeStart));
+        if (d <= 92 && (!best || d < best.distance)) best = { entry, distance: d };
+    });
+    return best?.entry || null;
+}
+
+function collectAnimationPlan() {
+    const objects = canvas.getObjects().filter(obj => !obj.__temp);
+    const movementLines = objects.filter(isMovementLine);
+    const actionLines = objects.filter(isPuckActionLine);
+    const players = objects.filter(isPlayerLikeObject);
+    const pucks = objects.filter(isPuckObject);
+    const usedMovementLines = new Set();
+    const usedPucks = new Set();
+    const usedActionLines = new Set();
+    const playerPucks = new Map();
+    const entries = players.map(player => ({
+        player,
+        movement: nearestAnimationLine(player, movementLines, usedMovementLines)
+    }));
+
+    entries.forEach(entry => {
+        if (entry.movement) usedMovementLines.add(entry.movement.line);
+        const referencePts = entry.movement?.pts || [objectCenter(entry.player)];
+        const puck = nearestAttachedPuck(entry.player, referencePts, pucks, usedPucks);
+        if (puck) {
+            usedPucks.add(puck);
+            playerPucks.set(entry.player, puck);
+        }
+    });
+
+    const processed = new Set();
+    const steps = [];
+    let preferred = entries.find(entry => playerPucks.has(entry.player)) || null;
+
+    while (processed.size < entries.length) {
+        const entry = preferred && !processed.has(preferred.player)
+            ? preferred
+            : entries.find(candidate => !processed.has(candidate.player));
+        preferred = null;
+        if (!entry) break;
+        processed.add(entry.player);
+
+        let puck = playerPucks.get(entry.player) || null;
+        let actionPoint = objectCenter(entry.player);
+        if (entry.movement) {
+            const center = objectCenter(entry.player);
+            const movementPts = distance(center, entry.movement.pts[0]) > 1.5
+                ? [center, ...entry.movement.pts]
+                : entry.movement.pts;
+            steps.push({ kind: 'movement', player: entry.player, puck, pts: movementPts });
+            actionPoint = movementPts[movementPts.length - 1];
+        }
+
+        if (!puck) continue;
+        const action = nearestPuckActionLine(actionPoint, actionLines, usedActionLines);
+        if (!action) continue;
+        usedActionLines.add(action.line);
+        steps.push({ kind: 'puck-action', puck, pts: action.pts, actionType: action.type });
+
+        if (action.type === 'pass') {
+            const receiver = nearestPassReceiver(action.pts[action.pts.length - 1], entries, processed, entry.player);
+            if (receiver) {
+                playerPucks.delete(entry.player);
+                playerPucks.set(receiver.player, puck);
+                preferred = receiver;
+            }
+        } else {
+            playerPucks.delete(entry.player);
+        }
+    }
+
+    return { steps };
 }
 
 function setAnimationButtonState(state, label = 'Анимация') {
@@ -4462,9 +4547,33 @@ function animateMovementStep(step) {
     });
 }
 
+function animatePuckActionStep(step) {
+    const puckStart = objectCenter(step.puck);
+    const pts = distance(puckStart, step.pts[0]) > 1.5 ? [puckStart, ...step.pts] : step.pts;
+    const len = pathLen(pts);
+    const duration = step.actionType === 'shot'
+        ? Math.min(850, Math.max(280, len * 2.1))
+        : Math.min(1350, Math.max(420, len * 3.4));
+    if (step.puck.bringToFront) step.puck.bringToFront();
+    return new Promise(resolve => {
+        const startedAt = performance.now();
+        const tick = now => {
+            const t = Math.min(1, (now - startedAt) / duration);
+            const at = pointAlongPath(pts, t);
+            if (at?.point) {
+                moveObjectCenter(step.puck, at.point.x, at.point.y);
+                canvas.requestRenderAll();
+            }
+            if (t < 1) requestAnimationFrame(tick);
+            else resolve();
+        };
+        requestAnimationFrame(tick);
+    });
+}
+
 async function playDrillAnimation() {
     if (animationRunning) return;
-    const steps = collectAnimationSteps();
+    const { steps } = collectAnimationPlan();
     if (!steps.length) {
         setAnimationButtonState('idle', 'Нет связок');
         await delay(1150);
@@ -4481,7 +4590,8 @@ async function playDrillAnimation() {
     setAnimationButtonState('running', 'Идёт');
     try {
         for (const step of steps) {
-            await animateMovementStep(step);
+            if (step.kind === 'puck-action') await animatePuckActionStep(step);
+            else await animateMovementStep(step);
             await delay(140);
         }
     } finally {
