@@ -2926,9 +2926,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.7" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.8" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.6.7</span>
+            <span class="version-tooltip">v0.6.8</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5189,7 +5189,8 @@ function ellipsizeText(ctx, text, maxWidth) {
 }
 function captureBoardWithFooter(format = 'png', baseMultiplier = 2, quality = 0.95, meta = {}) {
     const boardCanvas = captureBoardCanvas(baseMultiplier);
-    const footerH = Math.max(42, Math.round(58 * baseMultiplier));
+    const title = (meta.title || '').trim();
+    const footerH = title ? Math.max(36, Math.round(42 * baseMultiplier)) : 0;
     const out = document.createElement('canvas');
     out.width = boardCanvas.width;
     out.height = boardCanvas.height + footerH;
@@ -5197,26 +5198,17 @@ function captureBoardWithFooter(format = 'png', baseMultiplier = 2, quality = 0.
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, out.width, out.height);
     ctx.drawImage(boardCanvas, 0, 0);
-    ctx.fillStyle = '#16181d';
-    ctx.fillRect(0, boardCanvas.height, out.width, footerH);
-
-    const pad = Math.max(16, Math.round(24 * baseMultiplier));
-    const title = (meta.title || '').trim();
-    const date = exportDateLabel(meta.createdAt);
-    const titleSize = Math.max(14, Math.round(18 * baseMultiplier));
-    const metaSize = Math.max(11, Math.round(13 * baseMultiplier));
-    const yTitle = boardCanvas.height + Math.round(23 * baseMultiplier);
-    const yMeta = title ? boardCanvas.height + Math.round(44 * baseMultiplier) : boardCanvas.height + Math.round(35 * baseMultiplier);
 
     if (title) {
+        ctx.fillStyle = '#16181d';
+        ctx.fillRect(0, boardCanvas.height, out.width, footerH);
+        const pad = Math.max(16, Math.round(24 * baseMultiplier));
+        const titleSize = Math.max(14, Math.round(18 * baseMultiplier));
+        const yTitle = boardCanvas.height + Math.round(27 * baseMultiplier);
         ctx.fillStyle = '#f4f8ff';
         ctx.font = `700 ${titleSize}px "Russo One", "Arial Black", Arial, sans-serif`;
         ctx.fillText(ellipsizeText(ctx, title, out.width - pad * 2), pad, yTitle);
     }
-    ctx.fillStyle = '#aeb4bf';
-    ctx.font = `600 ${metaSize}px "Segoe UI", Arial, sans-serif`;
-    const dateLabel = `Дата и время: ${date}`;
-    ctx.fillText(ellipsizeText(ctx, dateLabel, out.width - pad * 2), pad, yMeta);
     return {
         dataUrl: out.toDataURL(`image/${format}`, quality),
         width: out.width,
