@@ -3913,9 +3913,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.7" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.8" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.7</span>
+            <span class="version-tooltip">v0.9.8</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -9058,9 +9058,9 @@ function detectedLineupRole(text) {
         .split(/\s+/)
         .map(token => token.replace(/\.+$/g, ''))
         .filter(Boolean);
-    if (tokens.some(token => ['вр', 'bp', 'вратарь', 'голкипер', 'gk', 'гк'].includes(token)) || /(^|\s)(bp|вр)(?=\s|\.|\/|$)/i.test(prefix)) return 'goalie';
-    if (tokens.some(token => ['защ', 'заш', 'защитник', 'лз', 'пз'].includes(token)) || /(^|\s)(?:d|защ|заш|зав)(?=\s|\.|\/|\)|$)/i.test(prefix) || /3a[a-z]{1,5}(?:\/d|d|\/o|\/о|\/\))/i.test(prefix)) return 'defense';
-    if (tokens.some(token => ['нап', 'нападающий', 'лн', 'пн', 'ц'].includes(token)) || /(^|\s)(?:f|нап|наш|нам|han|nam|ham[a-z]*)(?=\s|\.|\/|$)/i.test(prefix)) return 'forward';
+    if (tokens.some(token => ['вр', 'bp', 'bpg', 'вратарь', 'голкипер', 'gk', 'гк'].includes(token)) || /(^|\s)(?:bp[g6]?|вр[бg]?)(?=\s|\.|\/|$)/i.test(prefix)) return 'goalie';
+    if (tokens.some(token => ['защ', 'заш', 'защитник', 'лз', 'пз', 'sd', 'wd', 'sawd', '3uwd'].includes(token)) || /(^|\s)(?:d|защ|заш|зав)(?=\s|\.|\/|\)|$)/i.test(prefix) || /(?:3|s|з)[a-zа-я]{1,5}(?:\/d|d|\/o|\/о|\/\))/i.test(prefix)) return 'defense';
+    if (tokens.some(token => ['нап', 'нападающий', 'лн', 'пн', 'ц', 'hanf', 'hamf', 'hf', 'hp'].includes(token)) || /(^|\s)(?:f|нап|наш|нам|han|nam|ham[a-z]*|hanf|hamf)(?=\s|\.|\/|$)/i.test(prefix)) return 'forward';
     return '';
 }
 
@@ -9085,7 +9085,7 @@ function detectedLineupLeadership(text) {
         .toLowerCase()
         .replace(/ё/g, 'е')
         .replace(/[()]/g, ' ');
-    if (/(^|\s)капитан(?=\s|$)/i.test(value) || /(^|\s)(к|k|c)(?=\s+(?:\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2})|\s*$)/i.test(value) || /(^|\s|\|)©(?=\s|\||$)/.test(value)) return 'captain';
+    if (/(^|\s)капитан(?=\s|$)/i.test(value) || /(?:к|k)\s*\/\s*(?:с|c)/i.test(value) || /(^|\s)(?:кс|kc|kс|кc)(?=\s|\||$)/i.test(value) || /(^|\s)(к|k|c)(?=\s+(?:\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2})|\s*$)/i.test(value) || /(^|\s|\|)©(?=\s|\||$)/.test(value)) return 'captain';
     if (/(^|\s)(ассистент|асс\.)(?=\s|$)/i.test(value) || /(^|\s)(а|a)(?=\s+(?:\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2})|\s*$)/i.test(value)) return 'assistant';
     return '';
 }
@@ -9171,11 +9171,12 @@ function parseLineupText(text) {
         'амплуа', 'фио', 'полностью', 'рождения', 'состав', 'пятеркам', 'представители',
         'должность', 'подпись', 'расшифровка', 'игрок', 'номер', 'основной', 'запасной',
         'высшая', 'хоккейная', 'лига', 'сезон', 'кубок', 'пятерка', 'официальные',
-        'вр', 'bp', 'gk', 'защ', 'заш', 'зав', 'нап', 'наш', 'нам', 'han', 'f', 'd'
+        'вр', 'врб', 'bp', 'bpg', 'gk', 'защ', 'заш', 'зав', 'нап', 'наш', 'нам',
+        'han', 'hanf', 'hamf', 'sawd', '3uwd', 'f', 'd'
     ]);
     const candidates = [];
-    const sourceLines = String(text || '').split(/\r?\n/);
-    const dateRich = sourceLines.filter(line => detectedLineupBirthDate(line)).length >= 3;
+    const playerTableText = String(text || '').split(/официальные\s+представители|official\s+representatives/i)[0];
+    const sourceLines = playerTableText.split(/\r?\n/);
     sourceLines.forEach((source, index) => {
         const line = source.replace(/[|_]+/g, ' ').replace(/\s+/g, ' ').trim();
         if (!line || line.length < 3) return;
@@ -9186,16 +9187,16 @@ function parseLineupText(text) {
         const leadership = detectedLineupLeadership(line);
         const birthDate = detectedLineupBirthDate(line);
         const hasRole = Boolean(detectedRole);
-        const bilingualEvidence = /[А-ЯЁа-яё].*[A-Za-z]|[A-Za-z].*[А-ЯЁа-яё]/.test(line);
+        const bilingualEvidence = /[А-ЯЁ][А-ЯЁа-яё\-]{1,}(?:\s+[А-ЯЁ][А-ЯЁа-яё\-]{1,}){1,2}\s*\/\s*[A-ZА-ЯЁ]/.test(line);
         let clean = line
             .replace(/\b\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}\b/g, ' ')
             .replace(/\b\d{1,3}\b/g, ' ')
-            .replace(/(^|\s)(вр\.?|bp|gk|вратарь|голкипер|лз|пз|d|защитник|защ\.?|заш|зав|3a[uw]|лн|пн|ц|f|нападающий|нап\.?|наш|нам|han|к\/а|c\/a|капитан|ассистент|асс\.?)($|\s|\/|\))/gi, ' ')
+            .replace(/(^|\s)(вр\.?|врб|bp[g6]?|gk|вратарь|голкипер|лз|пз|d|защитник|защ\.?|заш|зав|3a[uw]|(?:3|s)[a-zа-я]{1,5}d|лн|пн|ц|f|нападающий|нап\.?|наш|нам|hanf?|hamf?|к\/а|c\/a|к\/с|k\/c|капитан|ассистент|асс\.?)($|\s|\/|\))/gi, ' ')
             .replace(/[^А-ЯЁа-яёA-Za-z\-\s]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
         const name = detectedLineupName(line, clean, rejected);
-        if (!name || (!number && !hasRole && !birthDate) || (dateRich && !birthDate && !(number && (hasRole || bilingualEvidence)))) return;
+        if (!name || (!number && !hasRole && !birthDate && !bilingualEvidence)) return;
         if (name.length < 3) return;
         candidates.push({
             id: `candidate-${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`,
@@ -9517,12 +9518,12 @@ function loadLineupImage(source) {
     });
 }
 
-async function prepareLineupImage(source) {
+async function prepareLineupImage(source, legacyCrop = false) {
     const image = await loadLineupImage(source);
     const fullSheet = image.height > image.width * 1.18;
     const sourceX = 0;
     const sourceY = fullSheet ? Math.round(image.height * .17) : 0;
-    const sourceWidth = fullSheet ? Math.round(image.width * .7) : image.width;
+    const sourceWidth = fullSheet ? Math.round(image.width * (legacyCrop ? .7 : .78)) : image.width;
     const sourceHeight = fullSheet ? Math.round(image.height * .65) : image.height;
     const scale = Math.max(1, Math.min(3.2, 1900 / sourceWidth));
     const canvas = document.createElement('canvas');
@@ -9539,25 +9540,38 @@ async function prepareLineupImage(source) {
 async function recognizeLineupImages(images) {
     await loadLineupScript('https://cdn.jsdelivr.net/npm/tesseract.js@7/dist/tesseract.min.js', 'Tesseract');
     let pageProgress = 0;
+    const modes = ['4', '6'];
     const worker = await Tesseract.createWorker('rus+eng', 1, {
         logger: message => {
             if (message.status !== 'recognizing text') return;
-            const progress = .3 + ((pageProgress + (message.progress || 0)) / images.length) * .65;
+            const progress = .3 + ((pageProgress + (message.progress || 0)) / (images.length * modes.length)) * .65;
             setLineupProgress(`Распознавание: ${Math.round((message.progress || 0) * 100)}%`, progress, true);
         }
     });
     await worker.setParameters({
-        tessedit_pageseg_mode: '6',
+        tessedit_pageseg_mode: '4',
         preserve_interword_spaces: '1',
         user_defined_dpi: '300'
     });
     const parts = [];
     try {
         for (let index = 0; index < images.length; index++) {
-            pageProgress = index;
-            const prepared = await prepareLineupImage(images[index]);
-            const result = await worker.recognize(prepared);
-            parts.push(result.data.text || '');
+            let bestText = '';
+            let bestCount = -1;
+            for (let modeIndex = 0; modeIndex < modes.length; modeIndex++) {
+                pageProgress = index * modes.length + modeIndex;
+                await worker.setParameters({ tessedit_pageseg_mode: modes[modeIndex] });
+                const prepared = await prepareLineupImage(images[index], modes[modeIndex] === '6');
+                const result = await worker.recognize(prepared);
+                const text = result.data.text || '';
+                const count = parseLineupText(text).length;
+                if (count > bestCount) {
+                    bestText = text;
+                    bestCount = count;
+                }
+                if (modeIndex === 0 && count >= 24) break;
+            }
+            parts.push(bestText);
         }
     } finally {
         await worker.terminate();
