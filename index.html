@@ -1804,6 +1804,296 @@
         font-size: 12px;
         font-weight: 800;
     }
+    .match-sheet-panel {
+        display: grid;
+        gap: 14px;
+    }
+    .match-sheet-topbar {
+        display: grid;
+        grid-template-columns: minmax(180px, 1fr) 150px auto auto;
+        gap: 9px;
+        align-items: end;
+    }
+    .match-sheet-field {
+        display: grid;
+        gap: 5px;
+        color: #858d9b;
+        font-size: 9px;
+        font-weight: 1000;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+    .match-sheet-field input {
+        height: 36px;
+        border: 1px solid #303642;
+        border-radius: 8px;
+        background: #171a20;
+        color: #f4f8ff;
+        padding: 0 11px;
+        font-weight: 800;
+        outline: none;
+    }
+    .match-sheet-field input:focus { border-color: #3b82f6; }
+    .match-sheet-periods {
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        padding: 3px;
+        border: 1px solid #303642;
+        border-radius: 8px;
+        background: #171a20;
+    }
+    .match-sheet-periods button {
+        min-width: 38px;
+        height: 28px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: #929aa8;
+        font-size: 12px;
+        font-weight: 1000;
+        cursor: pointer;
+    }
+    .match-sheet-periods button.active {
+        background: #2563eb;
+        color: #fff;
+    }
+    .match-sheet-reset,
+    .match-sheet-undo {
+        height: 36px;
+        border: 1px solid #303642;
+        border-radius: 8px;
+        background: #171a20;
+        color: #c8cfda;
+        padding: 0 13px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        font-size: 11px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+    .match-sheet-reset:hover { border-color: #ef4444; color: #f87171; }
+    .match-sheet-undo:hover:not(:disabled) { border-color: #3b82f6; color: #fff; }
+    .match-sheet-undo:disabled { opacity: .42; cursor: default; }
+    .match-sheet-entry {
+        border: 1px solid #262a32;
+        border-radius: 10px;
+        background: #171a20;
+        padding: 12px;
+        display: grid;
+        gap: 10px;
+    }
+    .match-sheet-entry-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 24px;
+    }
+    .match-sheet-selection {
+        color: #a2aab7;
+        font-size: 12px;
+        font-weight: 800;
+    }
+    .match-sheet-selection strong { color: #fff; }
+    .match-sheet-actions {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(105px, 1fr));
+        gap: 7px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+    }
+    .match-sheet-action {
+        min-width: 105px;
+        min-height: 44px;
+        border: 1px solid #303642;
+        border-radius: 8px;
+        background: #111419;
+        color: #d8dee9;
+        padding: 7px 9px;
+        display: grid;
+        grid-template-columns: 22px minmax(0, 1fr);
+        align-items: center;
+        gap: 7px;
+        text-align: left;
+        font-size: 10px;
+        line-height: 1.15;
+        font-weight: 900;
+        cursor: pointer;
+        transition: border-color .15s, background .15s, transform .15s;
+    }
+    .match-sheet-action i {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        background: rgba(59,130,246,.16);
+        color: #60a5fa;
+    }
+    .match-sheet-action:hover:not(:disabled) {
+        border-color: #3b82f6;
+        background: rgba(37,99,235,.12);
+        transform: translateY(-1px);
+    }
+    .match-sheet-action.danger i { background: rgba(239,68,68,.14); color: #f87171; }
+    .match-sheet-action.penalty i { background: rgba(245,158,11,.14); color: #fbbf24; }
+    .match-sheet-action:disabled { opacity: .36; cursor: default; }
+    .match-sheet-wrap {
+        border: 1px solid #262a32;
+        border-radius: 10px;
+        background: #171a20;
+        overflow: auto;
+    }
+    .match-sheet-table {
+        width: 100%;
+        min-width: 1460px;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 11px;
+    }
+    .match-sheet-table th,
+    .match-sheet-table td {
+        min-width: 42px;
+        height: 37px;
+        border-right: 1px solid #2a2e36;
+        border-bottom: 1px solid #2a2e36;
+        padding: 5px 6px;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .match-sheet-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #20242c;
+        color: #aeb6c3;
+        font-size: 9px;
+        font-weight: 1000;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+    }
+    .match-sheet-table thead tr:first-child th { height: 34px; }
+    .match-sheet-table thead tr:nth-child(2) th { top: 34px; background: #1b1f26; }
+    .match-sheet-table .match-sheet-player-head,
+    .match-sheet-table .match-sheet-player-cell {
+        position: sticky;
+        left: 0;
+        z-index: 3;
+        min-width: 205px;
+        text-align: left;
+        background: #171a20;
+        box-shadow: 1px 0 0 #343944;
+    }
+    .match-sheet-table thead .match-sheet-player-head { z-index: 5; background: #20242c; }
+    .match-sheet-table tbody tr { cursor: pointer; }
+    .match-sheet-table tbody tr:hover td { background-color: rgba(37,99,235,.08); }
+    .match-sheet-table tbody tr.selected td { background-color: rgba(37,99,235,.17); }
+    .match-sheet-table tbody tr.selected .match-sheet-player-cell { box-shadow: inset 3px 0 #3b82f6, 1px 0 0 #343944; }
+    .match-sheet-player {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: #f4f8ff;
+        padding: 0;
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr);
+        align-items: center;
+        gap: 8px;
+        text-align: left;
+        cursor: pointer;
+    }
+    .match-sheet-player b {
+        width: 32px;
+        height: 26px;
+        border-radius: 7px;
+        display: grid;
+        place-items: center;
+        background: #cfe0f2;
+        color: #07111f;
+        font-size: 12px;
+    }
+    .match-sheet-player.defense b { background: #f39a82; }
+    .match-sheet-player span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 11px;
+        font-weight: 900;
+    }
+    .match-sheet-value { color: #e6edf8; font-weight: 900; }
+    .match-sheet-value.zero { color: #5f6672; font-weight: 700; }
+    .match-sheet-faceoff { color: #9ec5ff; font-size: 10px; font-weight: 900; }
+    .match-sheet-rating {
+        width: 46px;
+        height: 26px;
+        border: 1px solid #303642;
+        border-radius: 6px;
+        background: #111419;
+        color: #fff;
+        text-align: center;
+        font-weight: 900;
+        outline: none;
+    }
+    .match-sheet-rating:focus { border-color: #3b82f6; }
+    .match-sheet-empty {
+        min-height: 180px;
+        display: grid;
+        place-items: center;
+        color: #8f96a3;
+        padding: 24px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 800;
+    }
+    .match-sheet-footer {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(290px, .7fr);
+        gap: 12px;
+    }
+    .match-sheet-log,
+    .match-sheet-goalies {
+        border: 1px solid #262a32;
+        border-radius: 10px;
+        background: #171a20;
+        padding: 12px;
+    }
+    .match-sheet-subtitle {
+        margin: 0 0 9px;
+        color: #8f96a3;
+        font-size: 9px;
+        font-weight: 1000;
+        letter-spacing: .14em;
+        text-transform: uppercase;
+    }
+    .match-sheet-log-list,
+    .match-sheet-goalie-list { display: grid; gap: 6px; }
+    .match-sheet-log-item,
+    .match-sheet-goalie-row {
+        min-height: 34px;
+        border: 1px solid #292e37;
+        border-radius: 7px;
+        padding: 7px 9px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        color: #d7dde8;
+        font-size: 11px;
+        font-weight: 800;
+    }
+    .match-sheet-log-item time,
+    .match-sheet-goalie-row span { color: #818997; font-size: 10px; }
+    .match-sheet-log-empty { color: #707784; font-size: 11px; font-weight: 800; }
+    @media (max-width: 900px) {
+        .match-sheet-topbar { grid-template-columns: minmax(0, 1fr) 135px; }
+        .match-sheet-periods { justify-content: center; }
+        .match-sheet-reset,
+        .match-sheet-undo { width: 100%; }
+        .match-sheet-footer { grid-template-columns: 1fr; }
+    }
     .training-controls {
         display: flex;
         align-items: center;
@@ -2926,9 +3216,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.9" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.7.0" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.6.9</span>
+            <span class="version-tooltip">v0.7.0</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -3139,6 +3429,7 @@
                 <div class="stats-tabs" aria-label="Страницы статистики">
                     <button class="stats-tab" type="button" data-stats-page="live">Live-stats</button>
                     <button class="stats-tab active" type="button" data-stats-page="roster">Статистика</button>
+                    <button class="stats-tab" type="button" data-stats-page="sheet">Матчевый лист</button>
                 </div>
             </div>
 
@@ -3242,6 +3533,53 @@
                         <button type="button" data-stats-add="forward"><i class="fa-solid fa-plus"></i>Добавить нападающего</button>
                     </div>
                 </section>
+            </section>
+
+            <section class="stats-panel match-sheet-panel" id="statsSheetPanel" hidden>
+                <div class="match-sheet-topbar">
+                    <label class="match-sheet-field">Соперник
+                        <input id="matchSheetOpponent" type="text" maxlength="50" placeholder="Название команды">
+                    </label>
+                    <label class="match-sheet-field">Дата
+                        <input id="matchSheetDate" type="date">
+                    </label>
+                    <div class="match-sheet-periods" aria-label="Период">
+                        <button class="active" type="button" data-match-period="1">1</button>
+                        <button type="button" data-match-period="2">2</button>
+                        <button type="button" data-match-period="3">3</button>
+                    </div>
+                    <button class="match-sheet-reset" id="btnMatchSheetReset" type="button"><i class="fa-regular fa-trash-can"></i>Новый лист</button>
+                </div>
+
+                <div class="match-sheet-entry">
+                    <div class="match-sheet-entry-head">
+                        <div class="match-sheet-selection" id="matchSheetSelection">Сначала выберите игрока в таблице</div>
+                        <button class="match-sheet-undo" id="btnMatchSheetUndo" type="button" disabled><i class="fa-solid fa-rotate-left"></i>Отменить последнее</button>
+                    </div>
+                    <div class="match-sheet-actions" id="matchSheetActions">
+                        <button class="match-sheet-action" type="button" data-match-event="faceoffWin"><i class="fa-solid fa-plus"></i><span>Вбрасывание выиграно</span></button>
+                        <button class="match-sheet-action danger" type="button" data-match-event="faceoffLoss"><i class="fa-solid fa-minus"></i><span>Вбрасывание проиграно</span></button>
+                        <button class="match-sheet-action" type="button" data-match-event="shot"><i class="fa-solid fa-bullseye"></i><span>Бросок</span></button>
+                        <button class="match-sheet-action" type="button" data-match-event="goal"><i class="fa-solid fa-hockey-puck"></i><span>Забил</span></button>
+                        <button class="match-sheet-action danger" type="button" data-match-event="conceded"><i class="fa-solid fa-circle-down"></i><span>Пропустили</span></button>
+                        <button class="match-sheet-action penalty" type="button" data-match-event="penalty"><i class="fa-solid fa-stopwatch"></i><span>Удаление</span></button>
+                        <button class="match-sheet-action penalty" type="button" data-match-event="opponentPenalty"><i class="fa-solid fa-user-minus"></i><span>Удаление соперника</span></button>
+                        <button class="match-sheet-action" type="button" data-match-event="block"><i class="fa-solid fa-shield-halved"></i><span>Блок броска</span></button>
+                    </div>
+                </div>
+
+                <div class="match-sheet-wrap" id="matchSheetTable"></div>
+
+                <div class="match-sheet-footer">
+                    <section class="match-sheet-log">
+                        <h3 class="match-sheet-subtitle">Последние отметки</h3>
+                        <div class="match-sheet-log-list" id="matchSheetLog"></div>
+                    </section>
+                    <section class="match-sheet-goalies">
+                        <h3 class="match-sheet-subtitle">Вратари</h3>
+                        <div class="match-sheet-goalie-list" id="matchSheetGoalies"></div>
+                    </section>
+                </div>
             </section>
         </div>
     </main>
@@ -3673,6 +4011,7 @@ const BLOCK_STORAGE_KEY = 'benchreview-lite.blocks.v1';
 const PLANNED_STORAGE_KEY = 'benchreview-lite.planned.v1';
 const GOALIE_STORAGE_KEY = 'benchreview-lite.goalie-matches.v1';
 const ROSTER_STORAGE_KEY = 'benchreview-lite.roster.v1';
+const MATCH_SHEET_STORAGE_KEY = 'benchreview-lite.match-sheet.v1';
 const SIDE_PANEL_STORAGE_KEY = 'benchreview-lite.side-panel-collapsed.v1';
 let trainingDraft = null;
 let trainingRecords = [];
@@ -3701,6 +4040,9 @@ let scheduleSource = 'saved';
 let planPreviewActiveId = '';
 let statsPage = 'roster';
 let rosterPlayers = [];
+let matchSheetPeriod = 1;
+let matchSheetSelectedPlayerId = '';
+let matchSheetState = { opponent: '', date: '', players: {}, events: [] };
 const LIVE_PERIOD_SECONDS = 20 * 60;
 const LIVE_MAX_FORWARDS = 12;
 const LIVE_MAX_DEFENSE = 8;
@@ -5855,6 +6197,302 @@ function persistRosterPlayers() {
     } catch (_) {}
 }
 
+const MATCH_SHEET_EVENTS = {
+    faceoffWin: { label: 'Вбрасывание +', field: 'faceoffWins' },
+    faceoffLoss: { label: 'Вбрасывание -', field: 'faceoffLosses' },
+    shot: { label: 'Бросок', field: 'shots' },
+    goal: { label: 'Гол', field: 'goals', shot: true, plusMinus: 1 },
+    conceded: { label: 'Пропустили', field: 'conceded', plusMinus: -1 },
+    penalty: { label: 'Удаление', field: 'penalties' },
+    opponentPenalty: { label: 'Удаление соперника', field: 'opponentPenalties' },
+    block: { label: 'Блок броска', field: 'blocks' }
+};
+const MATCH_SHEET_PERIOD_FIELDS = [
+    'faceoffWins', 'faceoffLosses', 'shots', 'goals', 'conceded',
+    'penalties', 'opponentPenalties', 'blocks'
+];
+
+function emptyMatchSheetPlayer() {
+    const state = { plusMinus: 0, rating: '' };
+    MATCH_SHEET_PERIOD_FIELDS.forEach(field => { state[field] = [0, 0, 0]; });
+    return state;
+}
+
+function normalizeMatchSheetPlayer(value) {
+    const normalized = emptyMatchSheetPlayer();
+    MATCH_SHEET_PERIOD_FIELDS.forEach(field => {
+        const source = Array.isArray(value?.[field]) ? value[field] : [];
+        normalized[field] = [0, 1, 2].map(index => Math.max(0, Math.round(safeStatNumber(source[index]))));
+    });
+    normalized.plusMinus = Math.round(safeStatNumber(value?.plusMinus));
+    normalized.rating = value?.rating === undefined || value?.rating === null ? '' : String(value.rating).slice(0, 5);
+    return normalized;
+}
+
+function loadMatchSheet() {
+    try {
+        const raw = localStorage.getItem(MATCH_SHEET_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        matchSheetState = {
+            opponent: String(parsed?.opponent || '').slice(0, 50),
+            date: String(parsed?.date || ''),
+            players: {},
+            events: Array.isArray(parsed?.events) ? parsed.events.slice(-150) : []
+        };
+        Object.entries(parsed?.players || {}).forEach(([id, value]) => {
+            matchSheetState.players[id] = normalizeMatchSheetPlayer(value);
+        });
+    } catch (_) {
+        matchSheetState = { opponent: '', date: '', players: {}, events: [] };
+    }
+    if (!matchSheetState.date) matchSheetState.date = todayInputValue();
+}
+
+function persistMatchSheet() {
+    try {
+        localStorage.setItem(MATCH_SHEET_STORAGE_KEY, JSON.stringify(matchSheetState));
+    } catch (_) {}
+}
+
+function matchSheetPlayerState(id) {
+    if (!matchSheetState.players[id]) matchSheetState.players[id] = emptyMatchSheetPlayer();
+    return matchSheetState.players[id];
+}
+
+function matchSheetSkaters() {
+    return rosterPlayers
+        .filter(player => player.role !== 'goalie' && (cleanStatName(player.name) || String(player.number || '').trim()))
+        .sort(rosterSort);
+}
+
+function matchSheetCellValue(value) {
+    const span = document.createElement('span');
+    const number = Math.max(0, Math.round(safeStatNumber(value)));
+    span.className = `match-sheet-value${number ? '' : ' zero'}`;
+    span.textContent = String(number);
+    return span;
+}
+
+function matchSheetHeader(table) {
+    const thead = document.createElement('thead');
+    const groups = document.createElement('tr');
+    const player = document.createElement('th');
+    player.className = 'match-sheet-player-head';
+    player.rowSpan = 2;
+    player.textContent = '№ / ФИО';
+    groups.appendChild(player);
+    [
+        ['Вбрасывания', 3], ['Броски', 3], ['Забили', 3], ['Пропустили', 3],
+        ['Удаления', 3], ['Удаления соперника', 3]
+    ].forEach(([label, count]) => {
+        const th = document.createElement('th');
+        th.colSpan = count;
+        th.textContent = label;
+        groups.appendChild(th);
+    });
+    ['Блок. броск.', '+/-', 'Оценка'].forEach(label => {
+        const th = document.createElement('th');
+        th.rowSpan = 2;
+        th.textContent = label;
+        groups.appendChild(th);
+    });
+    const periods = document.createElement('tr');
+    for (let group = 0; group < 6; group++) {
+        [1, 2, 3].forEach(period => {
+            const th = document.createElement('th');
+            th.textContent = String(period);
+            periods.appendChild(th);
+        });
+    }
+    thead.append(groups, periods);
+    table.appendChild(thead);
+}
+
+function renderMatchSheet() {
+    const opponent = document.getElementById('matchSheetOpponent');
+    const date = document.getElementById('matchSheetDate');
+    if (opponent && opponent.value !== matchSheetState.opponent) opponent.value = matchSheetState.opponent;
+    if (date && date.value !== matchSheetState.date) date.value = matchSheetState.date;
+    document.querySelectorAll('[data-match-period]').forEach(btn => {
+        btn.classList.toggle('active', Number(btn.dataset.matchPeriod) === matchSheetPeriod);
+    });
+
+    const players = matchSheetSkaters();
+    if (matchSheetSelectedPlayerId && !players.some(player => player.id === matchSheetSelectedPlayerId)) {
+        matchSheetSelectedPlayerId = '';
+    }
+    const selected = players.find(player => player.id === matchSheetSelectedPlayerId);
+    const selection = document.getElementById('matchSheetSelection');
+    if (selection) {
+        selection.textContent = '';
+        if (selected) {
+            selection.append('Игрок: ');
+            const name = document.createElement('strong');
+            name.textContent = `${selected.number ? `№${selected.number} ` : ''}${selected.name || rosterRoleLabel(selected.role)}`;
+            selection.append(name, ` · ${matchSheetPeriod}-й период`);
+        } else {
+            selection.textContent = 'Сначала выберите игрока в таблице';
+        }
+    }
+    document.querySelectorAll('[data-match-event]').forEach(btn => { btn.disabled = !selected; });
+    const undo = document.getElementById('btnMatchSheetUndo');
+    if (undo) undo.disabled = !matchSheetState.events.length;
+
+    const target = document.getElementById('matchSheetTable');
+    target.innerHTML = '';
+    if (!players.length) {
+        target.innerHTML = '<div class="match-sheet-empty">Добавьте защитников и нападающих на странице «Статистика». Они автоматически появятся в матчевом листе.</div>';
+    } else {
+        const table = document.createElement('table');
+        table.className = 'match-sheet-table';
+        matchSheetHeader(table);
+        const tbody = document.createElement('tbody');
+        players.forEach(player => {
+            const state = matchSheetPlayerState(player.id);
+            const row = document.createElement('tr');
+            row.dataset.matchPlayer = player.id;
+            row.classList.toggle('selected', player.id === matchSheetSelectedPlayerId);
+            const identityCell = document.createElement('td');
+            identityCell.className = 'match-sheet-player-cell';
+            const identity = document.createElement('button');
+            identity.type = 'button';
+            identity.className = `match-sheet-player ${player.role}`;
+            const number = document.createElement('b');
+            number.textContent = player.number || '№';
+            const name = document.createElement('span');
+            name.textContent = player.name || rosterRoleLabel(player.role);
+            identity.append(number, name);
+            identityCell.appendChild(identity);
+            row.appendChild(identityCell);
+
+            [0, 1, 2].forEach(index => {
+                const cell = document.createElement('td');
+                const value = document.createElement('span');
+                value.className = 'match-sheet-faceoff';
+                value.textContent = `+${state.faceoffWins[index]} / -${state.faceoffLosses[index]}`;
+                cell.appendChild(value);
+                row.appendChild(cell);
+            });
+            ['shots', 'goals', 'conceded', 'penalties', 'opponentPenalties'].forEach(field => {
+                [0, 1, 2].forEach(index => appendCell(row, matchSheetCellValue(state[field][index])));
+            });
+            appendCell(row, matchSheetCellValue(state.blocks.reduce((sum, value) => sum + value, 0)));
+            const plusMinus = document.createElement('span');
+            plusMinus.className = 'match-sheet-value';
+            plusMinus.textContent = state.plusMinus > 0 ? `+${state.plusMinus}` : String(state.plusMinus);
+            appendCell(row, plusMinus);
+            const rating = document.createElement('input');
+            rating.className = 'match-sheet-rating';
+            rating.type = 'text';
+            rating.inputMode = 'decimal';
+            rating.maxLength = 5;
+            rating.value = state.rating;
+            rating.dataset.matchRating = player.id;
+            rating.setAttribute('aria-label', `Оценка ${player.name || player.number}`);
+            appendCell(row, rating);
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        target.appendChild(table);
+    }
+    renderMatchSheetLog();
+    renderMatchSheetGoalies();
+}
+
+function renderMatchSheetLog() {
+    const target = document.getElementById('matchSheetLog');
+    if (!target) return;
+    target.innerHTML = '';
+    const events = matchSheetState.events.slice(-6).reverse();
+    if (!events.length) {
+        target.innerHTML = '<div class="match-sheet-log-empty">Отметок пока нет.</div>';
+        return;
+    }
+    events.forEach(event => {
+        const player = rosterPlayers.find(item => item.id === event.playerId);
+        const item = document.createElement('div');
+        item.className = 'match-sheet-log-item';
+        const text = document.createElement('span');
+        text.textContent = `${player?.number ? `№${player.number} ` : ''}${player?.name || 'Игрок'} · ${MATCH_SHEET_EVENTS[event.type]?.label || 'Событие'}`;
+        const time = document.createElement('time');
+        time.textContent = `${event.period}-й период`;
+        item.append(text, time);
+        target.appendChild(item);
+    });
+}
+
+function renderMatchSheetGoalies() {
+    const target = document.getElementById('matchSheetGoalies');
+    if (!target) return;
+    target.innerHTML = '';
+    const aggregateMap = goalieAggregatesByName();
+    const goalies = rosterPlayers.filter(player => player.role === 'goalie').sort(rosterSort);
+    if (!goalies.length) {
+        target.innerHTML = '<div class="match-sheet-log-empty">Вратари добавляются на странице «Статистика».</div>';
+        return;
+    }
+    goalies.forEach(player => {
+        const stats = combinedGoalieStats(player, aggregateMap);
+        const row = document.createElement('div');
+        row.className = 'match-sheet-goalie-row';
+        const name = document.createElement('strong');
+        name.textContent = `${player.number ? `№${player.number} ` : ''}${player.name || 'Вратарь'}`;
+        const meta = document.createElement('span');
+        meta.textContent = `${stats.games} И · ${stats.saves} ОБ · ${stats.sv.toFixed(1)}% · ${stats.ice}`;
+        row.append(name, meta);
+        target.appendChild(row);
+    });
+}
+
+function recordMatchSheetEvent(type) {
+    const config = MATCH_SHEET_EVENTS[type];
+    const player = rosterPlayers.find(item => item.id === matchSheetSelectedPlayerId && item.role !== 'goalie');
+    if (!config || !player) return;
+    const state = matchSheetPlayerState(player.id);
+    const periodIndex = matchSheetPeriod - 1;
+    state[config.field][periodIndex] += 1;
+    if (config.shot) state.shots[periodIndex] += 1;
+    if (config.plusMinus) state.plusMinus += config.plusMinus;
+    matchSheetState.events.push({
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        playerId: player.id,
+        type,
+        period: matchSheetPeriod,
+        createdAt: new Date().toISOString()
+    });
+    matchSheetState.events = matchSheetState.events.slice(-150);
+    persistMatchSheet();
+    renderMatchSheet();
+}
+
+function undoMatchSheetEvent() {
+    const event = matchSheetState.events.pop();
+    if (!event) return;
+    const config = MATCH_SHEET_EVENTS[event.type];
+    const state = matchSheetState.players[event.playerId];
+    const periodIndex = Math.max(0, Math.min(2, Number(event.period || 1) - 1));
+    if (config && state) {
+        state[config.field][periodIndex] = Math.max(0, state[config.field][periodIndex] - 1);
+        if (config.shot) state.shots[periodIndex] = Math.max(0, state.shots[periodIndex] - 1);
+        if (config.plusMinus) state.plusMinus -= config.plusMinus;
+    }
+    persistMatchSheet();
+    renderMatchSheet();
+}
+
+async function resetMatchSheet() {
+    const confirmed = await showConfirm('Очистить все отметки текущего матчевого листа?', {
+        title: 'Новый матчевый лист',
+        okLabel: 'Очистить'
+    });
+    if (!confirmed) return;
+    matchSheetState = { opponent: '', date: todayInputValue(), players: {}, events: [] };
+    matchSheetSelectedPlayerId = '';
+    matchSheetPeriod = 1;
+    persistMatchSheet();
+    renderMatchSheet();
+}
+
 function rosterRoleLabel(role) {
     if (role === 'goalie') return 'Вратарь';
     if (role === 'defense') return 'Защитник';
@@ -6353,14 +6991,16 @@ function toggleLivePlayer(id) {
 }
 
 function setStatsPage(page) {
-    statsPage = page === 'live' ? 'live' : 'roster';
+    statsPage = ['live', 'sheet'].includes(page) ? page : 'roster';
     document.querySelectorAll('[data-stats-page]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.statsPage === statsPage);
     });
     document.getElementById('statsLivePanel').hidden = statsPage !== 'live';
     document.getElementById('statsRosterPanel').hidden = statsPage !== 'roster';
+    document.getElementById('statsSheetPanel').hidden = statsPage !== 'sheet';
     if (statsPage === 'live') renderLiveStats();
     if (statsPage === 'roster') renderStatsRoster();
+    if (statsPage === 'sheet') renderMatchSheet();
 }
 
 function renderStatsPage() {
@@ -6395,6 +7035,7 @@ function renderStatsRoster() {
     renderSkaterStatsTable('forward');
     renderGoalieRosterSelects();
     renderLiveStats();
+    if (statsPage === 'sheet') renderMatchSheet();
 }
 
 function renderStatsSummary(aggregateMap = goalieAggregatesByName()) {
@@ -6603,7 +7244,11 @@ async function removeStatsPlayer(id) {
     liveShiftStartedIds.delete(id);
     liveMatchSkaterIds = liveMatchSkaterIds.filter(item => item !== id);
     liveMatchGoalieIds = liveMatchGoalieIds.filter(item => item !== id);
+    delete matchSheetState.players[id];
+    matchSheetState.events = matchSheetState.events.filter(event => event.playerId !== id);
+    if (matchSheetSelectedPlayerId === id) matchSheetSelectedPlayerId = '';
     persistRosterPlayers();
+    persistMatchSheet();
     renderStatsRoster();
     renderGoalieRosterSelects();
     if (statsPage === 'live') renderLiveStats();
@@ -7910,6 +8555,39 @@ document.querySelectorAll('[data-training-mode]').forEach(btn => {
 document.querySelectorAll('[data-stats-page]').forEach(btn => {
     btn.addEventListener('click', () => setStatsPage(btn.dataset.statsPage));
 });
+document.querySelectorAll('[data-match-period]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        matchSheetPeriod = Math.max(1, Math.min(3, Number(btn.dataset.matchPeriod) || 1));
+        renderMatchSheet();
+    });
+});
+document.getElementById('matchSheetActions').addEventListener('click', e => {
+    const action = e.target.closest('[data-match-event]');
+    if (action) recordMatchSheetEvent(action.dataset.matchEvent);
+});
+document.getElementById('matchSheetTable').addEventListener('click', e => {
+    if (e.target.closest('[data-match-rating]')) return;
+    const row = e.target.closest('[data-match-player]');
+    if (!row) return;
+    matchSheetSelectedPlayerId = row.dataset.matchPlayer;
+    renderMatchSheet();
+});
+document.getElementById('matchSheetTable').addEventListener('input', e => {
+    const input = e.target.closest('[data-match-rating]');
+    if (!input) return;
+    matchSheetPlayerState(input.dataset.matchRating).rating = String(input.value || '').trim().slice(0, 5);
+    persistMatchSheet();
+});
+document.getElementById('matchSheetOpponent').addEventListener('input', e => {
+    matchSheetState.opponent = String(e.target.value || '').slice(0, 50);
+    persistMatchSheet();
+});
+document.getElementById('matchSheetDate').addEventListener('change', e => {
+    matchSheetState.date = e.target.value || todayInputValue();
+    persistMatchSheet();
+});
+document.getElementById('btnMatchSheetUndo').addEventListener('click', undoMatchSheetEvent);
+document.getElementById('btnMatchSheetReset').addEventListener('click', resetMatchSheet);
 document.querySelectorAll('[data-stats-add]').forEach(btn => {
     btn.addEventListener('click', () => addStatsPlayer(btn.dataset.statsAdd));
 });
@@ -8062,6 +8740,7 @@ loadTrainingRecords();
 loadTrainingBlocks();
 loadPlannedTrainings();
 loadRosterPlayers();
+loadMatchSheet();
 loadGoalieMatches();
 syncRosterGoaliesFromMatches();
 document.getElementById('goalieMatchDate').value = todayInputValue();
