@@ -2017,9 +2017,25 @@
         display: grid;
         gap: 14px;
     }
+    .match-sheet-panel.is-fullscreen {
+        position: fixed;
+        inset: 0;
+        z-index: 70;
+        display: grid !important;
+        align-content: start;
+        gap: 12px;
+        padding: 12px;
+        overflow: auto;
+        background: #111318;
+    }
+    body.match-sheet-fullscreen-open { overflow: hidden; }
+    .match-sheet-panel.is-fullscreen .match-sheet-wrap {
+        max-height: none;
+        min-height: 0;
+    }
     .match-sheet-topbar {
         display: grid;
-        grid-template-columns: minmax(180px, 1fr) 150px auto auto;
+        grid-template-columns: minmax(180px, 1fr) 150px auto auto auto;
         gap: 9px;
         align-items: end;
     }
@@ -2069,6 +2085,7 @@
         color: #fff;
     }
     .match-sheet-reset,
+    .match-sheet-fullscreen,
     .match-sheet-undo {
         height: 36px;
         border: 1px solid #303642;
@@ -2085,6 +2102,7 @@
         cursor: pointer;
     }
     .match-sheet-reset:hover { border-color: #ef4444; color: #f87171; }
+    .match-sheet-fullscreen:hover { border-color: #3b82f6; color: #fff; }
     .match-sheet-undo:hover:not(:disabled) { border-color: #3b82f6; color: #fff; }
     .match-sheet-undo:disabled { opacity: .42; cursor: default; }
     .match-sheet-entry {
@@ -2310,15 +2328,115 @@
         font-size: 11px;
         font-weight: 800;
     }
+    .match-sheet-log-copy {
+        min-width: 0;
+        display: grid;
+        gap: 3px;
+    }
+    .match-sheet-log-copy span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .match-sheet-log-tools {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+    }
+    .match-sheet-log-edit {
+        width: 28px;
+        height: 28px;
+        border: 1px solid #303642;
+        border-radius: 6px;
+        display: grid;
+        place-items: center;
+        background: #111419;
+        color: #929aa8;
+        cursor: pointer;
+    }
+    .match-sheet-log-edit:hover { border-color: #3b82f6; color: #fff; }
     .match-sheet-log-item time,
     .match-sheet-goalie-row span { color: #818997; font-size: 10px; }
     .match-sheet-log-empty { color: #707784; font-size: 11px; font-weight: 800; }
+    .match-event-dialog { width: min(620px, calc(100vw - 48px)); }
+    .match-event-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 130px;
+        gap: 12px;
+        margin-top: 16px;
+    }
+    .match-event-field {
+        display: grid;
+        gap: 6px;
+        color: #8f96a3;
+        font-size: 9px;
+        font-weight: 1000;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+    .match-event-field select {
+        width: 100%;
+        height: 38px;
+        border: 1px solid #343944;
+        border-radius: 8px;
+        background: #111419;
+        color: #f4f8ff;
+        padding: 0 10px;
+        outline: none;
+        font-weight: 800;
+    }
+    .match-event-players {
+        grid-column: 1 / -1;
+        max-height: 230px;
+        overflow: auto;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+        padding: 8px;
+        border: 1px solid #303642;
+        border-radius: 9px;
+        background: #14171c;
+    }
+    .match-event-player {
+        min-height: 38px;
+        display: grid;
+        grid-template-columns: 17px 36px minmax(0, 1fr);
+        align-items: center;
+        gap: 8px;
+        padding: 6px 8px;
+        border: 1px solid #2b3039;
+        border-radius: 7px;
+        background: #191d24;
+        color: #dbe3ef;
+        font-size: 11px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+    .match-event-player b { color: #8dbbff; }
+    .match-event-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    .match-event-actions-main { display: flex; justify-content: flex-end; gap: 10px; }
+    .match-event-delete { border-color: #7f1d1d; color: #fecaca; background: #451a1a; }
+    .match-event-actions .confirm-btn:disabled { opacity: .42; cursor: default; transform: none; }
     @media (max-width: 900px) {
-        .match-sheet-topbar { grid-template-columns: minmax(0, 1fr) 135px; }
+        .match-sheet-topbar { grid-template-columns: minmax(0, 1fr) 135px auto; }
         .match-sheet-periods { justify-content: center; }
         .match-sheet-reset,
+        .match-sheet-fullscreen,
         .match-sheet-undo { width: 100%; }
         .match-sheet-footer { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+        .match-sheet-topbar { grid-template-columns: minmax(0, 1fr) 125px; }
+        .match-event-grid { grid-template-columns: 1fr; }
+        .match-event-players { grid-column: 1; grid-template-columns: 1fr; }
+        .match-event-actions { align-items: stretch; flex-direction: column-reverse; }
+        .match-event-actions-main { display: grid; grid-template-columns: 1fr 1fr; }
     }
     .training-controls {
         display: flex;
@@ -2944,7 +3062,7 @@
     .confirm-overlay {
         position: fixed;
         inset: 0;
-        z-index: 80;
+        z-index: 90;
         display: grid;
         place-items: center;
         padding: 24px;
@@ -3442,9 +3560,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.1" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.2" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.8.1</span>
+            <span class="version-tooltip">v0.8.2</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -3821,6 +3939,7 @@
                         <button type="button" data-match-period="2">2</button>
                         <button type="button" data-match-period="3">3</button>
                     </div>
+                    <button class="match-sheet-fullscreen" id="btnMatchSheetFullscreen" type="button" title="На весь экран"><i class="fa-solid fa-expand"></i><span>На весь экран</span></button>
                     <button class="match-sheet-reset" id="btnMatchSheetReset" type="button"><i class="fa-regular fa-trash-can"></i>Новый лист</button>
                 </div>
 
@@ -4026,6 +4145,35 @@
         <div class="confirm-actions">
             <button class="confirm-btn primary" id="confirmOk" type="button">ОК</button>
             <button class="confirm-btn cancel" id="confirmCancel" type="button">Отмена</button>
+        </div>
+    </div>
+</div>
+
+<div class="workflow-overlay" id="matchEventOverlay" hidden>
+    <div class="workflow-dialog match-event-dialog" role="dialog" aria-modal="true" aria-labelledby="matchEventTitle">
+        <h2 class="workflow-title" id="matchEventTitle">Редактировать отметку</h2>
+        <p class="workflow-subtitle" id="matchEventHint">Изменения сразу пересчитают матчевый лист.</p>
+        <div class="match-event-grid">
+            <label class="match-event-field">Событие
+                <select id="matchEventType"></select>
+            </label>
+            <label class="match-event-field">Период
+                <select id="matchEventPeriod">
+                    <option value="1">1-й период</option>
+                    <option value="2">2-й период</option>
+                    <option value="3">3-й период</option>
+                </select>
+            </label>
+            <div class="match-event-field">Игроки
+                <div class="match-event-players" id="matchEventPlayers"></div>
+            </div>
+        </div>
+        <div class="match-event-actions">
+            <button class="confirm-btn match-event-delete" id="btnMatchEventDelete" type="button"><i class="fa-regular fa-trash-can"></i> Удалить</button>
+            <div class="match-event-actions-main">
+                <button class="confirm-btn cancel" id="btnMatchEventCancel" type="button">Отмена</button>
+                <button class="confirm-btn primary" id="btnMatchEventSave" type="button">Сохранить</button>
+            </div>
         </div>
     </div>
 </div>
@@ -4318,6 +4466,8 @@ let rosterPlayers = [];
 let matchSheetPeriod = 1;
 let matchSheetSelectedPlayerIds = new Set();
 let matchSheetState = { opponent: '', date: '', players: {}, events: [] };
+let matchEventEditingId = '';
+let matchSheetNativeFullscreen = false;
 let lineupCandidates = [];
 let lineupImportBusy = false;
 const LIVE_PERIOD_SECONDS = 20 * 60;
@@ -6701,6 +6851,9 @@ function renderMatchSheetLog() {
         const players = playerIds.map(id => rosterPlayers.find(item => item.id === id)).filter(Boolean);
         const item = document.createElement('div');
         item.className = 'match-sheet-log-item';
+        item.dataset.matchLogEvent = event.id;
+        const copy = document.createElement('div');
+        copy.className = 'match-sheet-log-copy';
         const text = document.createElement('span');
         const names = players.length > 1
             ? players.map(player => player.number ? `№${player.number}` : player.name).join(', ')
@@ -6708,9 +6861,164 @@ function renderMatchSheetLog() {
         text.textContent = `${names} · ${MATCH_SHEET_EVENTS[event.type]?.label || 'Событие'}`;
         const time = document.createElement('time');
         time.textContent = `${event.period}-й период`;
-        item.append(text, time);
+        copy.append(text, time);
+        const tools = document.createElement('div');
+        tools.className = 'match-sheet-log-tools';
+        const edit = document.createElement('button');
+        edit.className = 'match-sheet-log-edit';
+        edit.type = 'button';
+        edit.title = 'Редактировать отметку';
+        edit.setAttribute('aria-label', 'Редактировать отметку');
+        edit.dataset.editMatchEvent = event.id;
+        edit.innerHTML = '<i class="fa-solid fa-pen"></i>';
+        tools.appendChild(edit);
+        item.append(copy, tools);
         target.appendChild(item);
     });
+}
+
+function matchSheetEventPlayerIds(event) {
+    return Array.isArray(event?.playerIds) && event.playerIds.length ? event.playerIds : [event?.playerId].filter(Boolean);
+}
+
+function applyMatchSheetEvent(event, direction) {
+    const config = MATCH_SHEET_EVENTS[event?.type];
+    if (!config) return;
+    const periodIndex = Math.max(0, Math.min(2, Number(event.period || 1) - 1));
+    matchSheetEventPlayerIds(event).forEach(id => {
+        const state = direction > 0 ? matchSheetPlayerState(id) : matchSheetState.players[id];
+        if (!state) return;
+        if (config.field) state[config.field][periodIndex] = Math.max(0, state[config.field][periodIndex] + direction);
+        if (config.shot) state.shots[periodIndex] = Math.max(0, state.shots[periodIndex] + direction);
+        if (config.plusMinus) state.plusMinus += config.plusMinus * direction;
+    });
+}
+
+function syncMatchEventEditorValidation() {
+    const type = document.getElementById('matchEventType').value;
+    const selectedCount = document.querySelectorAll('[data-match-event-player]:checked').length;
+    const config = MATCH_SHEET_EVENTS[type];
+    const invalidGroup = selectedCount > 1 && !config?.multi;
+    document.getElementById('btnMatchEventSave').disabled = !selectedCount || invalidGroup;
+    document.getElementById('matchEventHint').textContent = !selectedCount
+        ? 'Выберите хотя бы одного игрока.'
+        : invalidGroup
+            ? 'Несколько игроков можно выбрать только для отметок «+ на льду» и «− на льду».'
+            : 'Изменения сразу пересчитают матчевый лист.';
+}
+
+function openMatchEventEditor(eventId) {
+    const event = matchSheetState.events.find(item => item.id === eventId);
+    if (!event) return;
+    matchEventEditingId = eventId;
+    const type = document.getElementById('matchEventType');
+    type.innerHTML = '';
+    Object.entries(MATCH_SHEET_EVENTS).forEach(([value, config]) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = config.label;
+        type.appendChild(option);
+    });
+    type.value = event.type;
+    document.getElementById('matchEventPeriod').value = String(event.period || 1);
+    const selectedIds = new Set(matchSheetEventPlayerIds(event));
+    const players = document.getElementById('matchEventPlayers');
+    players.innerHTML = '';
+    matchSheetSkaters().forEach(player => {
+        const label = document.createElement('label');
+        label.className = 'match-event-player';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.dataset.matchEventPlayer = player.id;
+        checkbox.checked = selectedIds.has(player.id);
+        const number = document.createElement('b');
+        number.textContent = `№${player.number || '—'}`;
+        const name = document.createElement('span');
+        name.textContent = player.name || rosterRoleLabel(player.role);
+        label.append(checkbox, number, name);
+        players.appendChild(label);
+    });
+    document.getElementById('matchEventOverlay').hidden = false;
+    syncMatchEventEditorValidation();
+    type.focus();
+}
+
+function closeMatchEventEditor() {
+    document.getElementById('matchEventOverlay').hidden = true;
+    matchEventEditingId = '';
+}
+
+function saveMatchEventEditor() {
+    const event = matchSheetState.events.find(item => item.id === matchEventEditingId);
+    if (!event) return closeMatchEventEditor();
+    const type = document.getElementById('matchEventType').value;
+    const playerIds = [...document.querySelectorAll('[data-match-event-player]:checked')].map(input => input.dataset.matchEventPlayer);
+    const config = MATCH_SHEET_EVENTS[type];
+    if (!config || !playerIds.length || (playerIds.length > 1 && !config.multi)) return;
+    applyMatchSheetEvent(event, -1);
+    event.type = type;
+    event.period = Math.max(1, Math.min(3, Number(document.getElementById('matchEventPeriod').value) || 1));
+    event.playerId = playerIds[0];
+    event.playerIds = playerIds;
+    applyMatchSheetEvent(event, 1);
+    persistMatchSheet();
+    closeMatchEventEditor();
+    renderMatchSheet();
+}
+
+async function deleteMatchEventEditor() {
+    const event = matchSheetState.events.find(item => item.id === matchEventEditingId);
+    if (!event) return closeMatchEventEditor();
+    const confirmed = await showConfirm('Удалить эту отметку и пересчитать матчевый лист?', {
+        title: 'Удалить отметку',
+        okLabel: 'Удалить'
+    });
+    if (!confirmed) return;
+    applyMatchSheetEvent(event, -1);
+    matchSheetState.events = matchSheetState.events.filter(item => item.id !== event.id);
+    persistMatchSheet();
+    closeMatchEventEditor();
+    renderMatchSheet();
+}
+
+function updateMatchSheetFullscreenButton(active) {
+    const button = document.getElementById('btnMatchSheetFullscreen');
+    if (!button) return;
+    button.title = active ? 'Свернуть' : 'На весь экран';
+    button.innerHTML = active
+        ? '<i class="fa-solid fa-compress"></i><span>Свернуть</span>'
+        : '<i class="fa-solid fa-expand"></i><span>На весь экран</span>';
+}
+
+function closeMatchSheetFullscreen() {
+    const panel = document.getElementById('statsSheetPanel');
+    panel.classList.remove('is-fullscreen');
+    document.body.classList.remove('match-sheet-fullscreen-open');
+    matchSheetNativeFullscreen = false;
+    updateMatchSheetFullscreenButton(false);
+}
+
+async function toggleMatchSheetFullscreen() {
+    const panel = document.getElementById('statsSheetPanel');
+    if (panel.classList.contains('is-fullscreen')) {
+        if (document.fullscreenElement && document.exitFullscreen) {
+            try { await document.exitFullscreen(); } catch (_) {}
+        }
+        closeMatchSheetFullscreen();
+        return;
+    }
+    panel.classList.add('is-fullscreen');
+    document.body.classList.add('match-sheet-fullscreen-open');
+    updateMatchSheetFullscreenButton(true);
+    const fullscreenTarget = document.documentElement;
+    if (fullscreenTarget.requestFullscreen) {
+        try {
+            await fullscreenTarget.requestFullscreen({ navigationUI: 'hide' });
+            matchSheetNativeFullscreen = true;
+        } catch (_) {
+            matchSheetNativeFullscreen = false;
+        }
+    }
 }
 
 function renderMatchSheetGoalies() {
@@ -6740,21 +7048,16 @@ function recordMatchSheetEvent(type) {
     const config = MATCH_SHEET_EVENTS[type];
     const players = rosterPlayers.filter(item => matchSheetSelectedPlayerIds.has(item.id) && item.role !== 'goalie');
     if (!config || !players.length || (players.length > 1 && !config.multi)) return;
-    const periodIndex = matchSheetPeriod - 1;
-    players.forEach(player => {
-        const state = matchSheetPlayerState(player.id);
-        if (config.field) state[config.field][periodIndex] += 1;
-        if (config.shot) state.shots[periodIndex] += 1;
-        if (config.plusMinus) state.plusMinus += config.plusMinus;
-    });
-    matchSheetState.events.push({
+    const event = {
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         playerId: players[0].id,
         playerIds: players.map(player => player.id),
         type,
         period: matchSheetPeriod,
         createdAt: new Date().toISOString()
-    });
+    };
+    applyMatchSheetEvent(event, 1);
+    matchSheetState.events.push(event);
     matchSheetState.events = matchSheetState.events.slice(-150);
     persistMatchSheet();
     renderMatchSheet();
@@ -6763,16 +7066,7 @@ function recordMatchSheetEvent(type) {
 function undoMatchSheetEvent() {
     const event = matchSheetState.events.pop();
     if (!event) return;
-    const config = MATCH_SHEET_EVENTS[event.type];
-    const periodIndex = Math.max(0, Math.min(2, Number(event.period || 1) - 1));
-    const playerIds = Array.isArray(event.playerIds) && event.playerIds.length ? event.playerIds : [event.playerId];
-    playerIds.forEach(id => {
-        const state = matchSheetState.players[id];
-        if (!config || !state) return;
-        if (config.field) state[config.field][periodIndex] = Math.max(0, state[config.field][periodIndex] - 1);
-        if (config.shot) state.shots[periodIndex] = Math.max(0, state.shots[periodIndex] - 1);
-        if (config.plusMinus) state.plusMinus -= config.plusMinus;
-    });
+    applyMatchSheetEvent(event, -1);
     persistMatchSheet();
     renderMatchSheet();
 }
@@ -9270,6 +9564,18 @@ document.getElementById('matchSheetTable').addEventListener('input', e => {
     matchSheetPlayerState(input.dataset.matchRating).rating = String(input.value || '').trim().slice(0, 5);
     persistMatchSheet();
 });
+document.getElementById('matchSheetLog').addEventListener('click', e => {
+    const edit = e.target.closest('[data-edit-match-event]');
+    if (edit) openMatchEventEditor(edit.dataset.editMatchEvent);
+});
+document.getElementById('matchEventType').addEventListener('change', syncMatchEventEditorValidation);
+document.getElementById('matchEventPlayers').addEventListener('change', syncMatchEventEditorValidation);
+document.getElementById('btnMatchEventSave').addEventListener('click', saveMatchEventEditor);
+document.getElementById('btnMatchEventDelete').addEventListener('click', deleteMatchEventEditor);
+document.getElementById('btnMatchEventCancel').addEventListener('click', closeMatchEventEditor);
+document.getElementById('matchEventOverlay').addEventListener('click', e => {
+    if (e.target.id === 'matchEventOverlay') closeMatchEventEditor();
+});
 document.getElementById('matchSheetOpponent').addEventListener('input', e => {
     matchSheetState.opponent = String(e.target.value || '').slice(0, 50);
     persistMatchSheet();
@@ -9280,6 +9586,20 @@ document.getElementById('matchSheetDate').addEventListener('change', e => {
 });
 document.getElementById('btnMatchSheetUndo').addEventListener('click', undoMatchSheetEvent);
 document.getElementById('btnMatchSheetReset').addEventListener('click', resetMatchSheet);
+document.getElementById('btnMatchSheetFullscreen').addEventListener('click', toggleMatchSheetFullscreen);
+document.addEventListener('fullscreenchange', () => {
+    if (matchSheetNativeFullscreen && !document.fullscreenElement) closeMatchSheetFullscreen();
+});
+document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || !document.getElementById('confirmOverlay').hidden) return;
+    if (!document.getElementById('matchEventOverlay').hidden) {
+        closeMatchEventEditor();
+        return;
+    }
+    if (document.getElementById('statsSheetPanel').classList.contains('is-fullscreen') && !document.fullscreenElement) {
+        closeMatchSheetFullscreen();
+    }
+});
 document.getElementById('lineupFileInput').addEventListener('change', e => {
     processLineupFile(e.target.files?.[0]);
     e.target.value = '';
