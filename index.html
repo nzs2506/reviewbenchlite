@@ -19,6 +19,7 @@
     }
     :root {
         --active-color: #3b82f6;
+        --ui-font: Arial, "Helvetica Neue", Helvetica, sans-serif;
         --bg-color: #16181d;
         --panel-bg: #1a1d23;
         --panel-soft: #1c1f26;
@@ -39,7 +40,9 @@
         height: 100vh;
         background-color: var(--bg-color);
         color: var(--text-main);
-        font-family: 'Segoe UI', Arial, sans-serif;
+        font-family: var(--ui-font);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
         overflow: hidden;
         transition: grid-template-columns .24s ease;
     }
@@ -3758,15 +3761,85 @@
         .training-row-actions { grid-column: 1 / -1; justify-content: flex-end; }
         .training-meta { gap: 8px; font-size: 11px; }
     }
+
+    /* Clear interface typography; the sports display face stays on the brand only. */
+    input,
+    select,
+    textarea { font-family: var(--ui-font); }
+    .stats-title {
+        font-family: var(--ui-font);
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: 0;
+        text-shadow: none;
+    }
+    .stats-tab {
+        font-size: 12.5px;
+        font-weight: 700;
+        letter-spacing: 0;
+    }
+    .stats-block-title,
+    .live-section-title,
+    .live-edit-title,
+    .match-sheet-subtitle {
+        font-weight: 700;
+        letter-spacing: .04em;
+    }
+    .stats-summary-card span,
+    .stats-table th,
+    .match-sheet-table thead th,
+    .match-sheet-field,
+    .live-clock span {
+        font-weight: 700;
+        letter-spacing: .03em;
+    }
+    .stats-table { font-size: 13px; }
+    .stats-table th { font-size: 10.5px; }
+    .stats-input,
+    .stats-derived { font-size: 13px; font-weight: 600; }
+    .stats-add-row input,
+    .stats-add-row button,
+    .lineup-roster-row input,
+    .lineup-roster-row select { font-weight: 600; }
+    .match-sheet-table { font-size: 12px; }
+    .match-sheet-table thead th { font-size: 10px; }
+    .match-sheet-player span,
+    .match-sheet-value,
+    .match-sheet-faceoff,
+    .match-sheet-rating { font-weight: 600; }
+    .match-sheet-player span { font-size: 12px; }
+    .match-sheet-faceoff { font-size: 11px; }
+    .match-sheet-selection,
+    .match-sheet-log-item,
+    .match-sheet-goalie-row { font-size: 12px; font-weight: 600; }
+    .match-sheet-action {
+        font-size: 11px;
+        font-weight: 700;
+    }
+    .match-sheet-reset,
+    .match-sheet-sort,
+    .match-sheet-roster-toggle,
+    .match-sheet-save,
+    .match-sheet-pdf,
+    .match-sheet-fullscreen,
+    .match-sheet-undo,
+    .match-sheet-periods button { font-weight: 700; }
+    .match-sheet-roster-add input,
+    .match-sheet-roster-add select,
+    .match-sheet-roster-row input,
+    .match-sheet-roster-row select { font-size: 12px; font-weight: 600; }
+    .live-player-name,
+    .live-match-counts,
+    .live-match-choice span { font-weight: 700; letter-spacing: .02em; }
 </style>
 </head>
 <body data-view="field">
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.7" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.8" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.8.7</span>
+            <span class="version-tooltip">v0.8.8</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
