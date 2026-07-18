@@ -2298,6 +2298,39 @@
         border-spacing: 0;
         font-size: 11px;
     }
+    body[data-view="stats"][data-stats-page="sheet"] .stats-view {
+        padding: 16px 14px 32px;
+    }
+    body[data-view="stats"][data-stats-page="sheet"] .stats-shell {
+        width: 100%;
+        max-width: none;
+        gap: 12px;
+    }
+    body[data-view="stats"][data-stats-page="sheet"] .match-sheet-panel {
+        gap: 10px;
+    }
+    body[data-view="stats"][data-stats-page="sheet"] .match-sheet-wrap {
+        max-height: none;
+        overflow-x: hidden;
+    }
+    body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table {
+        min-width: 0;
+        table-layout: fixed;
+    }
+    body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table th,
+    body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table td {
+        min-width: 0;
+        padding: 5px 2px;
+    }
+    body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table .match-sheet-player-head,
+    body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table .match-sheet-player-cell {
+        width: 240px;
+        min-width: 240px;
+    }
+    body[data-view="stats"][data-stats-page="sheet"] .match-sheet-rating {
+        width: calc(100% - 4px);
+        min-width: 0;
+    }
     .match-sheet-table th,
     .match-sheet-table td {
         min-width: 42px;
@@ -3874,9 +3907,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.1" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.2" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.1</span>
+            <span class="version-tooltip">v0.9.2</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -7366,7 +7399,7 @@ function matchSheetHeader(table) {
         th.textContent = label;
         groups.appendChild(th);
     });
-    ['Блок. броск.', '+/-', 'Оценка'].forEach(label => {
+    ['Блоки', '+/-', 'Оценка'].forEach(label => {
         const th = document.createElement('th');
         th.rowSpan = 2;
         th.textContent = label;
@@ -8358,6 +8391,7 @@ function toggleLivePlayer(id) {
 
 function setStatsPage(page) {
     statsPage = ['live', 'lineup', 'sheet'].includes(page) ? page : 'roster';
+    document.body.dataset.statsPage = statsPage;
     document.querySelectorAll('[data-stats-page]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.statsPage === statsPage);
     });
