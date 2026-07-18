@@ -917,6 +917,11 @@
         justify-items: stretch;
         gap: 10px;
     }
+    .goalie-side-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 116px;
+        gap: 8px;
+    }
     .goalie-keeper-fields {
         display: grid;
         grid-template-columns: minmax(130px, 1fr) 86px;
@@ -965,6 +970,16 @@
         background: #dc2626;
         color: #fff;
     }
+    .goalie-report-pdf {
+        min-height: 48px;
+        border: 1px solid #d1d5db;
+        background: #fff;
+        color: #991b1b;
+        font-size: 13px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+    .goalie-report-pdf:hover { border-color: #dc2626; background: #fef2f2; }
     .goalie-stage {
         display: grid;
         grid-template-columns: minmax(360px, 1fr) 160px;
@@ -3859,9 +3874,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.0" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.1" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.0</span>
+            <span class="version-tooltip">v0.9.1</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -3982,7 +3997,10 @@
                         </div>
                     </div>
                     <div class="goalie-side-form">
-                        <button class="goalie-save" id="btnGoalieSaveMatch" type="button">Сохранить<br>Матч</button>
+                        <div class="goalie-side-actions">
+                            <button class="goalie-save" id="btnGoalieSaveMatch" type="button">Сохранить<br>Матч</button>
+                            <button class="goalie-report-pdf" id="btnGoaliePdf" type="button"><i class="fa-regular fa-file-pdf"></i> PDF отчет</button>
+                        </div>
                         <div class="goalie-keeper-fields">
                             <label class="goalie-field">
                                 Вратарь 1
@@ -9377,6 +9395,202 @@ function goalieGoalCounts(events) {
     return goalieEventCounts(events, 'goals');
 }
 
+function currentGoalieReportMatch() {
+    syncGoalieInputs();
+    const opponent = document.getElementById('goalieOpponentInput').value.trim() || 'Соперник';
+    const matchDate = goalieMatchDateValue();
+    const seasonType = document.getElementById('goalieSeasonSelect').value || goalieSeasonMode || 'friendly';
+    const goalies = goalieGoalies
+        .map((goalie, index) => ({
+            name: goalie.name || goalieName(index),
+            iceTime: goalie.iceTime || (index === 0 ? '60:00' : '0:00'),
+            events: Array.isArray(goalie.events) ? goalie.events.slice() : []
+        }))
+        .filter((goalie, index) => index === 0 || goalie.events.length || parseGoalieIceMinutes(goalie.iceTime) > 0);
+    return { opponent, matchDate, seasonType, goalies };
+}
+
+function goalieReportZoneData(events) {
+    const shots = goalieEventCounts(events, 'all');
+    const goals = goalieEventCounts(events, 'goals');
+    return new Map([9, 8, 7, 6, 5, 4, 3, 2, 1].map(zone => {
+        const shotCount = shots.get(zone) || 0;
+        const goalCount = goals.get(zone) || 0;
+        return [zone, { shots: shotCount, goals: goalCount, saves: Math.max(0, shotCount - goalCount) }];
+    }));
+}
+
+function drawGoalieReportStat(ctx, x, y, width, label, value, accent = '#14213b') {
+    ctx.fillStyle = '#f4f7fb';
+    ctx.fillRect(x, y, width, 118);
+    ctx.strokeStyle = '#d7dee8';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, width, 118);
+    ctx.fillStyle = '#667085';
+    ctx.font = '700 20px Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label.toUpperCase(), x + 22, y + 32);
+    ctx.fillStyle = accent;
+    ctx.font = '800 42px Arial, sans-serif';
+    ctx.fillText(String(value), x + 22, y + 79);
+}
+
+function renderGoalieReportPdfPages(match) {
+    const source = match || currentGoalieReportMatch();
+    const sourceGoalies = Array.isArray(source.goalies) ? source.goalies : [];
+    const goalies = sourceGoalies.length
+        ? sourceGoalies.filter((goalie, index) => index === 0
+            || (Array.isArray(goalie.events) && goalie.events.length)
+            || parseGoalieIceMinutes(goalie.iceTime) > 0)
+        : [{ name: 'Вратарь', iceTime: '0:00', events: [] }];
+    const pages = [];
+    goalies.forEach((goalie, pageIndex) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 2480;
+        canvas.height = 1754;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#14213b';
+        ctx.fillRect(0, 0, canvas.width, 18);
+
+        ctx.fillStyle = '#14213b';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.font = '700 42px "Russo One", "Arial Black", Arial, sans-serif';
+        ctx.fillText('BenchReview Lite', 90, 68);
+        ctx.font = '800 30px Arial, sans-serif';
+        ctx.fillText('ОТЧЕТ ВРАТАРЯ', 90, 126);
+        ctx.font = '700 23px Arial, sans-serif';
+        ctx.fillStyle = '#475467';
+        ctx.fillText(`Матч: ${source.opponent || 'Соперник'}`, 620, 67);
+        ctx.fillText(`Дата: ${trainingDayLabel(source.matchDate || new Date().toISOString())}`, 620, 112);
+        ctx.textAlign = 'right';
+        ctx.fillText(goalieSeasonLabel(source.seasonType || 'friendly'), 2390, 67);
+        ctx.fillText(`Страница ${pageIndex + 1} из ${goalies.length}`, 2390, 112);
+
+        const events = Array.isArray(goalie.events) ? goalie.events : [];
+        const stats = goalieStats({ ...goalie, events });
+        const zones = goalieReportZoneData(events);
+        const netX = 90;
+        const netY = 300;
+        const netW = 1430;
+        const netH = 930;
+        const cellW = netW / 3;
+        const cellH = netH / 3;
+
+        ctx.fillStyle = '#eef2f7';
+        ctx.fillRect(netX, netY, netW, netH);
+        ctx.strokeStyle = '#d7dde7';
+        ctx.lineWidth = 2;
+        for (let gx = netX + 24; gx < netX + netW; gx += 48) {
+            ctx.beginPath(); ctx.moveTo(gx, netY); ctx.lineTo(gx, netY + netH); ctx.stroke();
+        }
+        for (let gy = netY + 24; gy < netY + netH; gy += 48) {
+            ctx.beginPath(); ctx.moveTo(netX, gy); ctx.lineTo(netX + netW, gy); ctx.stroke();
+        }
+
+        [9, 8, 7, 6, 5, 4, 3, 2, 1].forEach((zone, index) => {
+            const row = Math.floor(index / 3);
+            const col = index % 3;
+            const x = netX + col * cellW;
+            const y = netY + row * cellH;
+            const data = zones.get(zone);
+            if (data.shots) {
+                const opacity = Math.min(.22, .06 + data.shots * .025);
+                ctx.fillStyle = `rgba(37, 99, 235, ${opacity})`;
+                ctx.fillRect(x + 3, y + 3, cellW - 6, cellH - 6);
+            }
+            if (data.goals) {
+                ctx.fillStyle = 'rgba(220, 38, 38, .12)';
+                ctx.fillRect(x + 3, y + 3, cellW - 6, 72);
+            }
+            ctx.strokeStyle = '#253047';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(x, y, cellW, cellH);
+            ctx.fillStyle = '#111827';
+            ctx.font = '900 54px Arial, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(String(zone), x + 24, y + 48);
+            ctx.font = '800 28px Arial, sans-serif';
+            ctx.fillStyle = '#1d4ed8';
+            ctx.fillText(`Броски: ${data.shots}`, x + 34, y + 130);
+            ctx.fillStyle = '#b42318';
+            ctx.fillText(`Голы: ${data.goals}`, x + 34, y + 190);
+            ctx.fillStyle = '#166534';
+            ctx.fillText(`Сейвы: ${data.saves}`, x + 34, y + 250);
+        });
+        ctx.strokeStyle = '#e1261c';
+        ctx.lineWidth = 30;
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(netX, netY + netH);
+        ctx.lineTo(netX, netY + 22);
+        ctx.quadraticCurveTo(netX, netY, netX + 22, netY);
+        ctx.lineTo(netX + netW - 22, netY);
+        ctx.quadraticCurveTo(netX + netW, netY, netX + netW, netY + 22);
+        ctx.lineTo(netX + netW, netY + netH);
+        ctx.stroke();
+
+        ctx.fillStyle = '#111827';
+        ctx.font = '800 38px Arial, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(goalie.name || 'Вратарь', 1600, 280);
+        ctx.font = '700 21px Arial, sans-serif';
+        ctx.fillStyle = '#667085';
+        ctx.fillText(`Время на льду: ${stats.ice}`, 1600, 328);
+        const statWidth = 355;
+        drawGoalieReportStat(ctx, 1600, 375, statWidth, 'Броски', stats.shots, '#1d4ed8');
+        drawGoalieReportStat(ctx, 1980, 375, statWidth, 'Сейвы', stats.saves, '#166534');
+        drawGoalieReportStat(ctx, 1600, 515, statWidth, 'Голы', stats.goals, '#b42318');
+        drawGoalieReportStat(ctx, 1980, 515, statWidth, '% ОБ', `${stats.sv.toFixed(1)}%`, stats.sv >= 93 ? '#166534' : '#b42318');
+        drawGoalieReportStat(ctx, 1600, 655, statWidth, 'GAA', stats.gaa.toFixed(2), '#14213b');
+        drawGoalieReportStat(ctx, 1980, 655, statWidth, 'Время', stats.ice, '#14213b');
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(1600, 820, 735, 410);
+        ctx.strokeStyle = '#d7dee8';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(1600, 820, 735, 410);
+        ctx.fillStyle = '#14213b';
+        ctx.font = '800 24px Arial, sans-serif';
+        ctx.fillText('РАСПРЕДЕЛЕНИЕ ПО ЗОНАМ', 1625, 862);
+        ctx.font = '700 20px Arial, sans-serif';
+        ctx.fillStyle = '#475467';
+        [9, 8, 7, 6, 5, 4, 3, 2, 1].forEach((zone, index) => {
+            const data = zones.get(zone);
+            const col = index % 2;
+            const row = Math.floor(index / 2);
+            const x = 1625 + col * 350;
+            const y = 915 + row * 58;
+            ctx.fillText(`Зона ${zone}: ${data.shots} Б · ${data.goals} Г`, x, y);
+        });
+
+        ctx.font = '700 20px Arial, sans-serif';
+        ctx.fillStyle = '#667085';
+        ctx.fillText('Б — броски в створ, Г — пропущенные голы. Процент отраженных бросков и GAA рассчитаны автоматически.', 90, 1345);
+        ctx.fillStyle = '#14213b';
+        ctx.fillRect(90, 1400, 2245, 4);
+        ctx.font = '700 22px Arial, sans-serif';
+        ctx.fillStyle = '#344054';
+        ctx.fillText(`Итого: ${stats.shots} бросков · ${stats.saves} сейвов · ${stats.goals} голов · SV ${stats.sv.toFixed(1)}% · GAA ${stats.gaa.toFixed(2)}`, 90, 1450);
+        pages.push({ dataUrl: canvas.toDataURL('image/jpeg', .94), width: canvas.width, height: canvas.height });
+    });
+    return pages;
+}
+
+function exportGoalieReportPdf(match = null) {
+    try {
+        const source = match || currentGoalieReportMatch();
+        const pages = renderGoalieReportPdfPages(source);
+        const name = `goalie-report-${source.opponent || 'match'}-${source.matchDate || todayInputValue()}`;
+        downloadBlob(`${safeFileStamp(name)}.pdf`, buildPdfFromJpegs(pages));
+    } catch (err) {
+        alert('Не удалось сформировать отчет вратаря: ' + err.message);
+    }
+}
+
 function goalieMiniNet(counts) {
     const mini = document.createElement('div');
     mini.className = 'goalie-mini-net';
@@ -9470,6 +9684,7 @@ function renderGoalieSavedList() {
         actions.className = 'goalie-row-actions';
         actions.innerHTML = `
             <button class="goalie-row-btn" type="button" data-goalie-action="toggle">${expanded ? 'Свернуть' : 'Открыть'}</button>
+            <button class="goalie-row-btn" type="button" data-goalie-action="pdf"><i class="fa-regular fa-file-pdf"></i> PDF</button>
             <button class="goalie-row-btn" type="button" data-goalie-action="edit">Редактировать</button>
             <button class="goalie-row-btn danger" type="button" data-goalie-action="delete">Удалить</button>`;
         card.appendChild(meta);
@@ -10796,6 +11011,7 @@ document.getElementById('btnGoalieGoal').addEventListener('click', () => setGoal
 document.getElementById('btnGoalieUndo').addEventListener('click', undoGoalieEvent);
 document.getElementById('btnGoalieRedo').addEventListener('click', redoGoalieEvent);
 document.getElementById('btnGoalieSaveMatch').addEventListener('click', saveGoalieMatch);
+document.getElementById('btnGoaliePdf').addEventListener('click', () => exportGoalieReportPdf());
 document.getElementById('btnGoalieSwitch').addEventListener('click', () => setGoalieActive(goalieActiveIndex === 0 ? 1 : 0));
 document.querySelectorAll('.goalie-tab').forEach(btn => {
     btn.addEventListener('click', () => setGoalieActive(Number(btn.dataset.goalieIndex)));
@@ -10837,6 +11053,10 @@ document.getElementById('goalieSavedList').addEventListener('click', async e => 
     if (action === 'toggle') {
         goalieExpandedMatchId = goalieExpandedMatchId === id ? '' : id;
         renderGoalieSavedList();
+    }
+    if (action === 'pdf') {
+        const match = goalieSavedMatches.find(item => item.id === id);
+        if (match) exportGoalieReportPdf(match);
     }
     if (action === 'edit') openGoalieMatchForEdit(id);
     if (action === 'delete') await deleteGoalieMatch(id);
