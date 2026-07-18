@@ -3442,9 +3442,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.0" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.1" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.8.0</span>
+            <span class="version-tooltip">v0.8.1</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -6982,6 +6982,19 @@ function syncLiveMatchSelection() {
     });
 }
 
+function reconcileRosterReferences() {
+    const validIds = new Set(rosterPlayers.map(player => player.id));
+    liveMatchSkaterIds = liveMatchSkaterIds.filter(id => validIds.has(id));
+    liveMatchGoalieIds = liveMatchGoalieIds.filter(id => validIds.has(id));
+    liveActiveIds = new Set([...liveActiveIds].filter(id => validIds.has(id)));
+    liveShiftStartedIds = new Set([...liveShiftStartedIds].filter(id => validIds.has(id)));
+    matchSheetSelectedPlayerIds = new Set([...matchSheetSelectedPlayerIds].filter(id => validIds.has(id)));
+    [...liveSessionStats.keys()].forEach(id => {
+        if (!validIds.has(id)) liveSessionStats.delete(id);
+    });
+    syncLiveMatchSelection();
+}
+
 function liveSelectedSkaters() {
     syncLiveMatchSelection();
     const byId = livePlayerMap();
@@ -7544,16 +7557,15 @@ async function removeStatsPlayer(id) {
     const confirmed = await showConfirm(`Удалить игрока "${player.name || rosterRoleLabel(player.role)}" из статистики?`, { okLabel: 'Удалить' });
     if (!confirmed) return;
     rosterPlayers = rosterPlayers.filter(item => item.id !== id);
-    liveActiveIds.delete(id);
-    liveShiftStartedIds.delete(id);
-    liveMatchSkaterIds = liveMatchSkaterIds.filter(item => item !== id);
-    liveMatchGoalieIds = liveMatchGoalieIds.filter(item => item !== id);
     delete matchSheetState.players[id];
-    matchSheetState.events = matchSheetState.events.filter(event => {
+    matchSheetState.events = matchSheetState.events.map(event => {
         const ids = Array.isArray(event.playerIds) && event.playerIds.length ? event.playerIds : [event.playerId];
-        return !ids.includes(id);
-    });
-    matchSheetSelectedPlayerIds.delete(id);
+        const remainingIds = ids.filter(item => item !== id);
+        if (!remainingIds.length) return null;
+        if (remainingIds.length === ids.length) return event;
+        return { ...event, playerId: remainingIds[0], playerIds: remainingIds };
+    }).filter(Boolean);
+    reconcileRosterReferences();
     persistRosterPlayers();
     persistMatchSheet();
     renderStatsRoster();
@@ -7755,12 +7767,13 @@ function addOrUpdateRosterCandidate(candidate) {
         cleanStatName(item.name).toLowerCase() === cleanName.toLowerCase()
     );
     if (player) {
-        player.name = cleanName;
-        if (number) player.number = number;
-        player.role = ['goalie', 'defense', 'forward'].includes(candidate.role) ? candidate.role : player.role;
+        updateStatsPlayerField(player, 'name', cleanName);
+        if (number) updateStatsPlayerField(player, 'number', number);
+        if (['goalie', 'defense', 'forward'].includes(candidate.role)) player.role = candidate.role;
     } else {
         rosterPlayers.push(defaultRosterPlayer(candidate.role, cleanName, number));
     }
+    reconcileRosterReferences();
     return true;
 }
 
@@ -7804,8 +7817,11 @@ function updateLineupPlayer(input) {
     const field = input.dataset.lineupPlayerField;
     if (field === 'role') player.role = ['goalie', 'defense', 'forward'].includes(input.value) ? input.value : player.role;
     else updateStatsPlayerField(player, field, input.value);
+    reconcileRosterReferences();
     persistRosterPlayers();
     renderGoalieRosterSelects();
+    renderStatsRoster();
+    if (field === 'role') renderRosterManager();
 }
 
 function loadLineupScript(src, globalName) {
