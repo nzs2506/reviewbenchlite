@@ -370,6 +370,7 @@
     }
     .tool-btn:hover { background: #262a32; color: var(--text-main); }
     .tool-btn.active { background: rgba(59,130,246,.16); color: #60a5fa; border-color: rgba(59,130,246,.35); }
+    .tool-btn:disabled { opacity: .32; cursor: default; background: transparent; color: #747982; }
     .btn-delete { color: #f87171; } .btn-delete:hover { background: rgba(248,113,113,.12); }
     .btn-save { color: #34d399; }
     .btn-primary {
@@ -3732,6 +3733,14 @@
         .goalie-stats { font-size: 17px; gap: 8px 18px; }
     }
 
+    @media (max-width: 1100px) and (min-width: 981px) {
+        .app-title { left: 14px; font-size: 20px; transform: translateY(-50%) scaleX(1.02); }
+        .mainnav { gap: 25px; }
+        .mainnav button { font-size: 11.5px; }
+        .mainnav:hover button { font-size: 11px; }
+        .mainnav button:hover { font-size: 15px; }
+    }
+
     @media (max-width: 980px), (max-height: 620px) {
         body { --side-panel-width: 142px; }
         .app-header { min-height: 46px; padding: 0 10px; }
@@ -3913,9 +3922,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.8" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.9" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.8</span>
+            <span class="version-tooltip">v0.9.9</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4438,6 +4447,7 @@
             <div class="group-cap">Площадка</div>
             <div class="toolbar-group">
                 <button class="tool-btn" id="btnRink" title="Полная / половина площадки"><i class="fa-solid fa-table-columns"></i></button>
+                <button class="tool-btn" id="btnRinkRotate" title="Повернуть половину площадки на 90°" disabled><i class="fa-solid fa-rotate"></i></button>
             </div>
         </div>
 
@@ -4745,8 +4755,14 @@ const RINK = {
     half: { w: 505,  h: 470 }
 };
 let rinkMode = 'full';
+let rinkRotation = 0;
 
-function rinkSVG(mode) {
+function normalizeRinkRotation(value) {
+    const rotation = Number(value) || 0;
+    return ((Math.round(rotation / 90) * 90) % 360 + 360) % 360;
+}
+
+function rinkSVG(mode, rotation = 0) {
     const H = 470, R = 90;
     const navy = '#24304d', pink = '#d49aa6', blue = '#9db6c9', crease = '#d6ecf5';
     const fullW = 1000;
@@ -4804,10 +4820,22 @@ function rinkSVG(mode) {
         outline = `<path d="${p}" fill="none" stroke="${navy}" stroke-width="8"/>`;
     }
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
-        `<defs><clipPath id="${clipId}">${clip}</clipPath></defs>` +
+    const appliedRotation = mode === 'half' ? normalizeRinkRotation(rotation) : 0;
+    const outputW = appliedRotation % 180 ? H : W;
+    const outputH = appliedRotation % 180 ? W : H;
+    const transforms = {
+        0: '',
+        90: `matrix(0 1 -1 0 ${H} 0)`,
+        180: `matrix(-1 0 0 -1 ${W} ${H})`,
+        270: `matrix(0 -1 1 0 0 ${W})`
+    };
+    const transform = transforms[appliedRotation];
+    const transformOpen = transform ? `<g transform="${transform}">` : '';
+    const transformClose = transform ? '</g>' : '';
+    return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${outputW}" height="${outputH}" viewBox="0 0 ${outputW} ${outputH}">` +
+        `<defs><clipPath id="${clipId}">${clip}</clipPath></defs>` + transformOpen +
         `<rect width="${W}" height="${H}" fill="white"/>` +
-        `<g clip-path="url(#${clipId})">${inner}</g>` + outline + `</svg>`;
+        `<g clip-path="url(#${clipId})">${inner}</g>` + outline + transformClose + `</svg>`;
 }
 
 // ================= ИНИЦИАЛИЗАЦИЯ =================
@@ -4914,11 +4942,16 @@ const LINE_LABELS = {
 canvas.freeDrawingBrush.color = currentColor;
 canvas.freeDrawingBrush.width = 3;
 
-function designSize() { return RINK[rinkMode]; }
+function designSize() {
+    if (rinkMode === 'half' && normalizeRinkRotation(rinkRotation) % 180) {
+        return { w: RINK.half.h, h: RINK.half.w };
+    }
+    return RINK[rinkMode];
+}
 function designCenter() { const d = designSize(); return { x: d.w / 2, y: d.h / 2 }; }
 
 function setBackground(cb) {
-    const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(rinkSVG(rinkMode));
+    const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(rinkSVG(rinkMode, rinkRotation));
     fabric.Image.fromURL(url, function (img) {
         canvas.setBackgroundImage(img, () => { canvas.renderAll(); if (cb) cb(); });
     });
@@ -4935,9 +4968,80 @@ function fitCanvas() {
     canvas.setDimensions({ width: Math.round(d.w * s), height: Math.round(d.h * s) });
     canvas.setZoom(s);
     const r = Math.round(90 * s) + 'px';
-    document.getElementById('canvasBox').style.borderRadius = (rinkMode === 'half') ? `${r} 0 0 ${r}` : r;
+    const halfRadii = {
+        0: `${r} 0 0 ${r}`,
+        90: `${r} ${r} 0 0`,
+        180: `0 ${r} ${r} 0`,
+        270: `0 0 ${r} ${r}`
+    };
+    document.getElementById('canvasBox').style.borderRadius = rinkMode === 'half' ? halfRadii[normalizeRinkRotation(rinkRotation)] : r;
     canvas.renderAll();
 }
+
+function shouldRotateWithRink(obj) {
+    const type = obj?.customType || '';
+    if (type === 'marker' || type === 'opponent' || type === 'obj-puck' || type === 'obj-pucks' || type === 'obj-tire' || type === 'obj-cone') return false;
+    return !['i-text', 'text', 'textbox'].includes(obj?.type);
+}
+
+function rotatePointClockwise(point, oldHeight) {
+    return { x: oldHeight - point.y, y: point.x };
+}
+
+function rotateBoardObjectsClockwise() {
+    const oldSize = designSize();
+    canvas.getObjects().filter(obj => !obj.__temp).forEach(obj => {
+        const center = objectCenter(obj);
+        const nextCenter = rotatePointClockwise(center, oldSize.h);
+        moveObjectCenter(obj, nextCenter.x, nextCenter.y);
+        if (shouldRotateWithRink(obj)) obj.rotate((((Number(obj.angle) || 0) + 90) % 360 + 360) % 360);
+        if (Array.isArray(obj.animPts)) obj.animPts = obj.animPts.map(point => rotatePointClockwise(point, oldSize.h));
+        if (obj.animBase) obj.animBase = rotatePointClockwise(obj.animBase, oldSize.h);
+        obj.setCoords();
+    });
+}
+
+function updateRinkControls() {
+    const half = rinkMode === 'half';
+    const rinkButton = document.getElementById('btnRink');
+    const rotateButton = document.getElementById('btnRinkRotate');
+    rinkButton.classList.toggle('active', half);
+    rinkButton.title = half ? 'Вернуть полную площадку' : 'Показать половину площадки';
+    rotateButton.disabled = !half;
+    rotateButton.classList.toggle('active', half && normalizeRinkRotation(rinkRotation) !== 0);
+    rotateButton.title = half ? `Повернуть половину площадки на 90° (сейчас ${normalizeRinkRotation(rinkRotation)}°)` : 'Поворот доступен для половины площадки';
+    rotateButton.querySelector('i').style.transform = `rotate(${normalizeRinkRotation(rinkRotation)}deg)`;
+}
+
+function finishRinkChange() {
+    setBackground(() => {
+        fitCanvas();
+        normalizeObjectStacking();
+        suspendHistory = false;
+        stateHistory = [];
+        historyIndex = -1;
+        snapshotNow();
+        updateRinkControls();
+    });
+}
+
+function rotateHalfRink() {
+    if (rinkMode !== 'half') return;
+    suspendHistory = true;
+    hidePlayerHalo();
+    canvas.discardActiveObject();
+    rotateBoardObjectsClockwise();
+    rinkRotation = normalizeRinkRotation(rinkRotation + 90);
+    finishRinkChange();
+}
+
+function resetHalfRinkRotation() {
+    while (normalizeRinkRotation(rinkRotation) !== 0) {
+        rotateBoardObjectsClockwise();
+        rinkRotation = normalizeRinkRotation(rinkRotation + 90);
+    }
+}
+
 window.addEventListener('resize', fitCanvas);
 if (window.visualViewport) window.visualViewport.addEventListener('resize', fitCanvas);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCanvas);
@@ -5097,7 +5201,11 @@ function scheduleSnapshot() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(snapshotNow, 80);
 }
-canvas.on('object:added',   e => { if (!e.target || !e.target.__temp) scheduleSnapshot(); });
+canvas.on('object:added', e => {
+    if (!e.target || e.target.__temp) return;
+    normalizeObjectStacking();
+    scheduleSnapshot();
+});
 canvas.on('object:removed', e => { if (!e.target || !e.target.__temp) scheduleSnapshot(); });
 canvas.on('object:modified', scheduleSnapshot);
 
@@ -5107,6 +5215,7 @@ function restoreState(json) {
     restoring = true;
     canvas.loadFromJSON(json, () => {
         canvas.forEachObject(applyModeToObject);
+        normalizeObjectStacking();
         canvas.renderAll();
         suspendHistory = false;
         restoring = false;
@@ -5152,6 +5261,7 @@ function updateToolbarUI() {
         const c = document.querySelector(`.comp-item[data-comp="${currentComponent}"]`);
         if (c) c.classList.add('active');
     }
+    updateRinkControls();
     updateStampHint();
 }
 function updateStampHint() {
@@ -6061,6 +6171,25 @@ function isPlayerLikeObject(o) {
     return o && (o.customType === 'marker' || o.customType === 'opponent');
 }
 
+function objectLayerRank(obj) {
+    const type = obj?.customType || '';
+    if (type === 'zone') return 5;
+    if (type.startsWith('line-')) return 10;
+    if (type === 'selection-halo') return 35;
+    if (type === 'marker' || type === 'opponent') return 40;
+    if (type === 'obj-puck' || type === 'obj-pucks') return 50;
+    if (obj?.type === 'i-text' || obj?.type === 'text' || obj?.type === 'textbox') return 60;
+    if (obj?.__temp) return 70;
+    if (type.startsWith('obj-')) return 25;
+    return 15;
+}
+
+function normalizeObjectStacking() {
+    const objects = canvas.getObjects().map((obj, index) => ({ obj, index }));
+    objects.sort((a, b) => objectLayerRank(a.obj) - objectLayerRank(b.obj) || a.index - b.index);
+    objects.forEach((entry, index) => canvas.moveTo(entry.obj, index));
+}
+
 function hidePlayerHalo() {
     if (!activePlayerHalo) return;
     canvas.remove(activePlayerHalo);
@@ -6090,10 +6219,10 @@ function updatePlayerHalo() {
             evented: false,
             objectCaching: false,
             excludeFromExport: true,
+            customType: 'selection-halo',
             __temp: true
         });
         canvas.add(activePlayerHalo);
-        activePlayerHalo.sendToBack();
     } else {
         activePlayerHalo.set({
             radius,
@@ -6101,8 +6230,8 @@ function updatePlayerHalo() {
             top: box.top + box.height / 2
         });
         activePlayerHalo.setCoords();
-        activePlayerHalo.sendToBack();
     }
+    normalizeObjectStacking();
     canvas.requestRenderAll();
 }
 
@@ -6583,7 +6712,7 @@ document.getElementById('btnSavePdf').addEventListener('click', () => {
 document.getElementById('btnShareTelegram').addEventListener('click', () => shareBoard('telegram'));
 document.getElementById('btnShareWhatsapp').addEventListener('click', () => shareBoard('whatsapp'));
 document.getElementById('btnSaveJson').addEventListener('click', () => {
-    const data = { rinkMode, numCounter, canvas: canvas.toJSON(EXTRA_PROPS) };
+    const data = { rinkMode, rinkRotation, numCounter, canvas: canvas.toJSON(EXTRA_PROPS) };
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     download('drill.json', URL.createObjectURL(blob));
 });
@@ -6596,12 +6725,15 @@ document.getElementById('jsonInput').addEventListener('change', e => {
         try {
             const data = JSON.parse(ev.target.result);
             rinkMode = data.rinkMode || 'full';
+            rinkRotation = rinkMode === 'half' ? normalizeRinkRotation(data.rinkRotation) : 0;
             numCounter = data.numCounter || 1;
             suspendHistory = true;
             canvas.loadFromJSON(data.canvas, () => {
                 setBackground(() => {
                     fitCanvas();
                     canvas.forEachObject(applyModeToObject);
+                    normalizeObjectStacking();
+                    updateRinkControls();
                     suspendHistory = false;
                     stateHistory = []; historyIndex = -1; snapshotNow();
                     activeTrainingId = '';
@@ -6696,12 +6828,15 @@ function recordObjectCount(record) {
     return objects.filter(o => !o.__temp).length;
 }
 function recordRinkLabel(record) {
-    return record.rinkMode === 'half' ? 'Половина поля' : 'Полное поле';
+    if (record.rinkMode !== 'half') return 'Полное поле';
+    const rotation = normalizeRinkRotation(record.rinkRotation);
+    return rotation ? `Половина поля · ${rotation}°` : 'Половина поля';
 }
 function recordScreenSize(record) {
+    const portraitHalf = record.rinkMode === 'half' && normalizeRinkRotation(record.rinkRotation) % 180;
     return {
-        width: record.screenW || (record.rinkMode === 'half' ? 505 : 1000),
-        height: record.screenH || 528
+        width: record.screenW || (record.rinkMode === 'half' ? (portraitHalf ? 470 : 505) : 1000),
+        height: record.screenH || (portraitHalf ? 505 : 528)
     };
 }
 function trainingTagMeta(tag) {
@@ -10368,6 +10503,7 @@ function beginTrainingEdit() {
     if (currentMode !== 'select') setMode('select');
     trainingDraft = {
         rinkMode,
+        rinkRotation,
         numCounter,
         canvas: canvas.toJSON(EXTRA_PROPS)
     };
@@ -10389,12 +10525,15 @@ function cancelTrainingEdit() {
     if (!trainingDraft) return;
     const draft = trainingDraft;
     rinkMode = draft.rinkMode || 'full';
+    rinkRotation = rinkMode === 'half' ? normalizeRinkRotation(draft.rinkRotation) : 0;
     numCounter = draft.numCounter || 1;
     suspendHistory = true;
     canvas.loadFromJSON(draft.canvas, () => {
         setBackground(() => {
             fitCanvas();
             canvas.forEachObject(applyModeToObject);
+            normalizeObjectStacking();
+            updateRinkControls();
             suspendHistory = false;
             stateHistory = [];
             historyIndex = -1;
@@ -10419,6 +10558,7 @@ function saveTrainingEdit() {
         screenW: screen.width,
         screenH: screen.height,
         rinkMode,
+        rinkRotation,
         numCounter,
         objectCount: canvas.getObjects().filter(o => !o.__temp).length,
         canvas: canvas.toJSON(EXTRA_PROPS)
@@ -10436,6 +10576,7 @@ function loadTrainingRecord(id) {
     const record = trainingRecords.find(item => item.id === id);
     if (!record || !record.canvas || trainingDraft) return;
     rinkMode = record.rinkMode || 'full';
+    rinkRotation = rinkMode === 'half' ? normalizeRinkRotation(record.rinkRotation) : 0;
     numCounter = record.numCounter || 1;
     activeTrainingId = record.id;
     activeTrainingTitle = record.title || '';
@@ -10445,6 +10586,8 @@ function loadTrainingRecord(id) {
         setBackground(() => {
             fitCanvas();
             canvas.forEachObject(applyModeToObject);
+            normalizeObjectStacking();
+            updateRinkControls();
             suspendHistory = false;
             stateHistory = [];
             historyIndex = -1;
@@ -11399,13 +11542,20 @@ document.getElementById('goalieSeasonSelect').addEventListener('change', e => {
 });
 
 document.getElementById('btnRink').addEventListener('click', () => {
-    rinkMode = (rinkMode === 'full') ? 'half' : 'full';
-    setBackground(() => {
-        fitCanvas();
-        stateHistory = []; historyIndex = -1;
-        snapshotNow();
-    });
+    suspendHistory = true;
+    hidePlayerHalo();
+    canvas.discardActiveObject();
+    if (rinkMode === 'full') {
+        rinkMode = 'half';
+        rinkRotation = 0;
+    } else {
+        resetHalfRinkRotation();
+        rinkMode = 'full';
+        rinkRotation = 0;
+    }
+    finishRinkChange();
 });
+document.getElementById('btnRinkRotate').addEventListener('click', rotateHalfRink);
 
 // ================= СТАРТ =================
 loadTrainingRecords();
@@ -11423,6 +11573,8 @@ initNumberPicker();
 initSidePanelToggle();
 setBackground(() => {
     fitCanvas();
+    normalizeObjectStacking();
+    updateRinkControls();
     suspendHistory = false;
     snapshotNow();
 });
