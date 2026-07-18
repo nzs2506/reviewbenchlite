@@ -2035,7 +2035,7 @@
     }
     .match-sheet-topbar {
         display: grid;
-        grid-template-columns: minmax(180px, 1fr) 150px auto auto auto auto auto auto;
+        grid-template-columns: minmax(180px, 1fr) 150px auto auto auto auto auto auto auto;
         gap: 9px;
         align-items: end;
     }
@@ -2088,6 +2088,7 @@
     .match-sheet-sort,
     .match-sheet-roster-toggle,
     .match-sheet-save,
+    .match-sheet-pdf,
     .match-sheet-fullscreen,
     .match-sheet-undo {
         height: 36px;
@@ -2115,6 +2116,7 @@
         color: #fff;
     }
     .match-sheet-save:hover { border-color: #60a5fa; background: #1d4ed8; }
+    .match-sheet-pdf:hover { border-color: #ef4444; color: #fecaca; }
     .match-sheet-fullscreen:hover { border-color: #3b82f6; color: #fff; }
     .match-sheet-undo:hover:not(:disabled) { border-color: #3b82f6; color: #fff; }
     .match-sheet-undo:disabled { opacity: .42; cursor: default; }
@@ -2262,6 +2264,8 @@
         border-radius: 10px;
         background: #171a20;
         overflow: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
     }
     .match-sheet-table {
         width: 100%;
@@ -2584,10 +2588,19 @@
         .match-sheet-sort,
         .match-sheet-roster-toggle,
         .match-sheet-save,
+        .match-sheet-pdf,
         .match-sheet-fullscreen,
         .match-sheet-undo { width: 100%; }
         .match-sheet-roster-list { grid-template-columns: 1fr; }
         .match-sheet-footer { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 1180px) {
+        .match-sheet-actions {
+            grid-template-columns: repeat(4, minmax(135px, 1fr));
+            overflow: visible;
+        }
+        .match-sheet-wrap { max-height: 54vh; }
+        .match-sheet-panel.is-fullscreen .match-sheet-wrap { max-height: none; }
     }
     @media (max-width: 620px) {
         .match-sheet-topbar { grid-template-columns: minmax(0, 1fr) 125px; }
@@ -2598,10 +2611,30 @@
         .match-sheet-roster-row select { grid-column: 1 / 3; }
         .match-archive-card-head { grid-template-columns: 1fr; }
         .match-archive-card-actions { flex-wrap: wrap; }
+        .match-sheet-actions { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
         .match-event-grid { grid-template-columns: 1fr; }
         .match-event-players { grid-column: 1; grid-template-columns: 1fr; }
         .match-event-actions { align-items: stretch; flex-direction: column-reverse; }
         .match-event-actions-main { display: grid; grid-template-columns: 1fr 1fr; }
+    }
+    @media (pointer: coarse) {
+        .match-sheet-reset,
+        .match-sheet-sort,
+        .match-sheet-roster-toggle,
+        .match-sheet-save,
+        .match-sheet-pdf,
+        .match-sheet-fullscreen,
+        .match-sheet-undo { min-height: 44px; }
+        .match-sheet-periods { height: 44px; }
+        .match-sheet-periods button { min-width: 44px; height: 36px; }
+        .match-sheet-action { min-height: 52px; }
+        .match-sheet-table th,
+        .match-sheet-table td { height: 44px; }
+        .match-sheet-selectbox { width: 20px; height: 20px; }
+        .match-sheet-drag-handle { width: 24px; height: 34px; }
+        .match-sheet-rating { width: 52px; height: 34px; }
+        .match-sheet-log-edit,
+        .match-sheet-roster-remove { width: 38px; height: 38px; }
     }
     .training-controls {
         display: flex;
@@ -3725,9 +3758,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.5" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.6" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.8.5</span>
+            <span class="version-tooltip">v0.8.6</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4115,6 +4148,7 @@
                     <button class="match-sheet-sort" id="btnMatchSheetSort" type="button" title="Сортировать по номеру"><i class="fa-solid fa-arrow-down-1-9"></i><span>По номеру</span></button>
                     <button class="match-sheet-roster-toggle" id="btnMatchSheetRoster" type="button"><i class="fa-solid fa-users"></i><span>Состав</span></button>
                     <button class="match-sheet-save" id="btnMatchSheetSave" type="button"><i class="fa-solid fa-floppy-disk"></i><span>Сохранить матч</span></button>
+                    <button class="match-sheet-pdf" id="btnMatchSheetPdf" type="button" title="Скачать матчевый лист"><i class="fa-regular fa-file-pdf"></i><span>PDF</span></button>
                     <button class="match-sheet-fullscreen" id="btnMatchSheetFullscreen" type="button" title="На весь экран"><i class="fa-solid fa-expand"></i><span>На весь экран</span></button>
                     <button class="match-sheet-reset" id="btnMatchSheetReset" type="button"><i class="fa-regular fa-trash-can"></i>Новый лист</button>
                 </div>
@@ -6228,6 +6262,51 @@ function buildPdfFromJpeg(dataUrl, imgW, imgH) {
     add(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
     return new Blob([stringToBytes(chunks.join(''))], { type: 'application/pdf' });
 }
+function buildPdfFromJpegs(images) {
+    const pages = Array.isArray(images) ? images.filter(Boolean) : [];
+    if (pages.length === 1) return buildPdfFromJpeg(pages[0].dataUrl, pages[0].width, pages[0].height);
+    if (!pages.length) throw new Error('Нет страниц для PDF');
+    const pageW = 841.89, pageH = 595.28, margin = 18;
+    const pageCount = pages.length;
+    const chunks = [];
+    const offsets = [];
+    let length = 0;
+    const add = str => { chunks.push(str); length += str.length; };
+    const obj = (num, body) => {
+        offsets[num] = length;
+        add(`${num} 0 obj\n${body}\nendobj\n`);
+    };
+    const pageIds = pages.map((_, index) => 3 + index);
+    const imageIds = pages.map((_, index) => 3 + pageCount + index);
+    const contentIds = pages.map((_, index) => 3 + pageCount * 2 + index);
+    const objectCount = 2 + pageCount * 3;
+
+    add('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+    obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+    obj(2, `<< /Type /Pages /Count ${pageCount} /Kids [${pageIds.map(id => `${id} 0 R`).join(' ')}] >>`);
+    pages.forEach((page, index) => {
+        obj(pageIds[index], `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] /Resources << /XObject << /Im${index} ${imageIds[index]} 0 R >> >> /Contents ${contentIds[index]} 0 R >>`);
+    });
+    pages.forEach((page, index) => {
+        const jpg = atob(page.dataUrl.split(',')[1]);
+        offsets[imageIds[index]] = length;
+        add(`${imageIds[index]} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`);
+        add(jpg);
+        add('\nendstream\nendobj\n');
+    });
+    pages.forEach((page, index) => {
+        const scale = Math.min((pageW - margin * 2) / page.width, (pageH - margin * 2) / page.height);
+        const drawW = page.width * scale, drawH = page.height * scale;
+        const x = (pageW - drawW) / 2, y = (pageH - drawH) / 2;
+        const content = `q\n${drawW.toFixed(2)} 0 0 ${drawH.toFixed(2)} ${x.toFixed(2)} ${y.toFixed(2)} cm\n/Im${index} Do\nQ`;
+        obj(contentIds[index], `<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+    });
+    const xref = length;
+    add(`xref\n0 ${objectCount + 1}\n0000000000 65535 f \n`);
+    for (let i = 1; i <= objectCount; i++) add(`${String(offsets[i]).padStart(10, '0')} 00000 n \n`);
+    add(`trailer\n<< /Size ${objectCount + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+    return new Blob([stringToBytes(chunks.join(''))], { type: 'application/pdf' });
+}
 function dataUrlToBlob(dataUrl) {
     const parts = dataUrl.split(',');
     const mimeMatch = parts[0].match(/data:(.*?);base64/);
@@ -8211,6 +8290,197 @@ function archivedMatchPlayers(record) {
     });
 }
 
+function matchSheetPdfRecord(record = null) {
+    if (record) return normalizeMatchArchiveRecord(record);
+    return normalizeMatchArchiveRecord({
+        id: matchSheetState.archiveId || 'current',
+        opponent: matchSheetState.opponent.trim() || 'Соперник',
+        date: matchSheetState.date || todayInputValue(),
+        roster: matchSheetArchiveRosterSnapshot(),
+        sheet: JSON.parse(JSON.stringify(matchSheetState))
+    });
+}
+
+function drawMatchSheetPdfText(ctx, text, x, y, width, options = {}) {
+    const align = options.align || 'center';
+    const pad = options.pad ?? 8;
+    ctx.save();
+    ctx.font = options.font || '700 20px Arial, sans-serif';
+    ctx.fillStyle = options.color || '#172033';
+    ctx.textAlign = align;
+    ctx.textBaseline = 'middle';
+    const maxWidth = Math.max(1, width - pad * 2);
+    const value = ellipsizeText(ctx, String(text ?? ''), maxWidth);
+    const drawX = align === 'left' ? x + pad : align === 'right' ? x + width - pad : x + width / 2;
+    ctx.fillText(value, drawX, y, maxWidth);
+    ctx.restore();
+}
+
+function drawMatchSheetPdfCell(ctx, x, y, width, height, text, options = {}) {
+    ctx.fillStyle = options.fill || '#ffffff';
+    ctx.fillRect(x, y, width, height);
+    ctx.strokeStyle = options.stroke || '#b9c3d2';
+    ctx.lineWidth = options.lineWidth || 2;
+    ctx.strokeRect(x, y, width, height);
+    drawMatchSheetPdfText(ctx, text, x, y + height / 2, width, options);
+}
+
+function renderMatchSheetPdfPages(sourceRecord = null) {
+    const record = matchSheetPdfRecord(sourceRecord);
+    const players = archivedMatchPlayers(record);
+    const rowsPerPage = 22;
+    const pageCount = Math.max(1, Math.ceil(players.length / rowsPerPage));
+    const pageWidth = 2480;
+    const pageHeight = 1754;
+    const margin = 80;
+    const tableWidth = pageWidth - margin * 2;
+    const titleHeight = 182;
+    const groupHeaderHeight = 58;
+    const subHeaderHeight = 46;
+    const rowHeight = 60;
+    const columns = {
+        player: 380,
+        faceoff: 300,
+        period: 86,
+        blocks: 110,
+        plusMinus: 100,
+        rating: 130
+    };
+    const periodGroups = [
+        { label: 'БРОСКИ', field: 'shots' },
+        { label: 'ЗАБИЛИ', field: 'goals' },
+        { label: 'ПРОПУСТИЛИ', field: 'conceded' },
+        { label: 'УДАЛЕНИЯ', field: 'penalties' },
+        { label: 'УДАЛ. СОПЕРНИКА', field: 'opponentPenalties' }
+    ];
+    const events = record.sheet.events || [];
+    const teamGoals = events.filter(event => event.type === 'goal').length;
+    const teamConceded = events.filter(event => event.type === 'conceded').length;
+    const goalieNames = (record.roster || [])
+        .filter(player => player.role === 'goalie')
+        .map(player => `${player.number ? `№${player.number} ` : ''}${player.name || 'Вратарь'}`)
+        .join(', ');
+    const pages = [];
+
+    for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+        const canvas = document.createElement('canvas');
+        canvas.width = pageWidth;
+        canvas.height = pageHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, pageWidth, pageHeight);
+        ctx.fillStyle = '#14213b';
+        ctx.fillRect(0, 0, pageWidth, 18);
+        ctx.font = '700 42px "Russo One", "Arial Black", Arial, sans-serif';
+        ctx.fillStyle = '#14213b';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('BenchReview Lite', margin, 66);
+        ctx.font = '800 28px Arial, sans-serif';
+        ctx.fillText('МАТЧЕВЫЙ ЛИСТ', margin, 120);
+        ctx.font = '700 23px Arial, sans-serif';
+        ctx.fillStyle = '#344158';
+        ctx.fillText(`Соперник: ${record.opponent || 'Соперник'}`, margin + 430, 70);
+        ctx.fillText(`Дата: ${trainingDayLabel(record.date)}`, margin + 430, 116);
+        ctx.textAlign = 'right';
+        ctx.fillText(`Счет по отметкам: ${teamGoals}:${teamConceded}`, pageWidth - margin, 70);
+        ctx.fillText(`Игроков: ${players.length}`, pageWidth - margin, 116);
+
+        const tableTop = titleHeight;
+        let x = margin;
+        drawMatchSheetPdfCell(ctx, x, tableTop, columns.player, groupHeaderHeight + subHeaderHeight, '№ / ФИО', {
+            fill: '#14213b', color: '#ffffff', align: 'left', pad: 16, font: '800 22px Arial, sans-serif', stroke: '#ffffff'
+        });
+        x += columns.player;
+        drawMatchSheetPdfCell(ctx, x, tableTop, columns.faceoff, groupHeaderHeight, 'ВБРАСЫВАНИЯ', {
+            fill: '#14213b', color: '#ffffff', font: '800 19px Arial, sans-serif', stroke: '#ffffff'
+        });
+        for (let period = 1; period <= 3; period++) {
+            drawMatchSheetPdfCell(ctx, x + (period - 1) * columns.faceoff / 3, tableTop + groupHeaderHeight, columns.faceoff / 3, subHeaderHeight, String(period), {
+                fill: '#e6edf7', color: '#14213b', font: '800 18px Arial, sans-serif', stroke: '#ffffff'
+            });
+        }
+        x += columns.faceoff;
+        periodGroups.forEach(group => {
+            const groupWidth = columns.period * 3;
+            drawMatchSheetPdfCell(ctx, x, tableTop, groupWidth, groupHeaderHeight, group.label, {
+                fill: '#14213b', color: '#ffffff', font: '800 17px Arial, sans-serif', stroke: '#ffffff'
+            });
+            for (let period = 1; period <= 3; period++) {
+                drawMatchSheetPdfCell(ctx, x + (period - 1) * columns.period, tableTop + groupHeaderHeight, columns.period, subHeaderHeight, String(period), {
+                    fill: '#e6edf7', color: '#14213b', font: '800 18px Arial, sans-serif', stroke: '#ffffff'
+                });
+            }
+            x += groupWidth;
+        });
+        [
+            ['БЛОК', columns.blocks],
+            ['+/-', columns.plusMinus],
+            ['ОЦЕНКА', columns.rating]
+        ].forEach(([label, width]) => {
+            drawMatchSheetPdfCell(ctx, x, tableTop, width, groupHeaderHeight + subHeaderHeight, label, {
+                fill: '#14213b', color: '#ffffff', font: '800 18px Arial, sans-serif', stroke: '#ffffff'
+            });
+            x += width;
+        });
+
+        const pagePlayers = players.slice(pageIndex * rowsPerPage, (pageIndex + 1) * rowsPerPage);
+        pagePlayers.forEach((player, rowIndex) => {
+            const state = normalizeMatchSheetPlayer(record.sheet.players?.[player.id]);
+            const y = tableTop + groupHeaderHeight + subHeaderHeight + rowIndex * rowHeight;
+            const fill = rowIndex % 2 ? '#f4f7fb' : '#ffffff';
+            let cellX = margin;
+            drawMatchSheetPdfCell(ctx, cellX, y, columns.player, rowHeight, `${player.number ? `№${player.number}  ` : ''}${player.name || rosterRoleLabel(player.role)}`, {
+                fill, align: 'left', pad: 15, font: '700 21px Arial, sans-serif', color: player.role === 'defense' ? '#a3321d' : '#172033'
+            });
+            cellX += columns.player;
+            [0, 1, 2].forEach(period => {
+                drawMatchSheetPdfCell(ctx, cellX, y, columns.faceoff / 3, rowHeight, `+${state.faceoffWins[period]} / -${state.faceoffLosses[period]}`, {
+                    fill, font: '700 18px Arial, sans-serif', color: '#1859a9'
+                });
+                cellX += columns.faceoff / 3;
+            });
+            periodGroups.forEach(group => {
+                [0, 1, 2].forEach(period => {
+                    drawMatchSheetPdfCell(ctx, cellX, y, columns.period, rowHeight, state[group.field][period], {
+                        fill, font: '700 19px Arial, sans-serif'
+                    });
+                    cellX += columns.period;
+                });
+            });
+            drawMatchSheetPdfCell(ctx, cellX, y, columns.blocks, rowHeight, state.blocks.reduce((sum, value) => sum + value, 0), { fill, font: '700 19px Arial, sans-serif' });
+            cellX += columns.blocks;
+            const plusMinus = matchSheetPlusMinus(state);
+            drawMatchSheetPdfCell(ctx, cellX, y, columns.plusMinus, rowHeight, plusMinus > 0 ? `+${plusMinus}` : plusMinus, {
+                fill, font: '800 21px Arial, sans-serif', color: plusMinus < 0 ? '#b42318' : '#172033'
+            });
+            cellX += columns.plusMinus;
+            drawMatchSheetPdfCell(ctx, cellX, y, columns.rating, rowHeight, state.rating || '—', { fill, font: '700 19px Arial, sans-serif' });
+        });
+
+        const footerY = pageHeight - 64;
+        ctx.font = '700 19px Arial, sans-serif';
+        ctx.fillStyle = '#536079';
+        ctx.textAlign = 'left';
+        ctx.fillText(goalieNames ? `Вратари: ${goalieNames}` : 'Вратари: не указаны', margin, footerY);
+        ctx.textAlign = 'right';
+        ctx.fillText(`Страница ${pageIndex + 1} из ${pageCount}`, pageWidth - margin, footerY);
+        pages.push({ dataUrl: canvas.toDataURL('image/jpeg', 0.93), width: pageWidth, height: pageHeight });
+    }
+    return pages;
+}
+
+function exportMatchSheetPdf(record = null) {
+    try {
+        const normalized = matchSheetPdfRecord(record);
+        const pages = renderMatchSheetPdfPages(normalized);
+        const name = `match-sheet-${normalized.opponent || 'match'}-${normalized.date || todayInputValue()}`;
+        downloadBlob(`${safeFileStamp(name)}.pdf`, buildPdfFromJpegs(pages));
+    } catch (err) {
+        alert('Не удалось сохранить матчевый лист: ' + err.message);
+    }
+}
+
 function renderArchivedMatchTable(record, target) {
     const players = archivedMatchPlayers(record);
     target.innerHTML = '';
@@ -8291,13 +8561,18 @@ function renderMatchArchive() {
         open.className = 'match-archive-action';
         open.dataset.matchArchiveOpen = record.id;
         open.innerHTML = '<i class="fa-solid fa-pen"></i>Открыть';
+        const pdf = document.createElement('button');
+        pdf.type = 'button';
+        pdf.className = 'match-archive-action';
+        pdf.dataset.matchArchivePdf = record.id;
+        pdf.innerHTML = '<i class="fa-regular fa-file-pdf"></i>PDF';
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.className = 'match-archive-action delete';
         remove.title = 'Удалить матч';
         remove.dataset.matchArchiveDelete = record.id;
         remove.innerHTML = '<i class="fa-regular fa-trash-can"></i>';
-        actions.append(toggle, open, remove);
+        actions.append(toggle, open, pdf, remove);
         head.append(copy, actions);
         const detail = document.createElement('div');
         detail.className = 'match-archive-detail';
@@ -10253,6 +10528,7 @@ document.getElementById('btnMatchSheetReset').addEventListener('click', resetMat
 document.getElementById('btnMatchSheetSort').addEventListener('click', sortMatchSheetByNumber);
 document.getElementById('btnMatchSheetRoster').addEventListener('click', toggleMatchSheetRosterPanel);
 document.getElementById('btnMatchSheetSave').addEventListener('click', saveMatchSheetToArchive);
+document.getElementById('btnMatchSheetPdf').addEventListener('click', () => exportMatchSheetPdf());
 document.getElementById('btnMatchSheetAddPlayer').addEventListener('click', addMatchSheetRosterPlayer);
 document.getElementById('matchSheetAddName').addEventListener('keydown', e => {
     if (e.key === 'Enter') addMatchSheetRosterPlayer();
@@ -10366,6 +10642,12 @@ document.getElementById('statsRosterPanel').addEventListener('click', async e =>
     const open = e.target.closest('[data-match-archive-open]');
     if (open) {
         await openArchivedMatchSheet(open.dataset.matchArchiveOpen);
+        return;
+    }
+    const pdf = e.target.closest('[data-match-archive-pdf]');
+    if (pdf) {
+        const record = matchSheetArchive.find(item => item.id === pdf.dataset.matchArchivePdf);
+        if (record) exportMatchSheetPdf(record);
         return;
     }
     const archiveRemove = e.target.closest('[data-match-archive-delete]');
