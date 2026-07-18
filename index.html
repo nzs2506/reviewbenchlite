@@ -3913,9 +3913,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.6" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.7" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.6</span>
+            <span class="version-tooltip">v0.9.7</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -9058,9 +9058,9 @@ function detectedLineupRole(text) {
         .split(/\s+/)
         .map(token => token.replace(/\.+$/g, ''))
         .filter(Boolean);
-    if (tokens.some(token => ['вр', 'вратарь', 'голкипер', 'gk', 'гк'].includes(token)) || /(^|\s)(bp|вр)(?=\s|\/|$)/i.test(prefix)) return 'goalie';
-    if (tokens.some(token => ['защ', 'защитник', 'лз', 'пз'].includes(token)) || /(^|\s)(?:d|защ|заш|зав)(?=\s|\/|\)|$)/i.test(prefix) || /3a[a-z]{1,5}(?:\/d|d|\/o|\/о|\/\))/i.test(prefix)) return 'defense';
-    if (tokens.some(token => ['нап', 'нападающий', 'лн', 'пн', 'ц'].includes(token)) || /(^|\s)(?:f|нап|наш|нам|han|nam)(?=\s|\/|$)/i.test(prefix)) return 'forward';
+    if (tokens.some(token => ['вр', 'bp', 'вратарь', 'голкипер', 'gk', 'гк'].includes(token)) || /(^|\s)(bp|вр)(?=\s|\.|\/|$)/i.test(prefix)) return 'goalie';
+    if (tokens.some(token => ['защ', 'заш', 'защитник', 'лз', 'пз'].includes(token)) || /(^|\s)(?:d|защ|заш|зав)(?=\s|\.|\/|\)|$)/i.test(prefix) || /3a[a-z]{1,5}(?:\/d|d|\/o|\/о|\/\))/i.test(prefix)) return 'defense';
+    if (tokens.some(token => ['нап', 'нападающий', 'лн', 'пн', 'ц'].includes(token)) || /(^|\s)(?:f|нап|наш|нам|han|nam|ham[a-z]*)(?=\s|\.|\/|$)/i.test(prefix)) return 'forward';
     return '';
 }
 
@@ -9085,7 +9085,7 @@ function detectedLineupLeadership(text) {
         .toLowerCase()
         .replace(/ё/g, 'е')
         .replace(/[()]/g, ' ');
-    if (/(^|\s)капитан(?=\s|$)/i.test(value) || /(^|\s)(к|k|c)(?=\s+(?:\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2})|\s*$)/i.test(value)) return 'captain';
+    if (/(^|\s)капитан(?=\s|$)/i.test(value) || /(^|\s)(к|k|c)(?=\s+(?:\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2})|\s*$)/i.test(value) || /(^|\s|\|)©(?=\s|\||$)/.test(value)) return 'captain';
     if (/(^|\s)(ассистент|асс\.)(?=\s|$)/i.test(value) || /(^|\s)(а|a)(?=\s+(?:\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}|\d{4}-\d{1,2}-\d{1,2})|\s*$)/i.test(value)) return 'assistant';
     return '';
 }
@@ -9117,7 +9117,7 @@ function normalizeLineupBirthDate(value) {
 }
 
 function detectedLineupBirthDate(text) {
-    const match = String(text || '').match(/\b(?:\d{1,2}[.\/-]\d{1,2}[.\/-](?:\d{4}|\d{2})|\d{4}-\d{1,2}-\d{1,2})\b/);
+    const match = String(text || '').match(/\b(?:\d{1,2}[.\/-]\d{1,2}[.\/-]\d{4}|\d{4}-\d{1,2}-\d{1,2})\b/);
     return normalizeLineupBirthDate(match?.[0]);
 }
 
@@ -9130,7 +9130,19 @@ function normalizeDetectedName(words) {
 
 function detectedLineupNumber(line) {
     const head = String(line || '').slice(0, 14);
-    return head.match(/(?:^|[^\p{L}\d])(\d{1,3})(?=\s|\|)/u)?.[1] || '';
+    const standard = head.match(/(?:^|[^\p{L}\d])(\d{1,3})(?=\s|\|)/u)?.[1] || '';
+    if (standard) {
+        const numeric = Number(standard);
+        return numeric > 99 ? String(numeric % 100) : standard;
+    }
+    const noisyHighlight = head.match(/[^\d](\d{1,2})\d{1,2}\)\s*(?=[А-ЯЁA-Z])/u)?.[1];
+    if (noisyHighlight) return noisyHighlight;
+    return head.match(/(?:^|[^\p{L}\d])(\d{1,2})(?=[a-zа-я]\s)/iu)?.[1] || '';
+}
+
+function splitLineupCamelName(value) {
+    const words = String(value || '').replace(/([a-z])([A-Z])/g, '$1 $2').trim().split(/\s+/).filter(Boolean);
+    return words.length >= 2 ? normalizeDetectedName(words.slice(0, 2)) : '';
 }
 
 function detectedLineupName(source, clean, rejected) {
@@ -9138,10 +9150,15 @@ function detectedLineupName(source, clean, rejected) {
     if (bilingualName) return normalizeDetectedName(bilingualName[1].split(/\s+/));
     const cyrillicWords = (clean.match(/[А-ЯЁ][А-ЯЁа-яё\-]{1,}/g) || [])
         .filter(word => !rejected.has(word.toLowerCase().replace(/ё/g, 'е')))
-        .slice(0, 3);
+        .slice(0, 2);
     if (cyrillicWords.length >= 2) return normalizeDetectedName(cyrillicWords);
-    const latinAfterSlash = String(source || '').match(/\/\s*([A-Z][A-Za-z\-]{1,}(?:\s+[A-Z][A-Za-z\-]{1,}){1,2})/);
-    if (latinAfterSlash) return normalizeDetectedName(latinAfterSlash[1].split(/\s+/));
+    const latinAfterSlash = String(source || '').match(/\/\s*([A-Z][A-Za-z\-]{3,}(?:\s+[A-Z][A-Za-z\-]{1,}){0,2})/);
+    if (latinAfterSlash) {
+        const splitName = splitLineupCamelName(latinAfterSlash[1]);
+        if (splitName) return splitName;
+    }
+    const camelName = [...String(source || '').matchAll(/[A-Z][a-z]{2,}[A-Z][A-Za-z]{2,}/g)].pop()?.[0];
+    if (camelName) return splitLineupCamelName(camelName);
     const latinWords = (clean.match(/[A-Z][A-Za-z\-]{1,}/g) || [])
         .filter(word => !rejected.has(word.toLowerCase()))
         .slice(0, 3);
@@ -9169,6 +9186,7 @@ function parseLineupText(text) {
         const leadership = detectedLineupLeadership(line);
         const birthDate = detectedLineupBirthDate(line);
         const hasRole = Boolean(detectedRole);
+        const bilingualEvidence = /[А-ЯЁа-яё].*[A-Za-z]|[A-Za-z].*[А-ЯЁа-яё]/.test(line);
         let clean = line
             .replace(/\b\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}\b/g, ' ')
             .replace(/\b\d{1,3}\b/g, ' ')
@@ -9177,7 +9195,7 @@ function parseLineupText(text) {
             .replace(/\s+/g, ' ')
             .trim();
         const name = detectedLineupName(line, clean, rejected);
-        if (!name || (!number && !hasRole && !birthDate) || (dateRich && !birthDate)) return;
+        if (!name || (!number && !hasRole && !birthDate) || (dateRich && !birthDate && !(number && (hasRole || bilingualEvidence)))) return;
         if (name.length < 3) return;
         candidates.push({
             id: `candidate-${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`,
