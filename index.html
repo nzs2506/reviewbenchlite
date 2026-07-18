@@ -3801,14 +3801,36 @@
     .stats-add-row button,
     .lineup-roster-row input,
     .lineup-roster-row select { font-weight: 600; }
-    .match-sheet-table { font-size: 12px; }
-    .match-sheet-table thead th { font-size: 10px; }
+    .match-sheet-table {
+        min-width: 1700px;
+        font-size: 14px;
+    }
+    .match-sheet-table th,
+    .match-sheet-table td {
+        min-width: 47px;
+        height: 45px;
+    }
+    .match-sheet-table thead th { font-size: 11px; }
+    .match-sheet-table .match-sheet-player-head,
+    .match-sheet-table .match-sheet-player-cell { min-width: 285px; }
+    .match-sheet-player {
+        grid-template-columns: 22px 40px minmax(0, 1fr);
+        gap: 10px;
+    }
+    .match-sheet-player b {
+        width: 38px;
+        height: 31px;
+        font-size: 15px;
+    }
     .match-sheet-player span,
     .match-sheet-value,
     .match-sheet-faceoff,
     .match-sheet-rating { font-weight: 600; }
-    .match-sheet-player span { font-size: 12px; }
-    .match-sheet-faceoff { font-size: 11px; }
+    .match-sheet-player span { font-size: 14px; font-weight: 700; }
+    .match-sheet-value { font-size: 14px; font-weight: 700; }
+    .match-sheet-faceoff { font-size: 13px; font-weight: 700; }
+    .match-sheet-rating { font-size: 14px; }
+    .match-archive-detail .match-sheet-table { font-size: 13px; }
     .match-sheet-selection,
     .match-sheet-log-item,
     .match-sheet-goalie-row { font-size: 12px; font-weight: 600; }
@@ -3837,9 +3859,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.9" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.0" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.8.9</span>
+            <span class="version-tooltip">v0.9.0</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -7125,10 +7147,24 @@ function saveMatchSheetToArchive() {
     const record = matchSheetArchiveSnapshot(id, existing?.createdAt || new Date().toISOString());
     if (existing) matchSheetArchive = matchSheetArchive.map(item => item.id === id ? record : item);
     else matchSheetArchive.unshift(record);
-    matchSheetState.archiveId = id;
-    persistMatchSheet();
     persistMatchSheetArchive();
     renderMatchArchive();
+    const preservedOrder = matchSheetSkaters().map(player => player.id);
+    const preservedSortDirection = matchSheetState.sortDirection;
+    matchSheetState = {
+        version: MATCH_SHEET_SCHEMA_VERSION,
+        archiveId: '',
+        opponent: '',
+        date: todayInputValue(),
+        players: {},
+        events: [],
+        order: preservedOrder,
+        sortDirection: preservedSortDirection
+    };
+    matchSheetSelectedPlayerIds.clear();
+    matchSheetPeriod = 1;
+    persistMatchSheet();
+    renderMatchSheet();
     const button = document.getElementById('btnMatchSheetSave');
     if (button) {
         button.innerHTML = '<i class="fa-solid fa-check"></i><span>Матч сохранен</span>';
