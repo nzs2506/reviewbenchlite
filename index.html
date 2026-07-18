@@ -3837,9 +3837,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.8" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.9" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.8.8</span>
+            <span class="version-tooltip">v0.8.9</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -7754,6 +7754,7 @@ function recordMatchSheetEvent(type) {
     applyMatchSheetEvent(event, 1);
     matchSheetState.events.push(event);
     matchSheetState.events = matchSheetState.events.slice(-150);
+    matchSheetSelectedPlayerIds.clear();
     persistMatchSheet();
     renderMatchSheet();
 }
