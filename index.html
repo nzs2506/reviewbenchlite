@@ -3560,9 +3560,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.2" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.3" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.8.2</span>
+            <span class="version-tooltip">v0.8.3</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -6628,8 +6628,8 @@ const MATCH_SHEET_EVENTS = {
     faceoffWin: { label: 'Вбрасывание +', field: 'faceoffWins' },
     faceoffLoss: { label: 'Вбрасывание -', field: 'faceoffLosses' },
     shot: { label: 'Бросок', field: 'shots' },
-    goal: { label: 'Гол', field: 'goals', shot: true, plusMinus: 1 },
-    conceded: { label: 'Пропустили', field: 'conceded', plusMinus: -1 },
+    goal: { label: 'Гол', field: 'goals', shot: true, plusMinus: 1, clearSelection: true },
+    conceded: { label: 'Пропустили', field: 'conceded', plusMinus: -1, clearSelection: true },
     penalty: { label: 'Удаление', field: 'penalties' },
     opponentPenalty: { label: 'Удаление соперника', field: 'opponentPenalties' },
     block: { label: 'Блок броска', field: 'blocks' },
@@ -7059,6 +7059,7 @@ function recordMatchSheetEvent(type) {
     applyMatchSheetEvent(event, 1);
     matchSheetState.events.push(event);
     matchSheetState.events = matchSheetState.events.slice(-150);
+    if (config.clearSelection) matchSheetSelectedPlayerIds.clear();
     persistMatchSheet();
     renderMatchSheet();
 }
