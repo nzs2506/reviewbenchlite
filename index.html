@@ -2033,6 +2033,12 @@
         max-height: none;
         min-height: 0;
     }
+    .match-sheet-panel.is-fullscreen .match-sheet-roster-panel,
+    .match-sheet-panel.is-fullscreen .match-sheet-roster-toggle,
+    .match-sheet-panel.is-fullscreen .match-sheet-goalies {
+        display: none !important;
+    }
+    .match-sheet-panel.is-fullscreen .match-sheet-footer { grid-template-columns: 1fr; }
     .match-sheet-topbar {
         display: grid;
         grid-template-columns: minmax(180px, 1fr) 150px auto auto auto auto auto auto auto;
@@ -3758,9 +3764,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.6" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.8.7" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.8.6</span>
+            <span class="version-tooltip">v0.8.7</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4153,24 +4159,6 @@
                     <button class="match-sheet-reset" id="btnMatchSheetReset" type="button"><i class="fa-regular fa-trash-can"></i>Новый лист</button>
                 </div>
 
-                <section class="match-sheet-roster-panel" id="matchSheetRosterPanel" hidden>
-                    <div class="match-sheet-roster-head">
-                        <strong>Состав команды</strong>
-                        <span id="matchSheetRosterCount">0 игроков</span>
-                    </div>
-                    <div class="match-sheet-roster-add">
-                        <input id="matchSheetAddNumber" type="text" inputmode="numeric" maxlength="3" placeholder="№">
-                        <input id="matchSheetAddName" type="text" maxlength="50" placeholder="Фамилия Имя">
-                        <select id="matchSheetAddRole" aria-label="Амплуа нового игрока">
-                            <option value="forward">Нападающий</option>
-                            <option value="defense">Защитник</option>
-                            <option value="goalie">Вратарь</option>
-                        </select>
-                        <button id="btnMatchSheetAddPlayer" type="button"><i class="fa-solid fa-plus"></i> Добавить</button>
-                    </div>
-                    <div class="match-sheet-roster-list" id="matchSheetRosterList"></div>
-                </section>
-
                 <div class="match-sheet-entry">
                     <div class="match-sheet-entry-head">
                         <div class="match-sheet-selection" id="matchSheetSelection">Сначала выберите игрока в таблице</div>
@@ -4200,6 +4188,24 @@
                         <div class="match-sheet-goalie-list" id="matchSheetGoalies"></div>
                     </section>
                 </div>
+
+                <section class="match-sheet-roster-panel" id="matchSheetRosterPanel" hidden>
+                    <div class="match-sheet-roster-head">
+                        <strong>Состав команды</strong>
+                        <span id="matchSheetRosterCount">0 игроков</span>
+                    </div>
+                    <div class="match-sheet-roster-add">
+                        <input id="matchSheetAddNumber" type="text" inputmode="numeric" maxlength="3" placeholder="№">
+                        <input id="matchSheetAddName" type="text" maxlength="50" placeholder="Фамилия Имя">
+                        <select id="matchSheetAddRole" aria-label="Амплуа нового игрока">
+                            <option value="forward">Нападающий</option>
+                            <option value="defense">Защитник</option>
+                            <option value="goalie">Вратарь</option>
+                        </select>
+                        <button id="btnMatchSheetAddPlayer" type="button"><i class="fa-solid fa-plus"></i> Добавить</button>
+                    </div>
+                    <div class="match-sheet-roster-list" id="matchSheetRosterList"></div>
+                </section>
             </section>
         </div>
     </main>
