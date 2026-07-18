@@ -2926,9 +2926,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.8" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.6.9" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.6.8</span>
+            <span class="version-tooltip">v0.6.9</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4285,7 +4285,7 @@ function addStyledLine(rawPts, type, color) {
 }
 
 // ================= АНИМАЦИЯ УПРАЖНЕНИЯ =================
-const ANIMATION_LINE_TYPES = new Set(['skate', 'backward', 'puck']);
+const ANIMATION_LINE_TYPES = new Set(['skate', 'backward', 'puck', 'stop']);
 const ANIMATION_ACTION_LINE_TYPES = new Set(['pass', 'shot']);
 
 function delay(ms) {
@@ -4358,12 +4358,16 @@ function nearestAnimationLine(player, lines, usedLines) {
     const center = objectCenter(player);
     const box = player.getBoundingRect ? player.getBoundingRect(true, true) : { width: 34, height: 34 };
     const threshold = Math.max(52, Math.min(86, Math.max(box.width, box.height) * 1.25));
+    return nearestMovementLineFromPoint(center, lines, usedLines, threshold);
+}
+
+function nearestMovementLineFromPoint(point, lines, usedLines, threshold = 86) {
     let best = null;
     lines.forEach(line => {
         if (usedLines.has(line)) return;
         const pts = adjustedAnimationPoints(line);
         if (!pts) return;
-        const d = distance(center, pts[0]);
+        const d = distance(point, pts[0]);
         if (d <= threshold && (!best || d < best.distance)) best = { line, pts, distance: d };
     });
     return best;
@@ -4406,8 +4410,7 @@ function nearestPassReceiver(endPoint, entries, processed, sender) {
     entries.forEach(entry => {
         if (entry.player === sender || processed.has(entry.player)) return;
         const playerCenter = objectCenter(entry.player);
-        const routeStart = entry.movement?.pts?.[0] || playerCenter;
-        const d = Math.min(distance(endPoint, playerCenter), distance(endPoint, routeStart));
+        const d = distance(endPoint, playerCenter);
         if (d <= 92 && (!best || d < best.distance)) best = { entry, distance: d };
     });
     return best?.entry || null;
@@ -4423,15 +4426,10 @@ function collectAnimationPlan() {
     const usedPucks = new Set();
     const usedActionLines = new Set();
     const playerPucks = new Map();
-    const entries = players.map(player => ({
-        player,
-        movement: nearestAnimationLine(player, movementLines, usedMovementLines)
-    }));
+    const entries = players.map(player => ({ player }));
 
     entries.forEach(entry => {
-        if (entry.movement) usedMovementLines.add(entry.movement.line);
-        const referencePts = entry.movement?.pts || [objectCenter(entry.player)];
-        const puck = nearestAttachedPuck(entry.player, referencePts, pucks, usedPucks);
+        const puck = nearestAttachedPuck(entry.player, [objectCenter(entry.player)], pucks, usedPucks);
         if (puck) {
             usedPucks.add(puck);
             playerPucks.set(entry.player, puck);
@@ -4452,30 +4450,39 @@ function collectAnimationPlan() {
 
         let puck = playerPucks.get(entry.player) || null;
         let actionPoint = objectCenter(entry.player);
-        if (entry.movement) {
-            const center = objectCenter(entry.player);
-            const movementPts = distance(center, entry.movement.pts[0]) > 1.5
-                ? [center, ...entry.movement.pts]
-                : entry.movement.pts;
-            steps.push({ kind: 'movement', player: entry.player, puck, pts: movementPts });
-            actionPoint = movementPts[movementPts.length - 1];
-        }
-
-        if (!puck) continue;
-        const action = nearestPuckActionLine(actionPoint, actionLines, usedActionLines);
-        if (!action) continue;
-        usedActionLines.add(action.line);
-        steps.push({ kind: 'puck-action', puck, pts: action.pts, actionType: action.type });
-
-        if (action.type === 'pass') {
-            const receiver = nearestPassReceiver(action.pts[action.pts.length - 1], entries, processed, entry.player);
-            if (receiver) {
-                playerPucks.delete(entry.player);
-                playerPucks.set(receiver.player, puck);
-                preferred = receiver;
+        const maxSegments = movementLines.length + actionLines.length + 1;
+        for (let segment = 0; segment < maxSegments; segment++) {
+            const movement = nearestMovementLineFromPoint(actionPoint, movementLines, usedMovementLines);
+            if (movement) {
+                usedMovementLines.add(movement.line);
+                const movementPts = distance(actionPoint, movement.pts[0]) > 1.5
+                    ? [actionPoint, ...movement.pts]
+                    : movement.pts;
+                steps.push({ kind: 'movement', player: entry.player, puck, pts: movementPts });
+                actionPoint = movementPts[movementPts.length - 1];
             }
-        } else {
-            playerPucks.delete(entry.player);
+
+            if (puck) {
+                const action = nearestPuckActionLine(actionPoint, actionLines, usedActionLines);
+                if (action) {
+                    usedActionLines.add(action.line);
+                    steps.push({ kind: 'puck-action', puck, pts: action.pts, actionType: action.type });
+
+                    if (action.type === 'pass') {
+                        const receiver = nearestPassReceiver(action.pts[action.pts.length - 1], entries, processed, entry.player);
+                        if (receiver) {
+                            playerPucks.delete(entry.player);
+                            playerPucks.set(receiver.player, puck);
+                            preferred = receiver;
+                        }
+                    } else {
+                        playerPucks.delete(entry.player);
+                    }
+                    break;
+                }
+            }
+
+            if (!movement) break;
         }
     }
 
