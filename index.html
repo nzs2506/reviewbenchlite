@@ -3922,9 +3922,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.9" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.10" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.9</span>
+            <span class="version-tooltip">v0.9.10</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -6552,35 +6552,75 @@ function ellipsizeText(ctx, text, maxWidth) {
 }
 function captureBoardWithFooter(format = 'png', baseMultiplier = 2, quality = 0.95, meta = {}) {
     const boardCanvas = captureBoardCanvas(baseMultiplier);
-    const title = (meta.title || '').trim();
-    const footerH = title ? Math.max(36, Math.round(42 * baseMultiplier)) : 0;
-    const out = document.createElement('canvas');
-    out.width = boardCanvas.width;
-    out.height = boardCanvas.height + footerH;
-    const ctx = out.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, out.width, out.height);
-    ctx.drawImage(boardCanvas, 0, 0);
-
-    if (title) {
-        ctx.fillStyle = '#16181d';
-        ctx.fillRect(0, boardCanvas.height, out.width, footerH);
-        const pad = Math.max(16, Math.round(24 * baseMultiplier));
-        const titleSize = Math.max(14, Math.round(18 * baseMultiplier));
-        const yTitle = boardCanvas.height + Math.round(27 * baseMultiplier);
-        ctx.fillStyle = '#f4f8ff';
-        ctx.font = `700 ${titleSize}px "Russo One", "Arial Black", Arial, sans-serif`;
-        ctx.fillText(ellipsizeText(ctx, title, out.width - pad * 2), pad, yTitle);
-    }
     return {
-        dataUrl: out.toDataURL(`image/${format}`, quality),
-        width: out.width,
-        height: out.height
+        dataUrl: boardCanvas.toDataURL(`image/${format}`, quality),
+        width: boardCanvas.width,
+        height: boardCanvas.height
     };
 }
 function captureBoardDataUrl(format = 'png', baseMultiplier = 2, quality = 0.95) {
     const boardCanvas = captureBoardCanvas(baseMultiplier);
     return boardCanvas.toDataURL(`image/${format}`, quality);
+}
+function loadExportImage(dataUrl) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('Не удалось прочитать сохранённый скрин'));
+        img.src = dataUrl;
+    });
+}
+function detectDarkExportFooter(ctx, width, height) {
+    const maxScan = Math.min(height, Math.max(80, Math.round(height * 0.22)));
+    const minFooter = Math.max(24, Math.round(height * 0.035));
+    const step = Math.max(1, Math.floor(width / 160));
+    let data;
+    try {
+        data = ctx.getImageData(0, height - maxScan, width, maxScan).data;
+    } catch (_) {
+        return height;
+    }
+    const isDarkRow = row => {
+        let dark = 0;
+        let total = 0;
+        for (let x = 0; x < width; x += step) {
+            const index = (row * width + x) * 4;
+            if (data[index + 3] < 12) continue;
+            total += 1;
+            const brightness = (data[index] + data[index + 1] + data[index + 2]) / 3;
+            if (brightness < 48) dark += 1;
+        }
+        return total > 0 && dark / total > 0.78;
+    };
+    let cropY = height;
+    for (let row = maxScan - 1; row >= 0; row -= 1) {
+        if (isDarkRow(row)) {
+            cropY = height - maxScan + row;
+            continue;
+        }
+        if (height - cropY >= minFooter) break;
+        cropY = height;
+    }
+    return height - cropY >= minFooter ? Math.max(1, cropY) : height;
+}
+async function cleanSavedTrainingScreen(record, format = 'jpeg', quality = 0.92) {
+    if (!record || !record.screen) return null;
+    const img = await loadExportImage(record.screen);
+    const source = document.createElement('canvas');
+    source.width = img.naturalWidth || record.screenW || 1;
+    source.height = img.naturalHeight || record.screenH || 1;
+    const sourceCtx = source.getContext('2d');
+    sourceCtx.drawImage(img, 0, 0, source.width, source.height);
+    const cropY = detectDarkExportFooter(sourceCtx, source.width, source.height);
+    const out = document.createElement('canvas');
+    out.width = source.width;
+    out.height = cropY;
+    out.getContext('2d').drawImage(source, 0, 0, source.width, cropY, 0, 0, out.width, out.height);
+    return {
+        dataUrl: out.toDataURL(`image/${format}`, quality),
+        width: out.width,
+        height: out.height
+    };
 }
 function stringToBytes(str) {
     const out = new Uint8Array(str.length);
@@ -10453,7 +10493,7 @@ function renderTrainingList() {
                 <button class="training-icon-btn danger" type="button" data-action="delete" title="Удалить"><i class="fa-regular fa-trash-can"></i></button>
             </div>`;
 
-        row.querySelector('.training-row-thumb').src = record.screen || '';
+        updateTrainingThumb(row.querySelector('.training-row-thumb'), record);
         row.querySelector('h3').textContent = record.title || 'Тренировка';
         setTagChip(row.querySelector('[data-role="tag"]'), record.tag);
         row.querySelector('[data-role="time"]').textContent = trainingDateLabel(record.createdAt || new Date().toISOString());
@@ -10597,17 +10637,32 @@ function loadTrainingRecord(id) {
         });
     });
 }
-function downloadTrainingScreen(record) {
-    if (!record || !record.screen) return;
-    download(`${safeFileStamp(record.title || 'training')}.jpg`, record.screen);
+async function updateTrainingThumb(img, record) {
+    if (!img || !record || !record.screen) return;
+    img.dataset.thumbId = record.id;
+    img.src = record.screen;
+    try {
+        const shot = await cleanSavedTrainingScreen(record, 'jpeg', 0.82);
+        if (shot && img.dataset.thumbId === record.id) img.src = shot.dataUrl;
+    } catch (_) {}
 }
-function downloadTrainingPdf(record) {
+async function downloadTrainingScreen(record) {
     if (!record || !record.screen) return;
     try {
-        const size = recordScreenSize(record);
+        const shot = await cleanSavedTrainingScreen(record, 'png', 0.95);
+        if (shot) download(`${safeFileStamp(record.title || 'training')}.png`, shot.dataUrl);
+    } catch (err) {
+        alert('Не удалось сохранить PNG: ' + err.message);
+    }
+}
+async function downloadTrainingPdf(record) {
+    if (!record || !record.screen) return;
+    try {
+        const shot = await cleanSavedTrainingScreen(record, 'jpeg', 0.94);
+        if (!shot) return;
         downloadBlob(
             `${safeFileStamp(record.title || 'training')}.pdf`,
-            buildPdfFromJpeg(record.screen, size.width, size.height)
+            buildPdfFromJpeg(shot.dataUrl, shot.width, shot.height)
         );
     } catch (err) {
         alert('Не удалось сохранить PDF: ' + err.message);
