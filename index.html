@@ -1837,20 +1837,16 @@
         letter-spacing: .11em;
         text-transform: uppercase;
     }
-    .lineup-roster-tools { display: inline-flex; align-items: center; gap: 7px; }
-    .lineup-roster-tool {
-        width: 26px;
-        height: 26px;
-        display: grid;
-        place-items: center;
-        border-radius: 7px;
-        border: 1px solid #323b4c;
-        background: #1a2230;
-        color: #aeb6c5;
-        font-size: 11px;
-        cursor: pointer;
+    .lineup-roster-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 12px;
+        border-top: 1px solid #262a32;
+        background: #151820;
     }
-    .lineup-roster-tool:hover { border-color: #3b82f6; color: #fff; }
     .lineup-import-body {
         padding: 14px;
         display: grid;
@@ -2053,6 +2049,7 @@
         .lineup-roster-row { grid-template-columns: 55px minmax(130px, 1fr); }
         .lineup-roster-row select,
         .lineup-roster-row input[type="date"] { grid-column: span 1; }
+        .lineup-roster-actions button { flex: 1; }
     }
     .match-sheet-panel {
         display: grid;
@@ -4388,12 +4385,7 @@
                 <section class="stats-block lineup-roster-block">
                     <div class="stats-block-head">
                         <h3 class="stats-block-title">Состав команды</h3>
-                        <div class="lineup-roster-tools">
-                            <button class="lineup-roster-tool" id="btnRosterExport" type="button" title="Сохранить состав в файл"><i class="fa-solid fa-file-arrow-down"></i></button>
-                            <button class="lineup-roster-tool" id="btnRosterImportFile" type="button" title="Загрузить состав из файла"><i class="fa-solid fa-file-arrow-up"></i></button>
-                            <input id="rosterImportInput" type="file" accept="application/json,.json" hidden>
-                            <span class="lineup-count" id="lineupRosterCount">0 игроков</span>
-                        </div>
+                        <span class="lineup-count" id="lineupRosterCount">0 игроков</span>
                     </div>
                     <div class="lineup-roster-list" id="lineupRosterList"></div>
                     <div class="lineup-add-row">
@@ -4411,6 +4403,11 @@
                         </select>
                         <input id="lineupAddBirthDate" type="date" aria-label="Дата рождения">
                         <button class="lineup-primary-btn" id="btnLineupAdd" type="button"><i class="fa-solid fa-plus"></i>Добавить</button>
+                    </div>
+                    <div class="lineup-roster-actions">
+                        <button class="lineup-secondary-btn" id="btnRosterImportFile" type="button"><i class="fa-solid fa-file-arrow-up"></i>Загрузить состав</button>
+                        <button class="lineup-primary-btn" id="btnRosterExport" type="button"><i class="fa-solid fa-file-arrow-down"></i>Сохранить состав</button>
+                        <input id="rosterImportInput" type="file" accept="application/json,.json" hidden>
                     </div>
                 </section>
             </section>
