@@ -4963,6 +4963,7 @@ const PLANNED_STORAGE_KEY = 'benchreview-lite.planned.v1';
 const GOALIE_STORAGE_KEY = 'benchreview-lite.goalie-matches.v1';
 const ROSTER_STORAGE_KEY = 'benchreview-lite.roster.v1';
 const ROSTER_BACKUP_KEY = 'benchreview-lite.roster.backup.v1';
+const ROSTER_REMOVED_KEY = 'benchreview-lite.roster.removed.v1';
 const MATCH_SHEET_STORAGE_KEY = 'benchreview-lite.match-sheet.v1';
 const MATCH_ARCHIVE_STORAGE_KEY = 'benchreview-lite.match-sheet-archive.v1';
 const MATCH_SHEET_SCHEMA_VERSION = 2;
@@ -7447,6 +7448,42 @@ function persistRosterPlayers() {
     } catch (_) {}
 }
 
+let rosterRemovedKeys = [];
+
+function rosterIdentityKey(role, name) {
+    const clean = cleanStatName(name).toLowerCase();
+    return clean ? `${role}|${clean}` : '';
+}
+
+function loadRosterRemovedKeys() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(ROSTER_REMOVED_KEY) || '[]');
+        rosterRemovedKeys = Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string').slice(0, 200) : [];
+    } catch (_) {
+        rosterRemovedKeys = [];
+    }
+}
+
+function persistRosterRemovedKeys() {
+    try {
+        localStorage.setItem(ROSTER_REMOVED_KEY, JSON.stringify(rosterRemovedKeys.slice(-200)));
+    } catch (_) {}
+}
+
+function markRosterPlayerRemoved(player) {
+    const key = rosterIdentityKey(player?.role, player?.name);
+    if (!key || rosterRemovedKeys.includes(key)) return;
+    rosterRemovedKeys.push(key);
+    persistRosterRemovedKeys();
+}
+
+function clearRosterPlayerRemoved(role, name) {
+    const key = rosterIdentityKey(role, name);
+    if (!key || !rosterRemovedKeys.includes(key)) return;
+    rosterRemovedKeys = rosterRemovedKeys.filter(item => item !== key);
+    persistRosterRemovedKeys();
+}
+
 const MATCH_SHEET_EVENTS = {
     faceoffWin: { label: 'Вбрасывание +', field: 'faceoffWins' },
     faceoffLoss: { label: 'Вбрасывание -', field: 'faceoffLosses' },
@@ -8595,6 +8632,7 @@ function combinedGoalieStats(player, aggregateMap = goalieAggregatesByName()) {
 function ensureRosterPlayer(role, name, number = '') {
     const cleanName = cleanStatName(name);
     if (!cleanName) return null;
+    clearRosterPlayerRemoved(role, cleanName);
     let player = rosterPlayers.find(item => item.role === role && cleanStatName(item.name).toLowerCase() === cleanName.toLowerCase());
     if (!player) {
         player = defaultRosterPlayer(role, cleanName, number);
@@ -8612,6 +8650,7 @@ function syncRosterGoaliesFromMatches() {
         (match.goalies || []).forEach(goalie => {
             const name = cleanStatName(goalie.name);
             if (!name) return;
+            if (rosterRemovedKeys.includes(rosterIdentityKey('goalie', name))) return;
             const exists = rosterPlayers.some(player => player.role === 'goalie' && cleanStatName(player.name).toLowerCase() === name.toLowerCase());
             if (!exists) {
                 rosterPlayers.push(defaultRosterPlayer('goalie', name));
@@ -9584,6 +9623,7 @@ async function removeStatsPlayer(id) {
     const confirmed = await showConfirm(`Удалить игрока "${player.name || rosterRoleLabel(player.role)}" из статистики?`, { okLabel: 'Удалить' });
     if (!confirmed) return;
     rosterPlayers = rosterPlayers.filter(item => item.id !== id);
+    markRosterPlayerRemoved(player);
     delete matchSheetState.players[id];
     matchSheetState.events = matchSheetState.events.map(event => {
         const ids = Array.isArray(event.playerIds) && event.playerIds.length ? event.playerIds : [event.playerId];
@@ -9952,7 +9992,9 @@ function addOrUpdateRosterCandidate(candidate) {
         created.leadership = ['captain', 'assistant'].includes(candidate.leadership) ? candidate.leadership : '';
         created.birthDate = birthDate;
         rosterPlayers.push(created);
+        player = created;
     }
+    clearRosterPlayerRemoved(player.role, player.name);
     reconcileRosterReferences();
     return true;
 }
@@ -10012,6 +10054,7 @@ async function importRosterFromFile(file) {
         if (!confirmed) return;
     }
     rosterPlayers = list.slice(0, 120).map(normalizeRosterPlayer);
+    rosterPlayers.forEach(player => clearRosterPlayerRemoved(player.role, player.name));
     reconcileRosterReferences();
     persistRosterPlayers();
     renderRosterManager();
@@ -12144,6 +12187,7 @@ document.getElementById('btnRinkRotate').addEventListener('click', rotateHalfRin
 loadTrainingRecords();
 loadTrainingBlocks();
 loadPlannedTrainings();
+loadRosterRemovedKeys();
 loadRosterPlayers();
 loadMatchSheet();
 loadMatchSheetArchive();
