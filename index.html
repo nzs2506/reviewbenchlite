@@ -2338,8 +2338,14 @@
         border-radius: 10px;
         background: #171a20;
         overflow: auto;
-        overscroll-behavior: contain;
+        overscroll-behavior: auto;
         -webkit-overflow-scrolling: touch;
+        touch-action: pan-x pan-y;
+        cursor: grab;
+    }
+    .match-sheet-wrap.is-panning {
+        cursor: grabbing;
+        user-select: none;
     }
     .match-sheet-table {
         width: 100%;
@@ -2361,10 +2367,10 @@
     }
     body[data-view="stats"][data-stats-page="sheet"] .match-sheet-wrap {
         max-height: none;
-        overflow-x: hidden;
+        overflow: auto;
     }
     body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table {
-        min-width: 0;
+        min-width: 1460px;
         table-layout: fixed;
     }
     body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table th,
@@ -3977,9 +3983,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.11" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.12" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.11</span>
+            <span class="version-tooltip">v0.9.12</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4953,6 +4959,7 @@ let matchSheetArchiveExpandedId = '';
 let matchEventEditingId = '';
 let matchSheetNativeFullscreen = false;
 let matchSheetPointerDrag = null;
+let matchSheetPanSuppressClick = false;
 let lineupCandidates = [];
 let lineupImportBusy = false;
 const LIVE_PERIOD_SECONDS = 20 * 60;
@@ -7757,6 +7764,67 @@ function finishMatchSheetPointerDrag(event, commit = true) {
     try { drag.handle.releasePointerCapture(event.pointerId); } catch (_) {}
     clearMatchSheetDragMarkers();
     if (commit && drag.targetId) reorderMatchSheetPlayers(drag.draggedId, drag.targetId, drag.placeAfter);
+}
+
+function setupDragPanScroll(scroller, verticalFallback = null) {
+    if (!scroller) return;
+    let pan = null;
+    const interactiveSelector = 'button, input, select, textarea, a, [data-match-drag-handle], [data-match-rating]';
+    scroller.addEventListener('pointerdown', event => {
+        if (!event.isPrimary || event.button > 0 || event.target.closest(interactiveSelector)) return;
+        pan = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            left: scroller.scrollLeft,
+            top: scroller.scrollTop,
+            fallbackTop: verticalFallback ? verticalFallback.scrollTop : 0,
+            moved: false
+        };
+        try { scroller.setPointerCapture(event.pointerId); } catch (_) {}
+    });
+    scroller.addEventListener('pointermove', event => {
+        if (!pan || event.pointerId !== pan.pointerId) return;
+        const dx = event.clientX - pan.startX;
+        const dy = event.clientY - pan.startY;
+        if (!pan.moved && Math.hypot(dx, dy) < 6) return;
+        pan.moved = true;
+        matchSheetPanSuppressClick = true;
+        scroller.classList.add('is-panning');
+        event.preventDefault();
+        const maxY = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+        scroller.scrollLeft = pan.left - dx;
+        if (maxY > 1) scroller.scrollTop = pan.top - dy;
+        else if (verticalFallback) verticalFallback.scrollTop = pan.fallbackTop - dy;
+    }, { passive: false });
+    const endPan = event => {
+        if (!pan || event.pointerId !== pan.pointerId) return;
+        try { scroller.releasePointerCapture(event.pointerId); } catch (_) {}
+        scroller.classList.remove('is-panning');
+        const moved = pan.moved;
+        pan = null;
+        if (moved) window.setTimeout(() => { matchSheetPanSuppressClick = false; }, 80);
+    };
+    scroller.addEventListener('pointerup', endPan);
+    scroller.addEventListener('pointercancel', endPan);
+    scroller.addEventListener('lostpointercapture', () => {
+        scroller.classList.remove('is-panning');
+        pan = null;
+    });
+    scroller.addEventListener('wheel', event => {
+        if (event.target.closest('input, select, textarea')) return;
+        const maxY = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+        const maxX = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+        if (event.shiftKey && maxX > 1 && Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+            scroller.scrollLeft += event.deltaY;
+            event.preventDefault();
+            return;
+        }
+        if (maxY <= 1 && verticalFallback && Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+            verticalFallback.scrollTop += event.deltaY;
+            event.preventDefault();
+        }
+    }, { passive: false });
 }
 
 function matchSheetCellValue(value) {
@@ -11485,6 +11553,12 @@ document.getElementById('btnMatchSheetRemoveSelected').addEventListener('click',
     removeMatchSheetPlayers([...matchSheetSelectedPlayerIds]);
 });
 document.getElementById('matchSheetTable').addEventListener('click', e => {
+    if (matchSheetPanSuppressClick) {
+        e.preventDefault();
+        e.stopPropagation();
+        matchSheetPanSuppressClick = false;
+        return;
+    }
     const remove = e.target.closest('[data-match-sheet-remove-player]');
     if (remove) {
         e.stopPropagation();
@@ -11503,6 +11577,7 @@ document.getElementById('matchSheetTable').addEventListener('pointerdown', start
 document.getElementById('matchSheetTable').addEventListener('pointermove', moveMatchSheetPointerDrag);
 document.getElementById('matchSheetTable').addEventListener('pointerup', e => finishMatchSheetPointerDrag(e, true));
 document.getElementById('matchSheetTable').addEventListener('pointercancel', e => finishMatchSheetPointerDrag(e, false));
+setupDragPanScroll(document.getElementById('matchSheetTable'), document.getElementById('statsView'));
 document.getElementById('matchSheetTable').addEventListener('input', e => {
     const input = e.target.closest('[data-match-rating]');
     if (!input) return;
