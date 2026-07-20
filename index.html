@@ -1837,6 +1837,20 @@
         letter-spacing: .11em;
         text-transform: uppercase;
     }
+    .lineup-roster-tools { display: inline-flex; align-items: center; gap: 7px; }
+    .lineup-roster-tool {
+        width: 26px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        border-radius: 7px;
+        border: 1px solid #323b4c;
+        background: #1a2230;
+        color: #aeb6c5;
+        font-size: 11px;
+        cursor: pointer;
+    }
+    .lineup-roster-tool:hover { border-color: #3b82f6; color: #fff; }
     .lineup-import-body {
         padding: 14px;
         display: grid;
@@ -4346,7 +4360,12 @@
                 <section class="stats-block lineup-roster-block">
                     <div class="stats-block-head">
                         <h3 class="stats-block-title">Состав команды</h3>
-                        <span class="lineup-count" id="lineupRosterCount">0 игроков</span>
+                        <div class="lineup-roster-tools">
+                            <button class="lineup-roster-tool" id="btnRosterExport" type="button" title="Сохранить состав в файл"><i class="fa-solid fa-file-arrow-down"></i></button>
+                            <button class="lineup-roster-tool" id="btnRosterImportFile" type="button" title="Загрузить состав из файла"><i class="fa-solid fa-file-arrow-up"></i></button>
+                            <input id="rosterImportInput" type="file" accept="application/json,.json" hidden>
+                            <span class="lineup-count" id="lineupRosterCount">0 игроков</span>
+                        </div>
                     </div>
                     <div class="lineup-roster-list" id="lineupRosterList"></div>
                     <div class="lineup-add-row">
@@ -4918,6 +4937,7 @@ const BLOCK_STORAGE_KEY = 'benchreview-lite.blocks.v1';
 const PLANNED_STORAGE_KEY = 'benchreview-lite.planned.v1';
 const GOALIE_STORAGE_KEY = 'benchreview-lite.goalie-matches.v1';
 const ROSTER_STORAGE_KEY = 'benchreview-lite.roster.v1';
+const ROSTER_BACKUP_KEY = 'benchreview-lite.roster.backup.v1';
 const MATCH_SHEET_STORAGE_KEY = 'benchreview-lite.match-sheet.v1';
 const MATCH_ARCHIVE_STORAGE_KEY = 'benchreview-lite.match-sheet-archive.v1';
 const MATCH_SHEET_SCHEMA_VERSION = 2;
@@ -7356,20 +7376,49 @@ function normalizeRosterPlayer(player) {
     return Object.assign(defaultRosterPlayer(role), player || {}, { role, leadership, birthDate });
 }
 
-function loadRosterPlayers() {
+function parseStoredRoster(raw) {
+    if (!raw) return null;
     try {
-        const raw = localStorage.getItem(ROSTER_STORAGE_KEY);
-        rosterPlayers = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(rosterPlayers)) rosterPlayers = [];
-        rosterPlayers = rosterPlayers.map(normalizeRosterPlayer);
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.map(normalizeRosterPlayer) : null;
     } catch (_) {
-        rosterPlayers = [];
+        return null;
     }
+}
+
+function archivedRosterFallback() {
+    try {
+        const raw = localStorage.getItem(MATCH_ARCHIVE_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(parsed)) return [];
+        const record = parsed.find(item => Array.isArray(item?.roster) && item.roster.length);
+        return record ? record.roster.map(normalizeRosterPlayer) : [];
+    } catch (_) {
+        return [];
+    }
+}
+
+function loadRosterPlayers() {
+    let stored = null;
+    let backup = null;
+    try {
+        stored = parseStoredRoster(localStorage.getItem(ROSTER_STORAGE_KEY));
+        backup = parseStoredRoster(localStorage.getItem(ROSTER_BACKUP_KEY));
+    } catch (_) {}
+    rosterPlayers = stored ? stored : backup?.length ? backup : archivedRosterFallback();
+    if (!stored && rosterPlayers.length) persistRosterPlayers();
 }
 
 function persistRosterPlayers() {
     try {
-        localStorage.setItem(ROSTER_STORAGE_KEY, JSON.stringify(rosterPlayers.slice(0, 120)));
+        const payload = JSON.stringify(rosterPlayers.slice(0, 120));
+        if (rosterPlayers.length) {
+            localStorage.setItem(ROSTER_BACKUP_KEY, payload);
+        } else {
+            const previous = parseStoredRoster(localStorage.getItem(ROSTER_STORAGE_KEY));
+            if (previous?.length) localStorage.setItem(ROSTER_BACKUP_KEY, JSON.stringify(previous));
+        }
+        localStorage.setItem(ROSTER_STORAGE_KEY, payload);
     } catch (_) {}
 }
 
@@ -9825,6 +9874,54 @@ function importLineupCandidates() {
     setLineupProgress(`Добавлено в состав: ${imported}`, 1, true);
 }
 
+function exportRosterToFile() {
+    if (!rosterPlayers.length) {
+        setLineupProgress('Состав пуст — нечего сохранять', 0, true);
+        return;
+    }
+    const payload = {
+        app: 'benchreview-lite',
+        kind: 'roster',
+        savedAt: new Date().toISOString(),
+        roster: rosterPlayers.slice(0, 120)
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `sostav-${todayInputValue()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(link.href), 4000);
+}
+
+async function importRosterFromFile(file) {
+    if (!file) return;
+    let list = null;
+    try {
+        const parsed = JSON.parse(await file.text());
+        list = Array.isArray(parsed) ? parsed : parsed?.roster;
+    } catch (_) {}
+    if (!Array.isArray(list) || !list.length) {
+        setLineupProgress('Не удалось прочитать файл состава', 0, true);
+        return;
+    }
+    if (rosterPlayers.length) {
+        const confirmed = await showConfirm(`Текущий состав (${rosterPlayers.length}) будет заменен составом из файла (${list.length}).`, {
+            title: 'Загрузить состав',
+            okLabel: 'Заменить'
+        });
+        if (!confirmed) return;
+    }
+    rosterPlayers = list.slice(0, 120).map(normalizeRosterPlayer);
+    reconcileRosterReferences();
+    persistRosterPlayers();
+    renderRosterManager();
+    renderStatsRoster();
+    renderGoalieRosterSelects();
+    setLineupProgress(`Состав загружен из файла: ${rosterPlayers.length}`, 1, true);
+}
+
 function addManualLineupPlayer() {
     const number = document.getElementById('lineupAddNumber');
     const name = document.getElementById('lineupAddName');
@@ -11737,6 +11834,12 @@ lineupDropZone.addEventListener('drop', e => processLineupFile(e.dataTransfer?.f
 document.getElementById('btnLineupParseText').addEventListener('click', parseLineupRawText);
 document.getElementById('btnLineupImport').addEventListener('click', importLineupCandidates);
 document.getElementById('btnLineupAdd').addEventListener('click', addManualLineupPlayer);
+document.getElementById('btnRosterExport').addEventListener('click', exportRosterToFile);
+document.getElementById('btnRosterImportFile').addEventListener('click', () => document.getElementById('rosterImportInput').click());
+document.getElementById('rosterImportInput').addEventListener('change', e => {
+    importRosterFromFile(e.target.files?.[0]);
+    e.target.value = '';
+});
 document.getElementById('lineupAddName').addEventListener('keydown', e => {
     if (e.key === 'Enter') addManualLineupPlayer();
 });
