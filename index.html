@@ -2212,7 +2212,7 @@
     }
     .match-sheet-roster-row {
         display: grid;
-        grid-template-columns: 58px minmax(120px, 1fr) 120px 32px;
+        grid-template-columns: 58px minmax(120px, 1fr) 120px 74px 32px;
         gap: 6px;
         align-items: center;
     }
@@ -2226,6 +2226,29 @@
         cursor: pointer;
     }
     .match-sheet-roster-remove:hover { border-color: #ef4444; background: #2a171b; }
+    .match-sheet-roster-sheet-toggle {
+        min-height: 32px;
+        border: 1px solid #343944;
+        border-radius: 7px;
+        background: #11151b;
+        color: #9aa3b2;
+        padding: 0 8px;
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        cursor: pointer;
+    }
+    .match-sheet-roster-sheet-toggle.in-sheet {
+        border-color: rgba(34,197,94,.38);
+        color: #bbf7d0;
+        background: rgba(34,197,94,.08);
+    }
+    .match-sheet-roster-sheet-toggle.out-sheet {
+        border-color: rgba(239,68,68,.38);
+        color: #fecaca;
+        background: rgba(239,68,68,.08);
+    }
+    .match-sheet-roster-sheet-toggle:hover { border-color: #3b82f6; color: #fff; }
     .match-sheet-entry {
         border: 1px solid #262a32;
         border-radius: 10px;
@@ -2247,6 +2270,26 @@
         font-weight: 800;
     }
     .match-sheet-selection strong { color: #fff; }
+    .match-sheet-selection-tools {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .match-sheet-remove-selected {
+        min-height: 28px;
+        border: 1px solid #3a3035;
+        border-radius: 7px;
+        background: #181418;
+        color: #fecaca;
+        padding: 0 10px;
+        font-size: 10px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+    .match-sheet-remove-selected:hover:not(:disabled) { border-color: #ef4444; background: #2a171b; }
+    .match-sheet-remove-selected:disabled { opacity: .38; cursor: default; }
     .match-sheet-actions {
         display: grid;
         grid-template-columns: repeat(8, minmax(112px, 1fr));
@@ -2391,7 +2434,7 @@
     }
     .match-sheet-player-cell-inner {
         display: grid;
-        grid-template-columns: 18px minmax(0, 1fr);
+        grid-template-columns: 18px minmax(0, 1fr) 24px;
         align-items: center;
         gap: 7px;
     }
@@ -2429,6 +2472,18 @@
     }
     .match-sheet-drag-handle:hover { color: #dbe7f8; }
     .match-sheet-drag-handle:active { cursor: grabbing; }
+    .match-sheet-row-remove {
+        width: 24px;
+        height: 28px;
+        border: 1px solid #343944;
+        border-radius: 6px;
+        background: #11151b;
+        color: #7f8794;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+    }
+    .match-sheet-row-remove:hover { border-color: #ef4444; color: #fecaca; background: #2a171b; }
     .match-sheet-table tbody tr.dragging { opacity: .45; }
     .match-sheet-table tbody tr.drag-over-before td { box-shadow: inset 0 2px #3b82f6; }
     .match-sheet-table tbody tr.drag-over-after td { box-shadow: inset 0 -2px #3b82f6; }
@@ -2671,7 +2726,7 @@
         .match-sheet-roster-add { grid-template-columns: 64px minmax(0, 1fr); }
         .match-sheet-roster-add select,
         .match-sheet-roster-add button { grid-column: span 1; }
-        .match-sheet-roster-row { grid-template-columns: 52px minmax(100px, 1fr) 32px; }
+        .match-sheet-roster-row { grid-template-columns: 52px minmax(100px, 1fr) 74px 32px; }
         .match-sheet-roster-row select { grid-column: 1 / 3; }
         .match-archive-card-head { grid-template-columns: 1fr; }
         .match-archive-card-actions { flex-wrap: wrap; }
@@ -3922,9 +3977,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.10" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.11" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.10</span>
+            <span class="version-tooltip">v0.9.11</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4329,7 +4384,10 @@
                 <div class="match-sheet-entry">
                     <div class="match-sheet-entry-head">
                         <div class="match-sheet-selection" id="matchSheetSelection">Сначала выберите игрока в таблице</div>
-                        <button class="match-sheet-undo" id="btnMatchSheetUndo" type="button" disabled><i class="fa-solid fa-rotate-left"></i>Отменить последнее</button>
+                        <div class="match-sheet-selection-tools">
+                            <button class="match-sheet-remove-selected" id="btnMatchSheetRemoveSelected" type="button" disabled><i class="fa-regular fa-trash-can"></i> Убрать выбранных</button>
+                            <button class="match-sheet-undo" id="btnMatchSheetUndo" type="button" disabled><i class="fa-solid fa-rotate-left"></i>Отменить последнее</button>
+                        </div>
                     </div>
                     <div class="match-sheet-actions" id="matchSheetActions">
                         <button class="match-sheet-action" type="button" data-match-event="faceoffWin"><i class="fa-solid fa-plus"></i><span>Вбрасывание выиграно</span></button>
@@ -4889,7 +4947,7 @@ let statsPage = 'roster';
 let rosterPlayers = [];
 let matchSheetPeriod = 1;
 let matchSheetSelectedPlayerIds = new Set();
-let matchSheetState = { version: MATCH_SHEET_SCHEMA_VERSION, archiveId: '', opponent: '', date: '', players: {}, events: [], order: [], sortDirection: 'manual' };
+let matchSheetState = { version: MATCH_SHEET_SCHEMA_VERSION, archiveId: '', opponent: '', date: '', players: {}, events: [], order: [], excludedPlayerIds: [], sortDirection: 'manual' };
 let matchSheetArchive = [];
 let matchSheetArchiveExpandedId = '';
 let matchEventEditingId = '';
@@ -7351,6 +7409,7 @@ function loadMatchSheet() {
             players: {},
             events: Array.isArray(parsed?.events) ? parsed.events.slice(-150) : [],
             order: Array.isArray(parsed?.order) ? parsed.order.map(String) : [],
+            excludedPlayerIds: Array.isArray(parsed?.excludedPlayerIds) ? parsed.excludedPlayerIds.map(String) : [],
             sortDirection: ['asc', 'desc'].includes(parsed?.sortDirection) ? parsed.sortDirection : 'manual'
         };
         Object.entries(parsed?.players || {}).forEach(([id, value]) => {
@@ -7368,7 +7427,7 @@ function loadMatchSheet() {
             persistMatchSheet();
         }
     } catch (_) {
-        matchSheetState = { version: MATCH_SHEET_SCHEMA_VERSION, archiveId: '', opponent: '', date: '', players: {}, events: [], order: [], sortDirection: 'manual' };
+        matchSheetState = { version: MATCH_SHEET_SCHEMA_VERSION, archiveId: '', opponent: '', date: '', players: {}, events: [], order: [], excludedPlayerIds: [], sortDirection: 'manual' };
     }
     if (!matchSheetState.date) matchSheetState.date = todayInputValue();
 }
@@ -7400,6 +7459,7 @@ function normalizeMatchArchiveRecord(value) {
             players,
             events: Array.isArray(sheet.events) ? sheet.events.slice(-150) : [],
             order: Array.isArray(sheet.order) ? sheet.order.map(String) : [],
+            excludedPlayerIds: Array.isArray(sheet.excludedPlayerIds) ? sheet.excludedPlayerIds.map(String) : [],
             sortDirection: ['asc', 'desc'].includes(sheet.sortDirection) ? sheet.sortDirection : 'manual'
         }
     };
@@ -7464,6 +7524,7 @@ function saveMatchSheetToArchive() {
         players: {},
         events: [],
         order: preservedOrder,
+        excludedPlayerIds: [],
         sortDirection: preservedSortDirection
     };
     matchSheetSelectedPlayerIds.clear();
@@ -7525,8 +7586,17 @@ function matchSheetPlayerState(id) {
     return matchSheetState.players[id];
 }
 
+function matchSheetExcludedSet() {
+    return new Set(Array.isArray(matchSheetState.excludedPlayerIds) ? matchSheetState.excludedPlayerIds.map(String) : []);
+}
+
+function allMatchSheetSkaters() {
+    return rosterPlayers.filter(player => player.role !== 'goalie' && (cleanStatName(player.name) || String(player.number || '').trim()));
+}
+
 function matchSheetSkaters() {
-    const players = rosterPlayers.filter(player => player.role !== 'goalie' && (cleanStatName(player.name) || String(player.number || '').trim()));
+    const excluded = matchSheetExcludedSet();
+    const players = allMatchSheetSkaters().filter(player => !excluded.has(player.id));
     if (matchSheetState.sortDirection === 'asc') return players.sort(rosterSort);
     if (matchSheetState.sortDirection === 'desc') return players.sort((a, b) => rosterSort(b, a));
     const order = Array.isArray(matchSheetState.order) ? matchSheetState.order : [];
@@ -7536,6 +7606,67 @@ function matchSheetSkaters() {
         const bi = rank.has(b.id) ? rank.get(b.id) : Number.MAX_SAFE_INTEGER;
         return ai === bi ? rosterSort(a, b) : ai - bi;
     });
+}
+
+function syncMatchSheetRosterPresence() {
+    const allIds = new Set(allMatchSheetSkaters().map(player => player.id));
+    matchSheetState.excludedPlayerIds = [...matchSheetExcludedSet()].filter(id => allIds.has(id));
+    matchSheetSelectedPlayerIds = new Set([...matchSheetSelectedPlayerIds].filter(id => allIds.has(id) && !matchSheetExcludedSet().has(id)));
+}
+
+function removePlayerFromMatchSheetEvents(id) {
+    matchSheetState.events = matchSheetState.events.filter(event => {
+        const ids = matchSheetEventPlayerIds(event);
+        if (!ids.includes(id)) return true;
+        applyMatchSheetEvent(event, -1);
+        const nextIds = ids.filter(playerId => playerId !== id);
+        if (!nextIds.length) return false;
+        event.playerIds = nextIds;
+        event.playerId = nextIds[0];
+        applyMatchSheetEvent(event, 1);
+        return true;
+    });
+    delete matchSheetState.players[id];
+}
+
+async function removeMatchSheetPlayers(ids) {
+    const cleanIds = [...new Set((ids || []).map(String).filter(Boolean))];
+    if (!cleanIds.length) return;
+    const names = cleanIds
+        .map(id => rosterPlayers.find(player => player.id === id))
+        .filter(Boolean)
+        .map(player => player.number ? `№${player.number}` : player.name || rosterRoleLabel(player.role));
+    const confirmed = await showConfirm(
+        cleanIds.length === 1
+            ? `Убрать ${names[0] || 'игрока'} из текущего матчевого листа?`
+            : `Убрать выбранных игроков из текущего матчевого листа: ${names.join(', ')}?`,
+        { title: 'Убрать из листа', okLabel: 'Убрать' }
+    );
+    if (!confirmed) return;
+    const excluded = matchSheetExcludedSet();
+    cleanIds.forEach(id => {
+        excluded.add(id);
+        matchSheetSelectedPlayerIds.delete(id);
+        removePlayerFromMatchSheetEvents(id);
+    });
+    matchSheetState.excludedPlayerIds = [...excluded];
+    matchSheetState.order = (matchSheetState.order || []).filter(id => !excluded.has(id));
+    persistMatchSheet();
+    renderMatchSheet();
+}
+
+function setMatchSheetPlayerPresence(id, inSheet) {
+    if (!id) return;
+    const excluded = matchSheetExcludedSet();
+    if (inSheet) excluded.delete(id);
+    else {
+        excluded.add(id);
+        matchSheetSelectedPlayerIds.delete(id);
+        removePlayerFromMatchSheetEvents(id);
+    }
+    matchSheetState.excludedPlayerIds = [...excluded];
+    persistMatchSheet();
+    renderMatchSheet();
 }
 
 function matchSheetPlusMinus(state) {
@@ -7672,6 +7803,7 @@ function matchSheetHeader(table) {
 }
 
 function renderMatchSheet() {
+    syncMatchSheetRosterPresence();
     const opponent = document.getElementById('matchSheetOpponent');
     const date = document.getElementById('matchSheetDate');
     if (opponent && opponent.value !== matchSheetState.opponent) opponent.value = matchSheetState.opponent;
@@ -7705,11 +7837,20 @@ function renderMatchSheet() {
     });
     const undo = document.getElementById('btnMatchSheetUndo');
     if (undo) undo.disabled = !matchSheetState.events.length;
+    const removeSelected = document.getElementById('btnMatchSheetRemoveSelected');
+    if (removeSelected) {
+        removeSelected.disabled = !selectedPlayers.length;
+        removeSelected.innerHTML = selectedPlayers.length
+            ? `<i class="fa-regular fa-trash-can"></i> Убрать (${selectedPlayers.length})`
+            : '<i class="fa-regular fa-trash-can"></i> Убрать выбранных';
+    }
 
     const target = document.getElementById('matchSheetTable');
     target.innerHTML = '';
     if (!players.length) {
-        target.innerHTML = '<div class="match-sheet-empty">Добавьте защитников и нападающих на странице «Статистика». Они автоматически появятся в матчевом листе.</div>';
+        target.innerHTML = allMatchSheetSkaters().length
+            ? '<div class="match-sheet-empty">Все полевые игроки убраны из текущего листа. Откройте «Состав» и верните нужных игроков в лист.</div>'
+            : '<div class="match-sheet-empty">Добавьте защитников и нападающих на странице «Статистика». Они автоматически появятся в матчевом листе.</div>';
     } else {
         const table = document.createElement('table');
         table.className = 'match-sheet-table';
@@ -7745,7 +7886,13 @@ function renderMatchSheet() {
             const name = document.createElement('span');
             name.textContent = player.name || rosterRoleLabel(player.role);
             identity.append(selectbox, number, name);
-            identityWrap.append(dragHandle, identity);
+            const rowRemove = document.createElement('button');
+            rowRemove.type = 'button';
+            rowRemove.className = 'match-sheet-row-remove';
+            rowRemove.title = 'Убрать из текущего листа';
+            rowRemove.dataset.matchSheetRemovePlayer = player.id;
+            rowRemove.innerHTML = '<i class="fa-regular fa-trash-can"></i>';
+            identityWrap.append(dragHandle, identity, rowRemove);
             identityCell.appendChild(identityWrap);
             row.appendChild(identityCell);
 
@@ -8028,13 +8175,23 @@ function renderMatchSheetRosterManager() {
             role.appendChild(option);
         });
         role.value = player.role;
+        const sheetToggle = document.createElement('button');
+        const inSheet = !matchSheetExcludedSet().has(player.id) || player.role === 'goalie';
+        sheetToggle.type = 'button';
+        sheetToggle.className = `match-sheet-roster-sheet-toggle ${inSheet ? 'in-sheet' : 'out-sheet'}`;
+        sheetToggle.dataset.matchRosterSheetToggle = player.id;
+        sheetToggle.disabled = player.role === 'goalie';
+        sheetToggle.textContent = player.role === 'goalie' ? 'Вратарь' : (inSheet ? 'В листе' : 'Вернуть');
+        sheetToggle.title = player.role === 'goalie'
+            ? 'Вратари не отображаются в таблице полевых игроков'
+            : (inSheet ? 'Убрать из текущего матчевого листа' : 'Вернуть в текущий матчевый лист');
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.className = 'match-sheet-roster-remove';
         remove.title = 'Удалить из общего пула';
         remove.dataset.matchRosterRemove = player.id;
         remove.innerHTML = '<i class="fa-regular fa-trash-can"></i>';
-        row.append(number, name, role, remove);
+        row.append(number, name, role, sheetToggle, remove);
         target.appendChild(row);
     });
 }
@@ -8124,6 +8281,7 @@ async function resetMatchSheet() {
         players: {},
         events: [],
         order: preservedOrder,
+        excludedPlayerIds: [],
         sortDirection: preservedSortDirection
     };
     matchSheetSelectedPlayerIds.clear();
@@ -8332,6 +8490,7 @@ function reconcileRosterReferences() {
     liveShiftStartedIds = new Set([...liveShiftStartedIds].filter(id => validIds.has(id)));
     matchSheetSelectedPlayerIds = new Set([...matchSheetSelectedPlayerIds].filter(id => validIds.has(id)));
     matchSheetState.order = (matchSheetState.order || []).filter(id => validIds.has(id));
+    matchSheetState.excludedPlayerIds = (matchSheetState.excludedPlayerIds || []).filter(id => validIds.has(id));
     [...liveSessionStats.keys()].forEach(id => {
         if (!validIds.has(id)) liveSessionStats.delete(id);
     });
@@ -11322,7 +11481,16 @@ document.getElementById('matchSheetActions').addEventListener('click', e => {
     const action = e.target.closest('[data-match-event]');
     if (action) recordMatchSheetEvent(action.dataset.matchEvent);
 });
+document.getElementById('btnMatchSheetRemoveSelected').addEventListener('click', () => {
+    removeMatchSheetPlayers([...matchSheetSelectedPlayerIds]);
+});
 document.getElementById('matchSheetTable').addEventListener('click', e => {
+    const remove = e.target.closest('[data-match-sheet-remove-player]');
+    if (remove) {
+        e.stopPropagation();
+        removeMatchSheetPlayers([remove.dataset.matchSheetRemovePlayer]);
+        return;
+    }
     if (e.target.closest('[data-match-rating], [data-match-drag-handle]')) return;
     const row = e.target.closest('[data-match-player]');
     if (!row) return;
@@ -11376,6 +11544,11 @@ document.getElementById('matchSheetRosterList').addEventListener('change', e => 
     if (input) updateMatchSheetRosterPlayer(input);
 });
 document.getElementById('matchSheetRosterList').addEventListener('click', async e => {
+    const toggle = e.target.closest('[data-match-roster-sheet-toggle]');
+    if (toggle && !toggle.disabled) {
+        setMatchSheetPlayerPresence(toggle.dataset.matchRosterSheetToggle, toggle.classList.contains('out-sheet'));
+        return;
+    }
     const remove = e.target.closest('[data-match-roster-remove]');
     if (remove) await removeStatsPlayer(remove.dataset.matchRosterRemove);
 });
