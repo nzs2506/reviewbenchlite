@@ -2386,7 +2386,7 @@
         overflow: auto;
     }
     body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table {
-        min-width: 1460px;
+        min-width: calc(1220px + var(--ms-player-col, 240px));
         table-layout: fixed;
     }
     body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table th,
@@ -2396,8 +2396,34 @@
     }
     body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table .match-sheet-player-head,
     body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table .match-sheet-player-cell {
-        width: 240px;
-        min-width: 240px;
+        width: var(--ms-player-col, 240px);
+        min-width: var(--ms-player-col, 240px);
+        max-width: var(--ms-player-col, 240px);
+    }
+    .match-sheet-col-resizer {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 16px;
+        height: 100%;
+        cursor: col-resize;
+        touch-action: none;
+        z-index: 6;
+        display: grid;
+        place-items: center;
+    }
+    .match-sheet-col-resizer::before {
+        content: '';
+        width: 3px;
+        height: 58%;
+        border-radius: 2px;
+        background: #3a4250;
+    }
+    .match-sheet-col-resizer:hover::before,
+    body.match-sheet-col-resizing .match-sheet-col-resizer::before { background: #3b82f6; }
+    body.match-sheet-col-resizing {
+        cursor: col-resize;
+        user-select: none;
     }
     body[data-view="stats"][data-stats-page="sheet"] .match-sheet-rating {
         width: calc(100% - 4px);
@@ -2776,6 +2802,8 @@
         .match-sheet-rating { width: 52px; height: 34px; }
         .match-sheet-log-edit,
         .match-sheet-roster-remove { width: 38px; height: 38px; }
+        .match-sheet-col-resizer { width: 30px; }
+        .match-sheet-col-resizer::before { width: 4px; }
     }
     .training-controls {
         display: flex;
@@ -7886,13 +7914,86 @@ function matchSheetCellValue(value) {
     return span;
 }
 
-function matchSheetHeader(table) {
+const MATCH_SHEET_PLAYER_COL_KEY = 'benchreview-lite.match-sheet-player-col.v1';
+const MATCH_SHEET_PLAYER_COL_MIN = 150;
+const MATCH_SHEET_PLAYER_COL_MAX = 560;
+let matchSheetColResize = null;
+
+function storedMatchSheetPlayerColWidth() {
+    let raw = 0;
+    try {
+        raw = Number(localStorage.getItem(MATCH_SHEET_PLAYER_COL_KEY));
+    } catch (_) {}
+    if (!Number.isFinite(raw) || raw <= 0) return 0;
+    return Math.max(MATCH_SHEET_PLAYER_COL_MIN, Math.min(MATCH_SHEET_PLAYER_COL_MAX, Math.round(raw)));
+}
+
+function applyMatchSheetPlayerColWidth(width) {
+    const panel = document.getElementById('statsSheetPanel');
+    if (!panel) return;
+    if (width) panel.style.setProperty('--ms-player-col', `${width}px`);
+    else panel.style.removeProperty('--ms-player-col');
+}
+
+function startMatchSheetColResize(event) {
+    const head = event.currentTarget.closest('th');
+    if (!head) return;
+    event.preventDefault();
+    event.stopPropagation();
+    matchSheetColResize = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startWidth: head.getBoundingClientRect().width,
+        width: 0
+    };
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch (_) {}
+    document.body.classList.add('match-sheet-col-resizing');
+}
+
+function moveMatchSheetColResize(event) {
+    if (!matchSheetColResize || event.pointerId !== matchSheetColResize.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const width = Math.max(MATCH_SHEET_PLAYER_COL_MIN, Math.min(MATCH_SHEET_PLAYER_COL_MAX,
+        Math.round(matchSheetColResize.startWidth + event.clientX - matchSheetColResize.startX)));
+    matchSheetColResize.width = width;
+    applyMatchSheetPlayerColWidth(width);
+}
+
+function finishMatchSheetColResize(event) {
+    if (!matchSheetColResize || event.pointerId !== matchSheetColResize.pointerId) return;
+    event.stopPropagation();
+    if (matchSheetColResize.width) {
+        try { localStorage.setItem(MATCH_SHEET_PLAYER_COL_KEY, String(matchSheetColResize.width)); } catch (_) {}
+    }
+    matchSheetColResize = null;
+    document.body.classList.remove('match-sheet-col-resizing');
+}
+
+function resetMatchSheetColWidth() {
+    try { localStorage.removeItem(MATCH_SHEET_PLAYER_COL_KEY); } catch (_) {}
+    applyMatchSheetPlayerColWidth(0);
+}
+
+function matchSheetHeader(table, options = {}) {
     const thead = document.createElement('thead');
     const groups = document.createElement('tr');
     const player = document.createElement('th');
     player.className = 'match-sheet-player-head';
     player.rowSpan = 2;
     player.textContent = '№ / ФИО';
+    if (options.resizable) {
+        const resizer = document.createElement('span');
+        resizer.className = 'match-sheet-col-resizer';
+        resizer.title = 'Потяните, чтобы изменить ширину. Двойной щелчок — сбросить.';
+        resizer.setAttribute('aria-hidden', 'true');
+        resizer.addEventListener('pointerdown', startMatchSheetColResize);
+        resizer.addEventListener('pointermove', moveMatchSheetColResize);
+        resizer.addEventListener('pointerup', finishMatchSheetColResize);
+        resizer.addEventListener('pointercancel', finishMatchSheetColResize);
+        resizer.addEventListener('dblclick', resetMatchSheetColWidth);
+        player.appendChild(resizer);
+    }
     groups.appendChild(player);
     [
         ['Вбрасывания', 3], ['Броски', 3], ['Забили', 3], ['Пропустили', 3],
@@ -7973,7 +8074,7 @@ function renderMatchSheet() {
     } else {
         const table = document.createElement('table');
         table.className = 'match-sheet-table';
-        matchSheetHeader(table);
+        matchSheetHeader(table, { resizable: true });
         const tbody = document.createElement('tbody');
         players.forEach(player => {
             const state = matchSheetPlayerState(player.id);
@@ -12049,6 +12150,7 @@ loadPlannedTrainings();
 loadRosterPlayers();
 loadMatchSheet();
 loadMatchSheetArchive();
+applyMatchSheetPlayerColWidth(storedMatchSheetPlayerColWidth());
 loadGoalieMatches();
 syncRosterGoaliesFromMatches();
 document.getElementById('goalieMatchDate').value = todayInputValue();
