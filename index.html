@@ -4024,9 +4024,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.12" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.13" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.12</span>
+            <span class="version-tooltip">v0.9.13</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5778,6 +5778,62 @@ function nearestAttachedPuck(player, pts, pucks, usedPucks) {
     return best?.puck || null;
 }
 
+function closestPointOnSegment(point, a, b) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy;
+    if (!len2) return { point: { x: a.x, y: a.y }, t: 0, distance: distance(point, a) };
+    const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / len2));
+    const projected = { x: a.x + dx * t, y: a.y + dy * t };
+    return { point: projected, t, distance: distance(point, projected) };
+}
+
+function puckPickupOnPath(pts, pucks, usedPucks, threshold = 34) {
+    if (!Array.isArray(pts) || pts.length < 2) return null;
+    let best = null;
+    pucks.forEach(puck => {
+        if (usedPucks.has(puck)) return;
+        const puckCenter = objectCenter(puck);
+        let travelled = 0;
+        for (let i = 1; i < pts.length; i++) {
+            const a = pts[i - 1];
+            const b = pts[i];
+            const segmentLen = distance(a, b);
+            const closest = closestPointOnSegment(puckCenter, a, b);
+            const along = travelled + segmentLen * closest.t;
+            if (closest.distance <= threshold && along > 6 && (!best || along < best.along || (Math.abs(along - best.along) < 0.001 && closest.distance < best.distance))) {
+                best = { puck, point: closest.point, index: i, along, distance: closest.distance };
+            }
+            travelled += segmentLen;
+        }
+    });
+    return best;
+}
+
+function nearestFreePuckNearPoint(point, pucks, usedPucks, threshold = 42) {
+    let best = null;
+    pucks.forEach(puck => {
+        if (usedPucks.has(puck)) return;
+        const d = distance(objectCenter(puck), point);
+        if (d <= threshold && (!best || d < best.distance)) best = { puck, distance: d };
+    });
+    return best?.puck || null;
+}
+
+function splitPathAtPickup(pts, pickup) {
+    const point = pickup?.point;
+    if (!point || !Array.isArray(pts) || pts.length < 2) return null;
+    const index = Math.max(1, Math.min(pts.length - 1, pickup.index || 1));
+    const before = pts.slice(0, index);
+    const prev = before[before.length - 1];
+    if (!prev || distance(prev, point) > 0.5) before.push(point);
+    const after = [point, ...pts.slice(index)];
+    return {
+        before: before.filter((p, i, arr) => !i || distance(p, arr[i - 1]) > 0.2),
+        after: after.filter((p, i, arr) => !i || distance(p, arr[i - 1]) > 0.2)
+    };
+}
+
 function nearestPuckActionLine(point, lines, usedLines) {
     let best = null;
     lines.forEach(line => {
@@ -5844,13 +5900,36 @@ function collectAnimationPlan() {
         let actionPoint = objectCenter(entry.player);
         const maxSegments = movementLines.length + actionLines.length + 1;
         for (let segment = 0; segment < maxSegments; segment++) {
+            if (!puck) {
+                const nearbyPuck = nearestFreePuckNearPoint(actionPoint, pucks, usedPucks);
+                if (nearbyPuck) {
+                    usedPucks.add(nearbyPuck);
+                    puck = nearbyPuck;
+                    playerPucks.set(entry.player, puck);
+                }
+            }
+
             const movement = nearestMovementLineFromPoint(actionPoint, movementLines, usedMovementLines);
             if (movement) {
                 usedMovementLines.add(movement.line);
                 const movementPts = distance(actionPoint, movement.pts[0]) > 1.5
                     ? [actionPoint, ...movement.pts]
                     : movement.pts;
-                steps.push({ kind: 'movement', player: entry.player, puck, pts: movementPts });
+                if (!puck) {
+                    const pickup = puckPickupOnPath(movementPts, pucks, usedPucks);
+                    const split = pickup ? splitPathAtPickup(movementPts, pickup) : null;
+                    if (pickup && split?.before?.length > 1 && split?.after?.length > 1) {
+                        steps.push({ kind: 'movement', player: entry.player, puck: null, pts: split.before });
+                        usedPucks.add(pickup.puck);
+                        puck = pickup.puck;
+                        playerPucks.set(entry.player, puck);
+                        steps.push({ kind: 'movement', player: entry.player, puck, pts: split.after });
+                    } else {
+                        steps.push({ kind: 'movement', player: entry.player, puck: null, pts: movementPts });
+                    }
+                } else {
+                    steps.push({ kind: 'movement', player: entry.player, puck, pts: movementPts });
+                }
                 actionPoint = movementPts[movementPts.length - 1];
             }
 
