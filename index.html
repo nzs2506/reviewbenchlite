@@ -4025,9 +4025,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.15" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.16" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.15</span>
+            <span class="version-tooltip">v0.9.16</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5580,6 +5580,24 @@ function puckTrailDots(pts) {
     }));
 }
 
+function puckTrailArrow(pt, dir) {
+    const len = Math.hypot(dir.x, dir.y) || 1;
+    const ux = dir.x / len;
+    const uy = dir.y / len;
+    const ang = Math.atan2(uy, ux) * 180 / Math.PI;
+    return new fabric.Triangle({
+        width: 21,
+        height: 16,
+        fill: '#111111',
+        left: pt.x + ux * 18,
+        top: pt.y + uy * 18,
+        originX: 'center',
+        originY: 'center',
+        angle: ang + 90,
+        objectCaching: false
+    });
+}
+
 function makeLineLabel(pts, type, color) {
     const text = LINE_LABELS[type];
     if (!text) return null;
@@ -5670,7 +5688,7 @@ function addStyledLine(rawPts, type, color) {
             break;
         case 'puckmove':
             items.push(...puckTrailDots(pts));
-            items.push(arrowHead(endPt, dir, '#111111'));
+            items.push(puckTrailArrow(endPt, dir));
             break;
         case 'pass':
             items.push(ptsToPath(trimEnd(pts, 8), color, { strokeDashArray: [10, 7] }));
