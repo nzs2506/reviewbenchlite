@@ -468,6 +468,7 @@
     .icon-skate    { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 18 C 7 6, 15 6, 20 10'/%3E%3Cpolyline points='20 10 14 10 18 4'/%3E%3C/svg%3E"); }
     .icon-back     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 l3 -4 3 8 3 -8 3 8 3 -4'/%3E%3Cpolyline points='22 12 18 9 18 15 22 12'/%3E%3C/svg%3E"); }
     .icon-puckline { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 c2 -4 4 -4 6 0 s4 4 6 0 4 -4 6 0'/%3E%3Cpolyline points='22 12 18 9 18 15 22 12'/%3E%3C/svg%3E"); }
+    .icon-puckroll { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='4' cy='13' r='1.8'/%3E%3Ccircle cx='9' cy='10' r='1.8'/%3E%3Ccircle cx='14' cy='13' r='1.8'/%3E%3Ccircle cx='19' cy='10' r='1.8'/%3E%3C/svg%3E"); }
     .icon-pass     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 h16' stroke-dasharray='4 3'/%3E%3Cpolyline points='22 12 18 9 18 15 22 12'/%3E%3C/svg%3E"); }
     .icon-shot     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 10 h16 M2 14 h16'/%3E%3Cpolyline points='23 12 18 8 18 16 23 12'/%3E%3C/svg%3E"); }
     .icon-stopline { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 h14'/%3E%3Cline x1='17' y1='7' x2='17' y2='17'/%3E%3Cline x1='21' y1='7' x2='21' y2='17'/%3E%3C/svg%3E"); }
@@ -4024,9 +4025,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.13" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.14" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.13</span>
+            <span class="version-tooltip">v0.9.14</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4509,6 +4510,7 @@
                 <button class="tool-btn line-tool" data-type="skate"    title="Катание без шайбы"><i class="custom-icon icon-skate"></i></button>
                 <button class="tool-btn line-tool" data-type="backward" title="Катание спиной вперёд"><i class="custom-icon icon-back"></i></button>
                 <button class="tool-btn line-tool" data-type="puck"     title="Ведение шайбы"><i class="custom-icon icon-puckline"></i></button>
+                <button class="tool-btn line-tool" data-type="puckmove" title="Движение шайбы"><i class="custom-icon icon-puckroll"></i></button>
                 <button class="tool-btn line-tool" data-type="pass"     title="Пас"><i class="custom-icon icon-pass"></i></button>
                 <button class="tool-btn line-tool" data-type="shot"     title="Бросок"><i class="custom-icon icon-shot"></i></button>
                 <button class="tool-btn line-tool" data-type="stop"     title="Движение с остановкой"><i class="custom-icon icon-stopline"></i></button>
@@ -5551,6 +5553,33 @@ function pointAlongPath(pts, ratio) {
     };
 }
 
+function pointsAtPathSpacing(pts, spacing = 18) {
+    const total = pathLen(pts);
+    if (!total) return [];
+    const count = Math.max(2, Math.floor(total / spacing) + 1);
+    const out = [];
+    for (let i = 0; i < count; i++) {
+        const at = pointAlongPath(pts, count === 1 ? 0 : i / (count - 1));
+        if (at?.point) out.push(at.point);
+    }
+    return out;
+}
+
+function puckTrailDots(pts) {
+    const dots = pointsAtPathSpacing(pts, 19);
+    return dots.map(point => new fabric.Circle({
+        left: point.x,
+        top: point.y,
+        radius: 6.2,
+        originX: 'center',
+        originY: 'center',
+        fill: 'rgba(0,0,0,0)',
+        stroke: '#111111',
+        strokeWidth: 2.2,
+        objectCaching: false
+    }));
+}
+
 function makeLineLabel(pts, type, color) {
     const text = LINE_LABELS[type];
     if (!text) return null;
@@ -5639,6 +5668,9 @@ function addStyledLine(rawPts, type, color) {
             items.push(ptsToPath(waveAlong(trimEnd(pts, 8), 5, 22, 'sin'), color));
             items.push(arrowHead(endPt, dir, color));
             break;
+        case 'puckmove':
+            items.push(...puckTrailDots(pts));
+            break;
         case 'pass':
             items.push(ptsToPath(trimEnd(pts, 8), color, { strokeDashArray: [10, 7] }));
             items.push(arrowHead(endPt, dir, color));
@@ -5660,7 +5692,7 @@ function addStyledLine(rawPts, type, color) {
             items.push(ptsToPath(pts, color));
             items.push(arrowHead(endPt, dir, color));
     }
-    if (lineLabelsEnabled) {
+    if (lineLabelsEnabled && type !== 'puckmove') {
         const label = makeLineLabel(pts, type, color);
         if (label) items.push(label);
     }
@@ -5678,7 +5710,7 @@ function addStyledLine(rawPts, type, color) {
 
 // ================= АНИМАЦИЯ УПРАЖНЕНИЯ =================
 const ANIMATION_LINE_TYPES = new Set(['skate', 'backward', 'puck', 'stop']);
-const ANIMATION_ACTION_LINE_TYPES = new Set(['pass', 'shot']);
+const ANIMATION_ACTION_LINE_TYPES = new Set(['pass', 'shot', 'puckmove']);
 
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -5957,6 +5989,23 @@ function collectAnimationPlan() {
         }
     }
 
+    const freePuckRollLines = actionLines.filter(line => {
+        const type = line.animType || String(line.customType || '').replace(/^line-/, '');
+        return type === 'puckmove';
+    });
+    pucks.forEach(puck => {
+        if (usedPucks.has(puck)) return;
+        let point = objectCenter(puck);
+        const maxSegments = freePuckRollLines.length + 1;
+        for (let segment = 0; segment < maxSegments; segment++) {
+            const action = nearestPuckActionLine(point, freePuckRollLines, usedActionLines);
+            if (!action) break;
+            usedActionLines.add(action.line);
+            steps.push({ kind: 'puck-action', puck, pts: action.pts, actionType: 'puckmove' });
+            point = action.pts[action.pts.length - 1];
+        }
+    });
+
     return { steps };
 }
 
@@ -6230,10 +6279,14 @@ canvas.on('mouse:move', o => {
     dragPts.push({ x: p.x, y: p.y });
     if (previewObj) canvas.remove(previewObj);
     const straight = (currentLineType === 'pass' || currentLineType === 'shot');
+    const puckMovePreview = currentLineType === 'puckmove';
     const pv = straight ? [dragPts[0], dragPts[dragPts.length - 1]] : dragPts;
     previewObj = new fabric.Polyline(pv, {
-        stroke: currentColor, strokeWidth: 2, fill: '', opacity: 0.5,
-        strokeDashArray: straight ? [8, 6] : null,
+        stroke: puckMovePreview ? '#111' : currentColor,
+        strokeWidth: puckMovePreview ? 2.2 : 2,
+        fill: '',
+        opacity: puckMovePreview ? 0.75 : 0.5,
+        strokeDashArray: puckMovePreview ? [1, 13] : (straight ? [8, 6] : null),
         selectable: false, evented: false, objectCaching: false, __temp: true
     });
     canvas.add(previewObj);
@@ -6311,7 +6364,7 @@ const COMPONENTS = {
     mNum: () => makeMarker(nextNumberMarkerText(), '#6c7a89'),
     oppX: () => makeOpponentMarker(),
 
-    puck: () => new fabric.Circle({ radius: 5, fill: '#111', customType: 'obj-puck' }),
+    puck: () => new fabric.Circle({ radius: 6.5, fill: '#111', customType: 'obj-puck' }),
     pucks: () => {
         const items = [];
         for (let i = 0; i < 5; i++)
