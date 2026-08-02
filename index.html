@@ -4271,9 +4271,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.35" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.36" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.35</span>
+            <span class="version-tooltip">v0.9.36</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4865,7 +4865,7 @@
             <div class="group-cap">Файл</div>
             <div class="toolbar-group">
                 <button class="tool-btn" id="btnLoadJson" title="Открыть упражнение"><i class="fa-regular fa-folder-open"></i></button>
-                <button class="tool-btn" id="btnSaveJson" title="Сохранить упражнение (файл)"><i class="fa-regular fa-floppy-disk"></i></button>
+                <button class="tool-btn" id="btnSaveJson" title="Сохранить тренировку"><i class="fa-regular fa-floppy-disk"></i></button>
                 <button class="tool-btn btn-primary" id="btnSavePng" title="Скачать PNG"><i class="fa-solid fa-download"></i><span>PNG</span></button>
                 <button class="tool-btn btn-export pdf-spacing" id="btnSavePdf" title="Скачать PDF"><i class="fa-regular fa-file-lines"></i><span>PDF</span></button>
                 <input type="file" id="jsonInput" accept=".json" style="display:none">
@@ -5314,6 +5314,7 @@ let currentPlayerColors = { ...DEFAULT_PLAYER_COLORS };
 let numCounter = 1;
 const TRAINING_STORAGE_KEY = 'benchreview-lite.trainings.v1';
 const TRAINING_META_STORAGE_KEY = 'benchreview-lite.trainings.meta.v1';
+const DRILL_JSON_BACKUP_STORAGE_KEY = 'benchreview-lite.drill-backup.v1';
 const BENCHREVIEW_DB_NAME = 'benchreview-lite.storage';
 const BENCHREVIEW_DB_VERSION = 1;
 const BENCHREVIEW_DB_STORE = 'records';
@@ -5766,6 +5767,19 @@ function currentTrainingSnapshot() {
         canvas: canvas.toJSON(EXTRA_PROPS)
     });
 }
+function backupCurrentDrillJson(reason = 'manual') {
+    try {
+        localStorage.setItem(DRILL_JSON_BACKUP_STORAGE_KEY, JSON.stringify({
+            version: 1,
+            reason,
+            updatedAt: new Date().toISOString(),
+            rinkMode,
+            rinkRotation,
+            numCounter,
+            canvas: canvas.toJSON(EXTRA_PROPS)
+        }));
+    } catch (_) {}
+}
 function resetActiveTrainingState() {
     activeTrainingId = '';
     activeTrainingTitle = '';
@@ -5911,6 +5925,16 @@ async function saveFieldAsNewTraining() {
     markActiveTrainingClean();
     renderTrainingList();
     return true;
+}
+async function saveBoardFromToolbar() {
+    backupCurrentDrillJson('toolbar-save');
+    if (trainingDraft) {
+        saveTrainingEdit();
+        return true;
+    }
+    if (activeTrainingId) return saveCurrentTrainingEdits();
+    if (!canvas.getObjects().some(o => !o.__temp)) return false;
+    return saveFieldAsNewTraining();
 }
 async function resolveUnsavedFieldChangesBeforeReplace(title = 'Несохранённые изменения') {
     if (!hasUnsavedFieldChanges()) return true;
@@ -6337,12 +6361,12 @@ function puckTrailDots(pts, color = '#111111') {
     return dots.map(point => new fabric.Circle({
         left: point.x,
         top: point.y,
-        radius: 6.2,
+        radius: 4.6,
         originX: 'center',
         originY: 'center',
         fill: 'rgba(0,0,0,0)',
         stroke: color,
-        strokeWidth: 2.2,
+        strokeWidth: 1.7,
         objectCaching: false
     }));
 }
@@ -6353,11 +6377,11 @@ function puckTrailArrow(pt, dir, color = '#111111') {
     const uy = dir.y / len;
     const ang = Math.atan2(uy, ux) * 180 / Math.PI;
     return new fabric.Triangle({
-        width: 21,
-        height: 16,
+        width: 16,
+        height: 12,
         fill: color,
-        left: pt.x + ux * 18,
-        top: pt.y + uy * 18,
+        left: pt.x + ux * 14,
+        top: pt.y + uy * 14,
         originX: 'center',
         originY: 'center',
         angle: ang + 90,
@@ -7081,7 +7105,7 @@ canvas.on('mouse:move', o => {
     const pv = straight ? [dragPts[0], dragPts[dragPts.length - 1]] : dragPts;
     previewObj = new fabric.Polyline(pv, {
         stroke: currentColor,
-        strokeWidth: puckMovePreview ? 2.2 : 2,
+        strokeWidth: puckMovePreview ? 1.7 : 2,
         fill: '',
         opacity: puckMovePreview ? 0.75 : 0.5,
         strokeDashArray: puckMovePreview ? [1, 13] : (dashedPreview ? [8, 6] : null),
@@ -8259,9 +8283,9 @@ document.getElementById('btnSavePdf').addEventListener('click', () => {
     }
 });
 document.getElementById('btnSaveJson').addEventListener('click', () => {
-    const data = { rinkMode, rinkRotation, numCounter, canvas: canvas.toJSON(EXTRA_PROPS) };
-    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-    download('drill.json', URL.createObjectURL(blob));
+    saveBoardFromToolbar().catch(err => {
+        alert('Не удалось сохранить тренировку: ' + err.message);
+    });
 });
 document.getElementById('btnLoadJson').addEventListener('click', () => document.getElementById('jsonInput').click());
 document.getElementById('jsonInput').addEventListener('change', e => {
