@@ -2,11 +2,13 @@ const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET,PUT,POST,DELETE,OPTIONS',
-  'access-control-allow-headers': 'content-type,x-benchreview-token'
+  'access-control-allow-headers': 'authorization,content-type,x-benchreview-token'
 };
 
 const MAX_RECORDS_PER_WRITE = 500;
 const MAX_STATE_BYTES = 2400000;
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+const DEFAULT_LOGIN_USER = 'Shaidullin.a';
 const STATE_KEYS = [
   'blocks',
   'planned',
@@ -19,6 +21,69 @@ const STATE_KEYS = [
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
+}
+
+function base64Url(bytes) {
+  const binary = String.fromCharCode(...new Uint8Array(bytes));
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function utf8(value) {
+  return new TextEncoder().encode(String(value));
+}
+
+async function hmacSign(secret, message) {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    utf8(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  return base64Url(await crypto.subtle.sign('HMAC', key, utf8(message)));
+}
+
+async function sha256(value) {
+  return base64Url(await crypto.subtle.digest('SHA-256', utf8(value)));
+}
+
+function safeEqual(a, b) {
+  a = String(a || '');
+  b = String(b || '');
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return result === 0;
+}
+
+function authSecret(env) {
+  return String(env.BENCHREVIEW_AUTH_SECRET || env.BENCHREVIEW_LOGIN_PASSWORD || 'benchreview-dev-secret').trim();
+}
+
+async function createSessionToken(env, username) {
+  const cleanUser = String(username || DEFAULT_LOGIN_USER).trim();
+  const expires = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
+  const payload = base64Url(utf8(JSON.stringify({ user: cleanUser, exp: expires })));
+  const signature = await hmacSign(authSecret(env), payload);
+  return `${payload}.${signature}`;
+}
+
+async function verifySessionToken(request, env) {
+  const header = request.headers.get('authorization') || '';
+  const token = header.replace(/^Bearer\s+/i, '').trim();
+  const [payload, signature] = token.split('.');
+  if (!payload || !signature) return null;
+  const expected = await hmacSign(authSecret(env), payload);
+  if (!safeEqual(signature, expected)) return null;
+  let session;
+  try {
+    const padded = payload.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(payload.length / 4) * 4, '=');
+    session = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(padded), char => char.charCodeAt(0))));
+  } catch (_) {
+    return null;
+  }
+  if (!session?.user || Number(session.exp || 0) < Math.floor(Date.now() / 1000)) return null;
+  return session;
 }
 
 function cleanTeam(value) {
@@ -92,9 +157,36 @@ async function writeIndex(env, team, index) {
   return clean;
 }
 
+async function login(request, env) {
+  if (!env.BENCHREVIEW_LOGIN_PASSWORD && !env.BENCHREVIEW_LOGIN_PASSWORD_HASH) {
+    return json({ ok: false, error: 'login is not configured' }, 503);
+  }
+  const body = await request.json().catch(() => ({}));
+  const username = String(body.username || '').trim();
+  const password = String(body.password || '');
+  const expectedUser = String(env.BENCHREVIEW_LOGIN_USER || DEFAULT_LOGIN_USER).trim();
+  const expectedHash = String(env.BENCHREVIEW_LOGIN_PASSWORD_HASH || '').trim();
+  const expectedPassword = String(env.BENCHREVIEW_LOGIN_PASSWORD || '').trim();
+  const passwordOk = expectedHash
+    ? safeEqual(await sha256(password), expectedHash)
+    : safeEqual(password, expectedPassword);
+  if (username.toLowerCase() !== expectedUser.toLowerCase() || !passwordOk) {
+    return json({ ok: false, error: 'invalid credentials' }, 401);
+  }
+  return json({
+    ok: true,
+    user: expectedUser,
+    token: await createSessionToken(env, expectedUser),
+    expiresIn: SESSION_TTL_SECONDS
+  });
+}
+
 async function auth(request, env) {
-  if (!env.BENCHREVIEW_SYNC_TOKEN) return true;
-  return request.headers.get('x-benchreview-token') === env.BENCHREVIEW_SYNC_TOKEN;
+  if (env.BENCHREVIEW_SYNC_TOKEN && request.headers.get('x-benchreview-token') === env.BENCHREVIEW_SYNC_TOKEN) {
+    return { user: 'sync-token' };
+  }
+  if (!env.BENCHREVIEW_LOGIN_PASSWORD && !env.BENCHREVIEW_LOGIN_PASSWORD_HASH) return { user: 'open' };
+  return await verifySessionToken(request, env);
 }
 
 async function listTrainings(env, team) {
@@ -169,13 +261,16 @@ async function putState(request, env, team) {
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { headers: JSON_HEADERS });
-    if (!env.BENCHREVIEW_KV) return json({ ok: false, error: 'BENCHREVIEW_KV binding is missing' }, 500);
-    if (!(await auth(request, env))) return json({ ok: false, error: 'unauthorized' }, 401);
-
     const url = new URL(request.url);
+    if (url.pathname === '/api/health') return json({ ok: true, service: 'benchreview-lite-api' });
+    if (url.pathname === '/api/login' && request.method === 'POST') return login(request, env);
+    if (!env.BENCHREVIEW_KV) return json({ ok: false, error: 'BENCHREVIEW_KV binding is missing' }, 500);
+    const session = await auth(request, env);
+    if (!session) return json({ ok: false, error: 'unauthorized' }, 401);
+
     const team = cleanTeam(url.searchParams.get('team'));
 
-    if (url.pathname === '/api/health') return json({ ok: true, service: 'benchreview-lite-api' });
+    if (url.pathname === '/api/session') return json({ ok: true, user: session.user });
     if (url.pathname === '/api/trainings' && request.method === 'GET') {
       return json({ ok: true, records: await listTrainings(env, team) });
     }

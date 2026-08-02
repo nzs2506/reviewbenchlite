@@ -51,6 +51,85 @@
     }
     button { font: inherit; }
     .main-col { display: contents; }
+    .auth-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 5000;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: radial-gradient(circle at 50% 20%, rgba(37,99,235,.18), transparent 34%), rgba(13,15,19,.96);
+    }
+    .auth-overlay[hidden] { display: none; }
+    .auth-card {
+        width: min(390px, 100%);
+        padding: 24px;
+        border: 1px solid #2c3340;
+        border-radius: 10px;
+        background: #191c23;
+        box-shadow: 0 24px 70px rgba(0,0,0,.42);
+    }
+    .auth-card h2 {
+        margin: 0 0 6px;
+        font-family: 'Russo One', 'Black Ops One', Impact, 'Arial Black', sans-serif;
+        font-size: 26px;
+        letter-spacing: .04em;
+    }
+    .auth-card h2 span { color: #60a5fa; }
+    .auth-card p {
+        margin: 0 0 18px;
+        color: #9aa3b2;
+        font-size: 13px;
+        line-height: 1.45;
+    }
+    .auth-field {
+        display: grid;
+        gap: 7px;
+        margin-bottom: 12px;
+        color: #8d96a6;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+    .auth-field input {
+        height: 42px;
+        border: 1px solid #303746;
+        border-radius: 7px;
+        padding: 0 12px;
+        background: #11141a;
+        color: #f4f7fb;
+        font-size: 15px;
+        font-weight: 700;
+        outline: none;
+    }
+    .auth-field input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.18);
+    }
+    .auth-submit {
+        width: 100%;
+        height: 43px;
+        margin-top: 6px;
+        border: 0;
+        border-radius: 7px;
+        background: #2563eb;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+    .auth-submit:disabled {
+        opacity: .65;
+        cursor: wait;
+    }
+    .auth-error {
+        min-height: 18px;
+        margin-top: 10px;
+        color: #fb7185;
+        font-size: 12px;
+        font-weight: 800;
+    }
     .app-header {
         grid-column: 1 / -1;
         grid-row: 1;
@@ -4061,11 +4140,28 @@
 </head>
 <body data-view="field">
 
+<div class="auth-overlay" id="authOverlay" hidden>
+    <form class="auth-card" id="authForm">
+        <h2>BenchReview <span>Lite</span></h2>
+        <p>Вход в облачное хранилище команды.</p>
+        <label class="auth-field">
+            Логин
+            <input id="authUsername" type="text" autocomplete="username" spellcheck="false" value="Shaidullin.a">
+        </label>
+        <label class="auth-field">
+            Пароль
+            <input id="authPassword" type="password" autocomplete="current-password">
+        </label>
+        <button class="auth-submit" id="authSubmit" type="submit">Войти</button>
+        <div class="auth-error" id="authError" aria-live="polite"></div>
+    </form>
+</div>
+
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.26" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.27" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.26</span>
+            <span class="version-tooltip">v0.9.27</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5090,6 +5186,7 @@ const DEFAULT_SYNC_API_URL = 'https://benchreview-lite-api.nzs2593.workers.dev';
 const CLOUD_TEAM_ID = 'default';
 const CLOUD_STATE_KEYS = ['blocks', 'planned', 'goalieMatches', 'roster', 'rosterRemoved', 'matchSheet', 'matchArchive'];
 const CLOUD_PUSH_DEBOUNCE_MS = 700;
+const AUTH_STORAGE_KEY = 'benchreview-lite.auth.v1';
 const BLOCK_STORAGE_KEY = 'benchreview-lite.blocks.v1';
 const PLANNED_STORAGE_KEY = 'benchreview-lite.planned.v1';
 const GOALIE_STORAGE_KEY = 'benchreview-lite.goalie-matches.v1';
@@ -5142,6 +5239,8 @@ let matchSheetPointerDrag = null;
 let matchSheetPanSuppressClick = false;
 let lineupCandidates = [];
 let lineupImportBusy = false;
+let benchAuthToken = '';
+let cloudInitStarted = false;
 let cloudStateReady = false;
 let cloudStateHydrating = false;
 const cloudStateTimers = new Map();
@@ -7593,11 +7692,106 @@ function trainingSyncApiUrl(path = '') {
     const base = String(configured || '').replace(/\/+$/, '');
     return base ? `${base}${path}` : '';
 }
+function authHeaders(extra = {}) {
+    const headers = { ...extra };
+    if (benchAuthToken) headers.Authorization = `Bearer ${benchAuthToken}`;
+    return headers;
+}
+function clearBenchAuth() {
+    benchAuthToken = '';
+    cloudInitStarted = false;
+    cloudStateReady = false;
+    try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch (_) {}
+    showAuthOverlay();
+}
+function showAuthOverlay(message = '') {
+    const overlay = document.getElementById('authOverlay');
+    const error = document.getElementById('authError');
+    if (overlay) overlay.hidden = false;
+    if (error) error.textContent = message;
+    window.setTimeout(() => document.getElementById('authPassword')?.focus(), 50);
+}
+function hideAuthOverlay() {
+    const overlay = document.getElementById('authOverlay');
+    const error = document.getElementById('authError');
+    if (overlay) overlay.hidden = true;
+    if (error) error.textContent = '';
+}
+async function authFetch(url, options = {}) {
+    const headers = authHeaders(options.headers || {});
+    const response = await fetch(url, { ...options, headers });
+    if (response.status === 401) clearBenchAuth();
+    return response;
+}
+async function validateBenchSession() {
+    const url = trainingSyncApiUrl('/api/session?team=default');
+    if (!url || !benchAuthToken) return false;
+    try {
+        const response = await authFetch(url, { method: 'GET', mode: 'cors' });
+        return response.ok;
+    } catch (_) {
+        return false;
+    }
+}
+async function loginBenchReview(username, password) {
+    const url = trainingSyncApiUrl('/api/login');
+    if (!url) throw new Error('Сервер входа не настроен');
+    const response = await fetch(url, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.token) throw new Error('Неверный логин или пароль');
+    benchAuthToken = data.token;
+    try { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token: benchAuthToken, user: data.user || username })); } catch (_) {}
+    hideAuthOverlay();
+    startCloudSync();
+}
+async function initBenchAuth() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || '{}');
+        benchAuthToken = String(saved.token || '');
+    } catch (_) {
+        benchAuthToken = '';
+    }
+    document.getElementById('authForm')?.addEventListener('submit', async e => {
+        e.preventDefault();
+        const submit = document.getElementById('authSubmit');
+        const error = document.getElementById('authError');
+        const username = document.getElementById('authUsername')?.value || '';
+        const password = document.getElementById('authPassword')?.value || '';
+        if (submit) submit.disabled = true;
+        if (error) error.textContent = '';
+        try {
+            await loginBenchReview(username, password);
+            const passwordInput = document.getElementById('authPassword');
+            if (passwordInput) passwordInput.value = '';
+        } catch (err) {
+            if (error) error.textContent = err.message || 'Не удалось войти';
+        } finally {
+            if (submit) submit.disabled = false;
+        }
+    });
+    if (benchAuthToken && await validateBenchSession()) {
+        hideAuthOverlay();
+        startCloudSync();
+    } else {
+        showAuthOverlay(benchAuthToken ? 'Сессия истекла. Войдите снова.' : '');
+    }
+}
+function startCloudSync() {
+    if (cloudInitStarted || !benchAuthToken) return;
+    cloudInitStarted = true;
+    initTrainingRecordStorage();
+    initCloudStateStorage();
+}
 async function fetchRemoteTrainingRecords() {
     const url = trainingSyncApiUrl('/api/trainings?team=default');
-    if (!url) return [];
+    if (!url || !benchAuthToken) return [];
     try {
-        const response = await fetch(url, { method: 'GET', mode: 'cors' });
+        const response = await authFetch(url, { method: 'GET', mode: 'cors' });
         if (!response.ok) return [];
         const data = await response.json();
         return normalizeTrainingRecords(data.records || []);
@@ -7607,9 +7801,9 @@ async function fetchRemoteTrainingRecords() {
 }
 async function pushRemoteTrainingRecords() {
     const url = trainingSyncApiUrl('/api/trainings?team=default');
-    if (!url || !trainingRecords.length) return;
+    if (!url || !benchAuthToken || !trainingRecords.length) return;
     try {
-        await fetch(url, {
+        await authFetch(url, {
             method: 'PUT',
             mode: 'cors',
             headers: { 'Content-Type': 'application/json' },
@@ -7619,9 +7813,9 @@ async function pushRemoteTrainingRecords() {
 }
 async function deleteRemoteTrainingRecord(id) {
     const url = trainingSyncApiUrl(`/api/trainings?team=default&id=${encodeURIComponent(id)}`);
-    if (!url) return;
+    if (!url || !benchAuthToken) return;
     try {
-        await fetch(url, { method: 'DELETE', mode: 'cors' });
+        await authFetch(url, { method: 'DELETE', mode: 'cors' });
     } catch (_) {}
 }
 function cloudStateUrl(path = '') {
@@ -7675,9 +7869,9 @@ function cloudStateValue(key) {
 }
 async function fetchRemoteCloudState() {
     const url = cloudStateUrl('/api/state');
-    if (!url) return {};
+    if (!url || !benchAuthToken) return {};
     try {
-        const response = await fetch(url, { method: 'GET', mode: 'cors' });
+        const response = await authFetch(url, { method: 'GET', mode: 'cors' });
         if (!response.ok) return {};
         const data = await response.json();
         return data.states || {};
@@ -7688,9 +7882,9 @@ async function fetchRemoteCloudState() {
 async function pushCloudStateKey(key) {
     if (!CLOUD_STATE_KEYS.includes(key)) return;
     const url = cloudStateUrl(`/api/state?key=${encodeURIComponent(key)}`);
-    if (!url) return;
+    if (!url || !benchAuthToken) return;
     try {
-        await fetch(url, {
+        await authFetch(url, {
             method: 'PUT',
             mode: 'cors',
             headers: { 'Content-Type': 'application/json' },
@@ -13030,8 +13224,7 @@ loadMatchSheetArchive();
 applyMatchSheetPlayerColWidth(storedMatchSheetPlayerColWidth());
 loadGoalieMatches();
 syncRosterGoaliesFromMatches();
-initTrainingRecordStorage();
-initCloudStateStorage();
+initBenchAuth();
 document.getElementById('goalieMatchDate').value = todayInputValue();
 renderTrainingList();
 renderGoaliePage();
