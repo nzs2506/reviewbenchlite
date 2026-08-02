@@ -3520,17 +3520,21 @@
     .role-picker {
         position: fixed;
         z-index: 86;
-        width: 146px;
+        width: 188px;
         padding: 9px;
         border: 1px solid #34383f;
         border-radius: 11px;
         background: #1c1f26;
         box-shadow: 0 20px 46px rgba(0,0,0,.48);
         display: grid;
+        gap: 9px;
+    }
+    .role-picker[hidden] { display: none; }
+    .role-options-grid {
+        display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 7px;
     }
-    .role-picker[hidden] { display: none; }
     .role-option {
         height: 40px;
         border: 1px solid #262a32;
@@ -3545,6 +3549,24 @@
         transform: translateY(-1px);
         border-color: #93c5fd;
         box-shadow: 0 0 0 2px rgba(59,130,246,.2);
+    }
+    .role-color-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 5px;
+        padding-top: 8px;
+        border-top: 1px solid #2a2f39;
+    }
+    .role-color-option {
+        width: 20px;
+        height: 20px;
+        border: 1px solid #3d424c;
+        border-radius: 999px;
+        cursor: pointer;
+    }
+    .role-color-option.active {
+        border-color: #93c5fd;
+        box-shadow: 0 0 0 2px rgba(59,130,246,.28);
     }
     .comp-item[data-comp="barrierH"] { order: 10; }
     .comp-item[data-comp="barrierV"] { order: 11; }
@@ -4248,9 +4270,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.32" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.33" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.32</span>
+            <span class="version-tooltip">v0.9.33</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5266,9 +5288,12 @@ let currentOpponentColor = '#c0392b';
 let currentShapeColor = '#2563eb';
 let activeComponentColorTarget = 'jersey';
 const DEFAULT_PLAYER_COLORS = {
+    mF: '#2980b9',
     mF1: '#2980b9',
     mF2: '#2980b9',
     mF3: '#2980b9',
+    mCenter: '#2980b9',
+    mD: '#c0392b',
     mD1: '#c0392b',
     mD2: '#c0392b',
     mG: '#7d3c98'
@@ -7226,9 +7251,12 @@ function makeImageComponent(src, targetW, targetH, customType, done) {
 
 // фабрики компонентов: id -> fabric-объект
 const COMPONENTS = {
+    mF: () => makeMarker('F', currentPlayerColors.mF, 'mF'),
     mF1: () => makeMarker('F1', currentPlayerColors.mF1, 'mF1'),
     mF2: () => makeMarker('F2', currentPlayerColors.mF2, 'mF2'),
     mF3: () => makeMarker('F3', currentPlayerColors.mF3, 'mF3'),
+    mCenter: () => makeMarker('C', currentPlayerColors.mCenter, 'mCenter'),
+    mD: () => makeMarker('D', currentPlayerColors.mD, 'mD'),
     mD1: () => makeMarker('D1', currentPlayerColors.mD1, 'mD1'),
     mD2: () => makeMarker('D2', currentPlayerColors.mD2, 'mD2'),
     mC:  () => makeMarker('T',  '#111111'),
@@ -7396,9 +7424,12 @@ function addComponent(id, x, y, keepMode = false) {
 
 const STAMP_COMPONENTS = new Set(['cone', 'puck', 'pucks', 'stick', 'stickPuck', 'barrierH', 'barrierV', 'stand']);
 const COMPONENT_LABELS = {
+    mF: 'Форвард',
     mF1: 'Форвард 1',
     mF2: 'Форвард 2',
     mF3: 'Форвард 3',
+    mCenter: 'Центр',
+    mD: 'Защитник',
     mD1: 'Защитник 1',
     mD2: 'Защитник 2',
     mC: 'Тренер',
@@ -7438,15 +7469,20 @@ const JERSEY_COLORS = [
 ];
 const ROLE_PICKER_OPTIONS = {
     forward: [
+        { id: 'mF', label: 'F' },
         { id: 'mF1', label: 'F1' },
         { id: 'mF2', label: 'F2' },
-        { id: 'mF3', label: 'F3' }
+        { id: 'mF3', label: 'F3' },
+        { id: 'mCenter', label: 'C' }
     ],
     defense: [
+        { id: 'mD', label: 'D' },
         { id: 'mD1', label: 'D1' },
         { id: 'mD2', label: 'D2' }
     ]
 };
+let activeRolePickerRole = '';
+let activeRolePickerColor = '';
 
 function closeJerseyPicker() {
     const picker = document.getElementById('jerseyPicker');
@@ -7457,6 +7493,7 @@ function closeJerseyPicker() {
 function closeRolePicker() {
     const picker = document.getElementById('rolePicker');
     if (picker) picker.hidden = true;
+    activeRolePickerRole = '';
 }
 
 function isShapeObject(obj) {
@@ -7613,28 +7650,61 @@ function openPlayerMarkerPicker(anchor, markerId) {
 
 function chooseRolePlayer(id) {
     if (!id || !COMPONENTS[id]) return;
+    const color = activeRolePickerColor || currentPlayerColors[id] || DEFAULT_PLAYER_COLORS[id] || '#2980b9';
+    currentPlayerColors[id] = color;
+    updatePlayerPanelColor(id, color);
+    if (activeRolePickerRole === 'forward') updatePlayerPanelColor('mF1', color);
+    if (activeRolePickerRole === 'defense') updatePlayerPanelColor('mD1', color);
     const p = dropPos();
     addComponent(id, p.x, p.y);
     closeRolePicker();
 }
 
-function openRolePicker(anchor, role) {
+function renderRolePickerOptions() {
     const picker = document.getElementById('rolePicker');
-    const options = ROLE_PICKER_OPTIONS[role] || [];
-    if (!picker || !anchor || !options.length) return;
+    const options = ROLE_PICKER_OPTIONS[activeRolePickerRole] || [];
+    if (!picker) return;
     picker.innerHTML = '';
+    const roleGrid = document.createElement('div');
+    roleGrid.className = 'role-options-grid';
     options.forEach(option => {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'role-option';
         btn.dataset.comp = option.id;
         btn.textContent = option.label;
-        const color = currentPlayerColors[option.id] || DEFAULT_PLAYER_COLORS[option.id] || '#2980b9';
+        const color = activeRolePickerColor || currentPlayerColors[option.id] || DEFAULT_PLAYER_COLORS[option.id] || '#2980b9';
         btn.style.background = color;
         btn.style.color = markerTextColor(color);
         btn.addEventListener('click', () => chooseRolePlayer(option.id));
-        picker.appendChild(btn);
+        roleGrid.appendChild(btn);
     });
+    const colorGrid = document.createElement('div');
+    colorGrid.className = 'role-color-grid';
+    JERSEY_COLORS.forEach(color => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'role-color-option';
+        btn.dataset.color = color.value;
+        btn.title = color.label;
+        btn.style.background = color.value;
+        btn.classList.toggle('active', color.value === activeRolePickerColor);
+        btn.addEventListener('click', () => {
+            activeRolePickerColor = color.value;
+            renderRolePickerOptions();
+        });
+        colorGrid.appendChild(btn);
+    });
+    picker.append(roleGrid, colorGrid);
+}
+
+function openRolePicker(anchor, role) {
+    const picker = document.getElementById('rolePicker');
+    const options = ROLE_PICKER_OPTIONS[role] || [];
+    if (!picker || !anchor || !options.length) return;
+    activeRolePickerRole = role;
+    activeRolePickerColor = role === 'defense' ? currentPlayerColors.mD1 : currentPlayerColors.mF1;
+    renderRolePickerOptions();
     const rect = anchor.getBoundingClientRect();
     picker.hidden = false;
     const pickerRect = picker.getBoundingClientRect();
