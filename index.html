@@ -4271,9 +4271,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.34" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.35" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.34</span>
+            <span class="version-tooltip">v0.9.35</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -7169,8 +7169,8 @@ function createTextBlock(text = 'Текст') {
 
 function makeMarker(text, color, markerId = '') {
     const fill = color || '#2980b9';
-    const circle = new fabric.Circle({ radius: 16, fill, originX: 'center', originY: 'center', stroke: 'rgba(0,0,0,0.25)', strokeWidth: 1 });
-    const label = new fabric.Text(text, { fontSize: text.length > 2 ? 10.5 : (text.length > 1 ? 13 : 15), fontWeight: 'bold', fill: markerTextColor(fill), originX: 'center', originY: 'center', fontFamily: 'Arial' });
+    const circle = new fabric.Circle({ radius: 14.5, fill, originX: 'center', originY: 'center', stroke: 'rgba(0,0,0,0.25)', strokeWidth: 1 });
+    const label = new fabric.Text(text, { fontSize: text.length > 2 ? 9.5 : (text.length > 1 ? 12 : 14), fontWeight: 'bold', fill: markerTextColor(fill), originX: 'center', originY: 'center', fontFamily: 'Arial' });
     return new fabric.Group([circle, label], { customType: 'marker', markerColor: fill, markerId });
 }
 
@@ -7334,6 +7334,18 @@ const COMPONENTS = {
 const NO_ROTATE = new Set(['marker', 'opponent', 'obj-jersey', 'obj-puck', 'obj-pucks', 'obj-tire', 'obj-cone']);
 function applyComponentLocks(o) {
     const t = o.customType || '';
+    if (isShapeObject(o)) {
+        o.lockScalingX = false;
+        o.lockScalingY = false;
+        o.lockScalingFlip = true;
+        o.lockSkewingX = true;
+        o.lockSkewingY = true;
+        o.lockRotation = false;
+        o.setControlsVisibility({ tl: true, tr: true, bl: true, br: true, ml: false, mt: false, mr: false, mb: false, mtr: true });
+        o.hasBorders = true;
+        o.transparentCorners = false;
+        return;
+    }
     if (t !== 'marker' && t !== 'opponent' && !t.startsWith('obj-')) return;
     o.lockScalingX = true;
     o.lockScalingY = true;
@@ -7846,7 +7858,16 @@ document.querySelectorAll('.comp-item').forEach(el => {
     const id = el.dataset.comp;
     el.dataset.label = COMPONENT_LABELS[id] || el.title || '';
     el.classList.toggle('stampable', STAMP_COMPONENTS.has(id));
-    el.addEventListener('click', () => {
+    el.addEventListener('click', e => {
+        if ((e.ctrlKey || e.metaKey) && el.dataset.rolePicker) {
+            closeNumberPicker();
+            closeJerseyPicker();
+            closeRolePicker();
+            const quickId = el.dataset.rolePicker === 'defense' ? 'mD' : 'mF';
+            const p = dropPos();
+            addComponent(quickId, p.x, p.y);
+            return;
+        }
         if (el.dataset.rolePicker) {
             closeNumberPicker();
             closeJerseyPicker();
