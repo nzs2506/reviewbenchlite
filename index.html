@@ -3399,9 +3399,16 @@
     .comp-item[data-comp="cone"] { order: 18; }
     .comp-item[data-comp="puck"] { order: 19; }
     .comp-item[data-comp="pucks"] { order: 20; }
+    .comp-item[data-comp="shapeRect"] { order: 30; }
+    .comp-item[data-comp="shapeCircle"] { order: 31; }
+    .comp-item[data-comp="shapeCross"] { order: 32; }
+    .comp-item[data-comp^="shape"] svg {
+        filter: none;
+        opacity: 1;
+    }
     .jersey-panel-icon {
-        width: 34px;
-        height: 28px;
+        width: 28px;
+        height: 22px;
         display: block;
         pointer-events: none;
         filter: none !important;
@@ -4055,9 +4062,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.20" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.21" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.20</span>
+            <span class="version-tooltip">v0.9.21</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4555,15 +4562,12 @@
                 <button class="tool-btn active" id="btnSelectMode" title="Перемещение / выделение"><i class="fa-solid fa-arrow-pointer"></i></button>
                 <button class="tool-btn" id="btnFreeDraw" title="Свободное рисование"><i class="fa-solid fa-paintbrush"></i></button>
                 <div class="toolbar-combo" id="shapeMenuWrap">
-                    <button class="tool-btn" id="btnShapeMenu" type="button" title="Текст, зоны и картинка">
-                        <i class="fa-solid fa-shapes"></i>
+                    <button class="tool-btn" id="btnShapeMenu" type="button" title="Текст и картинка">
+                        <i class="fa-solid fa-font"></i>
                         <i class="fa-solid fa-chevron-up menu-caret"></i>
                     </button>
                     <div class="tool-popover" id="shapeMenu">
                         <button class="menu-action" id="btnAddText" type="button"><i class="fa-solid fa-font"></i><span>Текст</span></button>
-                        <button class="menu-action" id="btnAddZone" type="button"><i class="fa-regular fa-square-full"></i><span>Прямоугольник</span></button>
-                        <button class="menu-action" id="btnAddEllipse" type="button"><i class="fa-regular fa-circle"></i><span>Овал</span></button>
-                        <button class="menu-action" id="btnAddCross" type="button"><i class="fa-solid fa-xmark"></i><span>Крестик</span></button>
                         <button class="menu-action" id="btnAddImage" type="button"><i class="fa-regular fa-image"></i><span>Картинка</span></button>
                     </div>
                 </div>
@@ -4645,12 +4649,12 @@
     <div class="comp-item" draggable="true" data-comp="mD2" title="Защитник 2"><div class="marker-icon" style="background:#c0392b">D2</div></div>
     <div class="comp-item" draggable="true" data-comp="mC"  title="Тренер"><div class="marker-icon" style="background:#111">C</div></div>
     <div class="comp-item" draggable="true" data-comp="mG"  title="Вратарь"><div class="marker-icon" style="background:#7d3c98">G</div></div>
-    <div class="comp-item" draggable="true" data-comp="oppX" title="Соперник (X)"><span class="opponent-panel-icon">X</span></div>
+    <div class="comp-item" draggable="true" data-comp="oppX" id="opponentPlayerItem" title="Соперник (X)"><span class="opponent-panel-icon">X</span></div>
     <div class="comp-item" draggable="true" data-comp="mNum" id="numberPlayerItem" title="Игрок с номером"><b style="font-size:1.05em; color:#d4d4d8;">№</b></div>
     <div class="comp-item" draggable="true" data-comp="jersey" id="jerseyPlayerItem" title="Майка">
         <svg class="jersey-panel-icon" viewBox="0 0 72 52" fill="none">
-            <path d="M27 13 L33 9 H39 L45 13 L61 22 L54 33 L47 29 V45 H25 V29 L18 33 L11 22 Z" fill="#2563eb" stroke="#e5e7eb" stroke-width="2.6" stroke-linejoin="round"/>
-            <path d="M33 9 L36 16 L39 9" stroke="#dbeafe" stroke-width="2.2" stroke-linejoin="round"/>
+            <path d="M29 15 L34 11 H38 L43 15 L56 22 L51 31 L44 28 V42 H28 V28 L21 31 L16 22 Z" fill="#2563eb" stroke="#e5e7eb" stroke-width="2.7" stroke-linejoin="round"/>
+            <path d="M34 11 L36 17 L38 11" stroke="#dbeafe" stroke-width="2.2" stroke-linejoin="round"/>
         </svg>
     </div>
 
@@ -4687,6 +4691,17 @@
     </div>
     <div class="comp-item" draggable="true" data-comp="net" title="Ворота">
         <img class="asset-icon-img" alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAA2CAYAAAA25uK9AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAAAYxJREFUeAHtmNFtgzAQhn0heUciRHlkBDYoG7QbtN2gG4RMkGyQsAGdIIzABuExUhKV90S53hmoUIsKRqFSpTsJbFk//vxjP1g/oOuiuk+lCjFTADEcj1GTAO4Iq80KGYHDH1CGtQFxOn0gzQZnsz3O516jxnV9dJwXavfVnKQPjWE16EIDbdtu0b3RnB/l3KtesFK/Y2gHnf8FdJwnHhsp00Jc0p4EbTLar1RrNWW04b9hDrteU3oHXaRwOq2pSeix1WTybAyDPM+VWcX6jRiYOzMty3rXLYA/OAwOh6zsesM7q5XABCYwgQlMYAPVWPWsPpfb/+GMrmrQVVv9BTmNAhOYwAQmMIF1KA5fym72F84KGGI6PAxgUcLiQWEcmBHEo24G53NkfOHRoRdi0qor9qpwdbuF3Bg509GfZa0Itv1Vx46U2inOrDjkJFc83smZhozHPqdrtMpt9fE3jUdh2CN1Oe4LikFcU1i2rDTDxLZK5bSoV1pUXB/sfUltKM6FUzp9ibpcoqb07hPKLKqeiCmoAwAAAABJRU5ErkJggg==">
+    </div>
+
+    <div class="panel-title">Фигуры</div>
+    <div class="comp-item" draggable="true" data-comp="shapeRect" title="Прямоугольник">
+        <svg width="34" height="34" viewBox="0 0 34 34"><rect x="9" y="11" width="16" height="12" rx="1" fill="rgba(0,86,179,.14)" stroke="#0056b3" stroke-width="2" stroke-dasharray="4 3"/></svg>
+    </div>
+    <div class="comp-item" draggable="true" data-comp="shapeCircle" title="Круг">
+        <svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="8" fill="rgba(0,86,179,.14)" stroke="#0056b3" stroke-width="2" stroke-dasharray="4 3"/></svg>
+    </div>
+    <div class="comp-item" draggable="true" data-comp="shapeCross" title="Крестик">
+        <svg width="34" height="34" viewBox="0 0 34 34"><line x1="12" y1="12" x2="22" y2="22" stroke="#0056b3" stroke-width="3" stroke-linecap="round"/><line x1="22" y1="12" x2="12" y2="22" stroke="#0056b3" stroke-width="3" stroke-linecap="round"/></svg>
     </div>
 </div>
 
@@ -4950,8 +4965,8 @@ function rinkSVG(mode, rotation = 0) {
             `<line x1="${x}" y1="292" x2="${boardX}" y2="316" stroke="${pink}" stroke-width="2.5"/>`;
     }
     function refereeSemiCircle(cx) {
-        const y = H - 10;
-        return `<path d="M ${cx-54} ${y} Q ${cx} ${H-92} ${cx+54} ${y}" fill="none" stroke="${pink}" stroke-width="3"/>`;
+        const y = H - 7;
+        return `<path d="M ${cx-80} ${y} C ${cx-80} ${y-44} ${cx-44} ${y-80} ${cx} ${y-80} C ${cx+44} ${y-80} ${cx+80} ${y-44} ${cx+80} ${y}" fill="none" stroke="${pink}" stroke-width="3"/>`;
     }
     // логотип клуба в центральном круге (opacity 0.7)
     function centerLogo() {
@@ -5032,13 +5047,15 @@ function rinkSVG(mode, rotation = 0) {
 
 // ================= ИНИЦИАЛИЗАЦИЯ =================
 const canvas = new fabric.Canvas('rink-canvas', { isDrawingMode: false, selection: true, preserveObjectStacking: true });
-const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase', 'jerseyColor'];
+const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase', 'jerseyColor', 'opponentColor'];
 
 let currentMode = 'select';
 let currentLineType = null;
 let currentComponent = null;
 let currentColor = '#0056b3';
 let currentJerseyColor = '#2563eb';
+let currentOpponentColor = '#c0392b';
+let activeComponentColorTarget = 'jersey';
 let numCounter = 1;
 const TRAINING_STORAGE_KEY = 'benchreview-lite.trainings.v1';
 const BLOCK_STORAGE_KEY = 'benchreview-lite.blocks.v1';
@@ -6452,47 +6469,83 @@ function nextNumberMarkerText() {
     return text;
 }
 
-function makeOpponentMarker() {
+function makeOpponentMarker(color = currentOpponentColor) {
+    const accent = color || '#c0392b';
+    const stroke = accent.toLowerCase() === '#ffffff' ? '#111827' : accent;
     const circle = new fabric.Circle({
-        radius: 16,
+        radius: 12,
         fill: '#ffffff',
         originX: 'center',
         originY: 'center',
-        stroke: '#c0392b',
-        strokeWidth: 2.4
+        stroke,
+        strokeWidth: 2
     });
     const label = new fabric.Text('X', {
-        fontSize: 19,
+        fontSize: 15,
         fontWeight: 'bold',
-        fill: '#c0392b',
+        fill: stroke,
         originX: 'center',
         originY: 'center',
         fontFamily: 'Arial'
     });
-    return new fabric.Group([circle, label], { customType: 'opponent' });
+    return new fabric.Group([circle, label], { customType: 'opponent', opponentColor: accent });
 }
 
 function makeJersey(color = currentJerseyColor) {
     const fill = color || '#2563eb';
     const stroke = fill.toLowerCase() === '#ffffff' ? '#111827' : '#ffffff';
     return new fabric.Group([
-        new fabric.Path('M -13 -15 L -6 -20 H 6 L 13 -15 L 24 -9 L 18 2 L 12 -2 V18 H -12 V-2 L -18 2 L -24 -9 Z', {
+        new fabric.Path('M -7 -9 L -3 -13 H 3 L 7 -9 L 14 -5 L 10 1 L 7 -1 V11 H -7 V-1 L -10 1 L -14 -5 Z', {
             fill,
             stroke,
-            strokeWidth: 2,
+            strokeWidth: 1.6,
             strokeLineJoin: 'round',
             originX: 'center',
             originY: 'center'
         }),
-        new fabric.Path('M -5 -20 L 0 -13 L 5 -20', {
+        new fabric.Path('M -3 -13 L 0 -8 L 3 -13', {
             fill: '',
             stroke,
-            strokeWidth: 2,
+            strokeWidth: 1.4,
             strokeLineJoin: 'round',
             originX: 'center',
             originY: 'center'
         })
     ], { customType: 'obj-jersey', jerseyColor: fill });
+}
+
+function makeShapeRect() {
+    return new fabric.Rect({
+        width: 56,
+        height: 38,
+        fill: hexA(currentColor, 0.14),
+        stroke: currentColor,
+        strokeWidth: 1.3,
+        strokeDashArray: [5, 4],
+        originX: 'center',
+        originY: 'center',
+        customType: 'zone'
+    });
+}
+
+function makeShapeCircle() {
+    return new fabric.Circle({
+        radius: 20,
+        fill: hexA(currentColor, 0.14),
+        stroke: currentColor,
+        strokeWidth: 1.3,
+        strokeDashArray: [5, 4],
+        originX: 'center',
+        originY: 'center',
+        customType: 'zone'
+    });
+}
+
+function makeShapeCross() {
+    return new fabric.Group([
+        new fabric.Line([-12, -12, 12, 12], { stroke: currentColor, strokeWidth: 3, strokeLineCap: 'round' }),
+        new fabric.Line([12, -12, -12, 12], { stroke: currentColor, strokeWidth: 3, strokeLineCap: 'round' })
+    ], { originX: 'center', originY: 'center', customType: 'shape-cross' });
 }
 
 function makeImageComponent(src, targetW, targetH, customType, done) {
@@ -6543,7 +6596,10 @@ const COMPONENTS = {
         new fabric.Circle({ radius: 3.2, fill: '#111', left: 0, top: 0, originX: 'center', originY: 'center' }),
         new fabric.Line([5, 0, 21, 0], { stroke: '#333', strokeWidth: 2.8, strokeLineCap: 'round' }),
         new fabric.Circle({ radius: 3.2, fill: '#111', left: 26, top: 0, originX: 'center', originY: 'center' })
-    ], { customType: 'obj-stickpuck' })
+    ], { customType: 'obj-stickpuck' }),
+    shapeRect: () => makeShapeRect(),
+    shapeCircle: () => makeShapeCircle(),
+    shapeCross: () => makeShapeCross()
 };
 
 // у игроков и оборудования размер фиксированный: масштабирование выключено,
@@ -6687,7 +6743,10 @@ const COMPONENT_LABELS = {
     cone: 'Конус',
     puck: 'Шайба',
     pucks: 'Горка шайб',
-    net: 'Ворота'
+    net: 'Ворота',
+    shapeRect: 'Прямоугольник',
+    shapeCircle: 'Круг',
+    shapeCross: 'Крестик'
 };
 
 function closeNumberPicker() {
@@ -6708,6 +6767,7 @@ const JERSEY_COLORS = [
 function closeJerseyPicker() {
     const picker = document.getElementById('jerseyPicker');
     if (picker) picker.hidden = true;
+    activeComponentColorTarget = 'jersey';
 }
 
 function setJerseyObjectColor(jersey, color) {
@@ -6723,23 +6783,52 @@ function setJerseyObjectColor(jersey, color) {
     jersey.setCoords();
 }
 
+function setOpponentObjectColor(opponent, color) {
+    if (!opponent || opponent.customType !== 'opponent') return;
+    const accent = color || '#c0392b';
+    const stroke = accent.toLowerCase() === '#ffffff' ? '#111827' : accent;
+    opponent.opponentColor = accent;
+    const parts = opponent._objects || [];
+    if (parts[0]) parts[0].set({ stroke, fill: '#ffffff' });
+    if (parts[1]) parts[1].set({ fill: stroke });
+    opponent.dirty = true;
+    opponent.setCoords();
+}
+
 function chooseJerseyColor(color) {
-    currentJerseyColor = color || currentJerseyColor;
+    const chosen = color || (activeComponentColorTarget === 'opponent' ? currentOpponentColor : currentJerseyColor);
     const active = canvas.getActiveObject();
-    if (active?.customType === 'obj-jersey') {
-        setJerseyObjectColor(active, currentJerseyColor);
-        canvas.requestRenderAll();
-        snapshotNow();
+    if (activeComponentColorTarget === 'opponent') {
+        currentOpponentColor = chosen;
+        if (active?.customType === 'opponent') {
+            setOpponentObjectColor(active, currentOpponentColor);
+            canvas.requestRenderAll();
+            snapshotNow();
+        } else {
+            const p = dropPos();
+            addComponent('oppX', p.x, p.y);
+        }
     } else {
-        const p = dropPos();
-        addComponent('jersey', p.x, p.y);
+        currentJerseyColor = chosen;
+        if (active?.customType === 'obj-jersey') {
+            setJerseyObjectColor(active, currentJerseyColor);
+            canvas.requestRenderAll();
+            snapshotNow();
+        } else {
+            const p = dropPos();
+            addComponent('jersey', p.x, p.y);
+        }
     }
     closeJerseyPicker();
 }
 
-function openJerseyPicker(anchor) {
+function openJerseyPicker(anchor, target = 'jersey') {
     const picker = document.getElementById('jerseyPicker');
     if (!picker || !anchor) return;
+    activeComponentColorTarget = target;
+    const active = canvas.getActiveObject();
+    if (target === 'opponent' && active?.customType === 'opponent') currentOpponentColor = active.opponentColor || currentOpponentColor;
+    if (target === 'jersey' && active?.customType === 'obj-jersey') currentJerseyColor = active.jerseyColor || currentJerseyColor;
     const rect = anchor.getBoundingClientRect();
     picker.hidden = false;
     const pickerRect = picker.getBoundingClientRect();
@@ -6747,9 +6836,14 @@ function openJerseyPicker(anchor) {
     const top = Math.max(10, Math.min(window.innerHeight - pickerRect.height - 10, rect.top));
     picker.style.left = `${left}px`;
     picker.style.top = `${top}px`;
+    const activeColor = target === 'opponent' ? currentOpponentColor : currentJerseyColor;
     picker.querySelectorAll('.jersey-color-option').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.color === currentJerseyColor);
+        btn.classList.toggle('active', btn.dataset.color === activeColor);
     });
+}
+
+function openOpponentPicker(anchor) {
+    openJerseyPicker(anchor, 'opponent');
 }
 
 function initJerseyPicker() {
@@ -6767,9 +6861,12 @@ function initJerseyPicker() {
         picker.appendChild(btn);
     });
     document.addEventListener('pointerdown', e => {
-        const trigger = document.getElementById('jerseyPlayerItem');
+        const jerseyTrigger = document.getElementById('jerseyPlayerItem');
+        const opponentTrigger = document.getElementById('opponentPlayerItem');
         if (picker.hidden) return;
-        if (picker.contains(e.target) || (trigger && trigger.contains(e.target))) return;
+        if (picker.contains(e.target) ||
+            (jerseyTrigger && jerseyTrigger.contains(e.target)) ||
+            (opponentTrigger && opponentTrigger.contains(e.target))) return;
         closeJerseyPicker();
     });
 }
@@ -6848,6 +6945,11 @@ document.querySelectorAll('.comp-item').forEach(el => {
             openJerseyPicker(el);
             return;
         }
+        if (id === 'oppX') {
+            closeNumberPicker();
+            openOpponentPicker(el);
+            return;
+        }
         if (STAMP_COMPONENTS.has(id)) {
             if (currentMode === 'place' && currentComponent === id) {
                 setMode('select'); // повторный клик по тому же элементу выключает штамп
@@ -6891,24 +6993,6 @@ document.getElementById('btnAddText').addEventListener('click', () => {
     closeToolMenus();
     const p = dropPos();
     addToBoard(new fabric.IText('Текст', { left: p.x, top: p.y, originX: 'center', originY: 'center', fontSize: 22, fontFamily: 'Arial', fill: currentColor }));
-});
-document.getElementById('btnAddZone').addEventListener('click', () => {
-    closeToolMenus();
-    const p = dropPos();
-    addToBoard(new fabric.Rect({ left: p.x, top: p.y, width: 120, height: 90, fill: hexA(currentColor, 0.15), stroke: currentColor, strokeWidth: 1.5, strokeDashArray: [6, 5], originX: 'center', originY: 'center', customType: 'zone' }));
-});
-document.getElementById('btnAddEllipse').addEventListener('click', () => {
-    closeToolMenus();
-    const p = dropPos();
-    addToBoard(new fabric.Ellipse({ left: p.x, top: p.y, rx: 70, ry: 45, fill: hexA(currentColor, 0.15), stroke: currentColor, strokeWidth: 1.5, strokeDashArray: [6, 5], originX: 'center', originY: 'center', customType: 'zone' }));
-});
-document.getElementById('btnAddCross').addEventListener('click', () => {
-    closeToolMenus();
-    const p = dropPos();
-    addToBoard(new fabric.Group([
-        new fabric.Line([-22, -22, 22, 22], { stroke: currentColor, strokeWidth: 5, strokeLineCap: 'round' }),
-        new fabric.Line([22, -22, -22, 22], { stroke: currentColor, strokeWidth: 5, strokeLineCap: 'round' })
-    ], { left: p.x, top: p.y, originX: 'center', originY: 'center', customType: 'shape-cross' }));
 });
 function hexA(hex, a) {
     const n = parseInt(hex.slice(1), 16);
