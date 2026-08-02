@@ -4168,9 +4168,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.28" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.29" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.28</span>
+            <span class="version-tooltip">v0.9.29</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4839,6 +4839,7 @@
         <p class="confirm-message" id="confirmMessage"></p>
         <div class="confirm-actions">
             <button class="confirm-btn primary" id="confirmOk" type="button">ОК</button>
+            <button class="confirm-btn primary" id="confirmExtra" type="button" hidden>Сохранить как новую</button>
             <button class="confirm-btn cancel" id="confirmCancel" type="button">Отмена</button>
         </div>
     </div>
@@ -5168,7 +5169,7 @@ function rinkSVG(mode, rotation = 0) {
 
 // ================= ИНИЦИАЛИЗАЦИЯ =================
 const canvas = new fabric.Canvas('rink-canvas', { isDrawingMode: false, selection: true, preserveObjectStacking: true });
-const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase', 'jerseyColor', 'opponentColor', 'shapeColor', 'markerColor', 'markerId'];
+const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase', 'lineColor', 'jerseyColor', 'opponentColor', 'shapeColor', 'markerColor', 'markerId'];
 
 let currentMode = 'select';
 let currentLineType = null;
@@ -5217,6 +5218,7 @@ let trainingMode = 'saved';
 let activeTrainingId = '';
 let activeTrainingTitle = '';
 let activeTrainingCreatedAt = '';
+let activeTrainingSnapshot = '';
 let trainingSortDesc = true;
 let selectedTrainingIds = new Set();
 let selectedTrainingTag = '';
@@ -5445,14 +5447,14 @@ function setView(view) {
 }
 document.getElementById('btnNavTrainings').addEventListener('click', () => setView('trainings'));
 document.getElementById('btnNavCalendar').addEventListener('click', () => setView('calendar'));
-document.getElementById('btnNavField').addEventListener('click', () => setView('field'));
+document.getElementById('btnNavField').addEventListener('click', openFieldHome);
 document.getElementById('btnNavGoalie').addEventListener('click', () => setView('goalie'));
 document.getElementById('btnNavStats').addEventListener('click', () => setView('stats'));
-document.getElementById('appTitle').addEventListener('click', () => setView('field'));
+document.getElementById('appTitle').addEventListener('click', openFieldHome);
 document.getElementById('appTitle').addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        setView('field');
+        openFieldHome();
     }
 });
 
@@ -5460,6 +5462,47 @@ function updateFieldReturn() {
     const btn = document.getElementById('btnBackToTrainings');
     if (!btn) return;
     btn.hidden = !(document.body.dataset.view === 'field' && activeTrainingId && !trainingDraft);
+}
+
+function resetFieldToBlank() {
+    return new Promise(resolve => {
+        if (animationRunning) stopDrillAnimation();
+        closeToolMenus();
+        closeNumberPicker();
+        closeJerseyPicker();
+        hidePlayerHalo();
+        suspendHistory = true;
+        canvas.discardActiveObject();
+        canvas.getObjects().filter(o => !o.__temp).forEach(o => canvas.remove(o));
+        rinkMode = 'full';
+        rinkRotation = 0;
+        numCounter = 1;
+        resetActiveTrainingState();
+        setBackground(() => {
+            fitCanvas();
+            updateRinkControls();
+            suspendHistory = false;
+            stateHistory = [];
+            historyIndex = -1;
+            snapshotNow();
+            setMode('select');
+            canvas.requestRenderAll();
+            resolve();
+        });
+    });
+}
+
+async function openFieldHome() {
+    if (trainingDraft) {
+        setView('field');
+        return;
+    }
+    if (document.body.dataset.view === 'trainings') {
+        const canReplace = await resolveUnsavedFieldChangesBeforeReplace('Открыть чистое поле');
+        if (!canReplace) return;
+        await resetFieldToBlank();
+    }
+    setView('field');
 }
 
 function setSidePanelCollapsed(collapsed, persist = true) {
@@ -5501,10 +5544,13 @@ function closeConfirm(result) {
 function showConfirm(message, options = {}) {
     const overlay = document.getElementById('confirmOverlay');
     const ok = document.getElementById('confirmOk');
+    const extra = document.getElementById('confirmExtra');
     const cancel = document.getElementById('confirmCancel');
     document.getElementById('confirmTitle').textContent = options.title || 'Подтвердите действие';
     document.getElementById('confirmMessage').textContent = message;
     ok.textContent = options.okLabel || 'ОК';
+    extra.textContent = options.extraLabel || '';
+    extra.hidden = !options.extraLabel;
     cancel.textContent = options.cancelLabel || 'Отмена';
     confirmPreviousFocus = document.activeElement;
     overlay.hidden = false;
@@ -5515,6 +5561,7 @@ function showConfirm(message, options = {}) {
 }
 
 document.getElementById('confirmOk').addEventListener('click', () => closeConfirm(true));
+document.getElementById('confirmExtra').addEventListener('click', () => closeConfirm('extra'));
 document.getElementById('confirmCancel').addEventListener('click', () => closeConfirm(false));
 document.getElementById('confirmOverlay').addEventListener('click', e => {
     if (e.target.id === 'confirmOverlay') closeConfirm(false);
@@ -5573,6 +5620,183 @@ function snapshotNow() {
     stateHistory.push(JSON.stringify(canvas.toJSON(EXTRA_PROPS)));
     historyIndex++;
     if (stateHistory.length > 100) { stateHistory.shift(); historyIndex--; }
+}
+function currentTrainingSnapshot() {
+    return JSON.stringify({
+        rinkMode,
+        rinkRotation,
+        numCounter,
+        canvas: canvas.toJSON(EXTRA_PROPS)
+    });
+}
+function resetActiveTrainingState() {
+    activeTrainingId = '';
+    activeTrainingTitle = '';
+    activeTrainingCreatedAt = '';
+    activeTrainingSnapshot = '';
+    updateFieldReturn();
+}
+function markActiveTrainingClean() {
+    activeTrainingSnapshot = activeTrainingId ? currentTrainingSnapshot() : '';
+}
+function hasUnsavedFieldChanges() {
+    const hasObjects = canvas.getObjects().some(o => !o.__temp);
+    if (!hasObjects) return false;
+    if (!activeTrainingId) return true;
+    return !activeTrainingSnapshot || currentTrainingSnapshot() !== activeTrainingSnapshot;
+}
+function lineObjectType(obj) {
+    return obj?.animType || String(obj?.customType || '').replace(/^line-/, '');
+}
+function isLineObject(obj) {
+    const customType = String(obj?.customType || '');
+    return customType.startsWith('line-') && customType !== 'line-label';
+}
+function lineSupportsLabel(obj) {
+    return isLineObject(obj) && lineObjectType(obj) !== 'puckmove';
+}
+function lineHasLabel(obj) {
+    return (obj?._objects || []).some(part => part.customType === 'line-label');
+}
+function lineObjectColor(obj) {
+    if (obj?.lineColor) return obj.lineColor;
+    const part = (obj?._objects || []).find(item => item.stroke || item.fill);
+    return part?.stroke || part?.fill || currentColor;
+}
+function targetLineForColorUpdate() {
+    const active = canvas.getActiveObject();
+    if (isLineObject(active)) return active;
+    const objects = canvas.getObjects();
+    for (let i = objects.length - 1; i >= 0; i--) {
+        if (isLineObject(objects[i])) return objects[i];
+    }
+    return null;
+}
+function recolorLineObject(line, color) {
+    if (!isLineObject(line)) return false;
+    line.lineColor = color;
+    (line._objects || []).forEach(part => {
+        if (part.customType === 'line-label') {
+            part.set({ fill: color });
+            return;
+        }
+        if (typeof part.stroke !== 'undefined' && part.stroke !== '') part.set({ stroke: color });
+        const transparentFill = part.fill === 'rgba(0,0,0,0)' || part.fill === 'transparent';
+        if (part.type === 'triangle' || (typeof part.fill !== 'undefined' && part.fill && part.fill !== '' && !transparentFill && !part.stroke)) {
+            part.set({ fill: color });
+        }
+    });
+    line.dirty = true;
+    line.setCoords();
+    return true;
+}
+function recolorActiveOrLastLine(color) {
+    const line = targetLineForColorUpdate();
+    if (!line || !recolorLineObject(line, color)) return;
+    canvas.requestRenderAll();
+    scheduleSnapshot();
+}
+function rebuildLineObject(line) {
+    if (!isLineObject(line)) return null;
+    const pts = adjustedAnimationPoints(line);
+    if (!pts || pts.length < 2) return null;
+    const type = lineObjectType(line);
+    const color = lineObjectColor(line);
+    const objects = canvas.getObjects();
+    const index = objects.indexOf(line);
+    const wasActive = canvas.getActiveObject() === line;
+    canvas.remove(line);
+    const rebuilt = addStyledLine(pts, type, color);
+    if (!rebuilt) return null;
+    if (index >= 0) canvas.moveTo(rebuilt, index);
+    applyModeToObject(rebuilt);
+    if (wasActive) canvas.setActiveObject(rebuilt);
+    return rebuilt;
+}
+function applyLineLabelMode() {
+    const lines = canvas.getObjects()
+        .filter(lineSupportsLabel)
+        .filter(line => lineLabelsEnabled ? !lineHasLabel(line) : lineHasLabel(line));
+    if (!lines.length) return;
+    const prevSuspend = suspendHistory;
+    suspendHistory = true;
+    lines.forEach(rebuildLineObject);
+    suspendHistory = prevSuspend;
+    snapshotNow();
+    canvas.requestRenderAll();
+}
+function makeTrainingRecordFromField(base = {}) {
+    const createdAt = base.createdAt || new Date().toISOString();
+    const title = base.title || `Тренировка ${trainingDateLabel(createdAt)}`;
+    const screen = captureBoardWithFooter('jpeg', 1, 0.86, { title, createdAt });
+    return Object.assign({}, base, {
+        title,
+        createdAt,
+        screen: screen.dataUrl,
+        screenW: screen.width,
+        screenH: screen.height,
+        rinkMode,
+        rinkRotation,
+        numCounter,
+        objectCount: canvas.getObjects().filter(o => !o.__temp).length,
+        canvas: canvas.toJSON(EXTRA_PROPS)
+    });
+}
+async function saveCurrentTrainingEdits() {
+    const index = trainingRecords.findIndex(item => item.id === activeTrainingId);
+    if (index < 0) return false;
+    const current = trainingRecords[index];
+    trainingRecords[index] = makeTrainingRecordFromField(Object.assign({}, current, {
+        updatedAt: new Date().toISOString()
+    }));
+    await persistTrainingRecords();
+    activeTrainingTitle = trainingRecords[index].title || '';
+    activeTrainingCreatedAt = trainingRecords[index].createdAt || '';
+    markActiveTrainingClean();
+    renderTrainingList();
+    return true;
+}
+async function saveFieldAsNewTraining() {
+    const createdAt = new Date().toISOString();
+    const source = trainingRecords.find(item => item.id === activeTrainingId) || {};
+    const title = source.title ? `${source.title} копия` : `Тренировка ${trainingDateLabel(createdAt)}`;
+    const record = makeTrainingRecordFromField({
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        title,
+        tag: source.tag || selectedTrainingTag || '',
+        createdAt
+    });
+    trainingRecords.unshift(record);
+    await persistTrainingRecords();
+    activeTrainingId = record.id;
+    activeTrainingTitle = record.title || '';
+    activeTrainingCreatedAt = record.createdAt || '';
+    markActiveTrainingClean();
+    renderTrainingList();
+    return true;
+}
+async function resolveUnsavedFieldChangesBeforeReplace(title = 'Несохранённые изменения') {
+    if (!hasUnsavedFieldChanges()) return true;
+    if (!activeTrainingId) {
+        const result = await showConfirm(
+            'На поле есть несохранённые изменения. Можно сохранить их новой тренировкой или отменить переход.',
+            { title, okLabel: 'Сохранить как новую', cancelLabel: 'Отмена' }
+        );
+        if (!result) return false;
+        return saveFieldAsNewTraining();
+    }
+    const result = await showConfirm(
+        'Открытая тренировка была изменена. Что сделать перед переходом?',
+        {
+            title,
+            okLabel: 'Сохранить текущую',
+            extraLabel: 'Сохранить как новую',
+            cancelLabel: 'Отмена'
+        }
+    );
+    if (!result) return false;
+    if (result === 'extra') return saveFieldAsNewTraining();
+    return saveCurrentTrainingEdits();
 }
 function scheduleSnapshot() {
     if (suspendHistory) return;
@@ -5661,15 +5885,17 @@ document.getElementById('btnLineLabels').addEventListener('click', e => {
     e.stopPropagation();
     lineLabelsEnabled = !lineLabelsEnabled;
     e.currentTarget.classList.toggle('active', lineLabelsEnabled);
+    applyLineLabelMode();
 });
 
-function setColor(c) {
+function setColor(c, options = {}) {
     currentColor = c;
     canvas.freeDrawingBrush.color = c;
     document.querySelectorAll('.color-swatch').forEach(s =>
         s.classList.toggle('active', s.dataset.color === c));
     const dot = document.getElementById('activeColorDot');
     if (dot) dot.style.background = c;
+    if (options.updateLastLine !== false) recolorActiveOrLastLine(c);
 }
 document.querySelectorAll('.color-swatch').forEach(s =>
     s.addEventListener('click', () => { setColor(s.dataset.color); closeToolMenus(); }));
@@ -5838,7 +6064,7 @@ function pointsAtPathSpacing(pts, spacing = 18) {
     return out;
 }
 
-function puckTrailDots(pts) {
+function puckTrailDots(pts, color = '#111111') {
     const dots = pointsAtPathSpacing(pts, 19);
     return dots.map(point => new fabric.Circle({
         left: point.x,
@@ -5847,13 +6073,13 @@ function puckTrailDots(pts) {
         originX: 'center',
         originY: 'center',
         fill: 'rgba(0,0,0,0)',
-        stroke: '#111111',
+        stroke: color,
         strokeWidth: 2.2,
         objectCaching: false
     }));
 }
 
-function puckTrailArrow(pt, dir) {
+function puckTrailArrow(pt, dir, color = '#111111') {
     const len = Math.hypot(dir.x, dir.y) || 1;
     const ux = dir.x / len;
     const uy = dir.y / len;
@@ -5861,7 +6087,7 @@ function puckTrailArrow(pt, dir) {
     return new fabric.Triangle({
         width: 21,
         height: 16,
-        fill: '#111111',
+        fill: color,
         left: pt.x + ux * 18,
         top: pt.y + uy * 18,
         originX: 'center',
@@ -5964,8 +6190,8 @@ function addStyledLine(rawPts, type, color) {
             items.push(arrowHead(endPt, dir, color));
             break;
         case 'puckmove':
-            items.push(...puckTrailDots(pts));
-            items.push(puckTrailArrow(endPt, dir));
+            items.push(...puckTrailDots(pts, color));
+            items.push(puckTrailArrow(endPt, dir, color));
             break;
         case 'pass':
             items.push(ptsToPath(trimEnd(pts, 8), color, { strokeDashArray: [10, 7] }));
@@ -5995,6 +6221,7 @@ function addStyledLine(rawPts, type, color) {
     const g = new fabric.Group(items, {
         customType: 'line-' + type,
         animType: type,
+        lineColor: color,
         animPts: pts.map(p => ({ x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 }))
     });
     const animationBase = g.getCenterPoint();
@@ -6579,7 +6806,7 @@ canvas.on('mouse:move', o => {
     const dashedPreview = currentLineType === 'pass';
     const pv = straight ? [dragPts[0], dragPts[dragPts.length - 1]] : dragPts;
     previewObj = new fabric.Polyline(pv, {
-        stroke: puckMovePreview ? '#111' : currentColor,
+        stroke: currentColor,
         strokeWidth: puckMovePreview ? 2.2 : 2,
         fill: '',
         opacity: puckMovePreview ? 0.75 : 0.5,
@@ -7297,10 +7524,7 @@ async function clearBoard(skipConfirm = false) {
     suspendHistory = true;
     objects.forEach(o => canvas.remove(o));
     suspendHistory = false;
-    activeTrainingId = '';
-    activeTrainingTitle = '';
-    activeTrainingCreatedAt = '';
-    updateFieldReturn();
+    resetActiveTrainingState();
     snapshotNow();
     canvas.requestRenderAll();
     return true;
@@ -7588,10 +7812,7 @@ document.getElementById('jsonInput').addEventListener('change', e => {
                     updateRinkControls();
                     suspendHistory = false;
                     stateHistory = []; historyIndex = -1; snapshotNow();
-                    activeTrainingId = '';
-                    activeTrainingTitle = '';
-                    activeTrainingCreatedAt = '';
-                    updateFieldReturn();
+                    resetActiveTrainingState();
                     setMode('select');
                 });
             });
@@ -12206,20 +12427,19 @@ function saveTrainingEdit() {
     activeTrainingId = record.id;
     activeTrainingTitle = title;
     activeTrainingCreatedAt = createdAt;
+    markActiveTrainingClean();
     endTrainingEdit();
     setView('trainings');
 }
 async function loadTrainingRecord(id) {
     const record = trainingRecords.find(item => item.id === id);
     if (!record || !record.canvas || trainingDraft) return;
-    const hasCurrentWork = canvas.getObjects().some(o => !o.__temp);
-    if (hasCurrentWork && activeTrainingId !== record.id) {
-        const confirmed = await showConfirm(
-            'Текущее поле будет перезаписано выбранной тренировкой. Несохранённые изменения пропадут.',
-            { title: 'Открыть тренировку', okLabel: 'Открыть' }
-        );
-        if (!confirmed) return;
+    if (activeTrainingId === record.id) {
+        setView('field');
+        return;
     }
+    const canReplace = await resolveUnsavedFieldChangesBeforeReplace('Открыть тренировку');
+    if (!canReplace) return;
     rinkMode = RINK[record.rinkMode] ? record.rinkMode : 'full';
     rinkRotation = rinkMode !== 'full' ? normalizeRinkRotation(record.rinkRotation) : 0;
     numCounter = record.numCounter || 1;
@@ -12237,6 +12457,7 @@ async function loadTrainingRecord(id) {
             stateHistory = [];
             historyIndex = -1;
             snapshotNow();
+            markActiveTrainingClean();
             setMode('select');
             setView('field');
         });
@@ -12299,10 +12520,7 @@ function removeTrainingRecordsByIds(ids = []) {
     const deleteSet = new Set(deleteIds);
     trainingRecords = trainingRecords.filter(item => !deleteSet.has(item.id));
     if (deleteSet.has(activeTrainingId)) {
-        activeTrainingId = '';
-        activeTrainingTitle = '';
-        activeTrainingCreatedAt = '';
-        updateFieldReturn();
+        resetActiveTrainingState();
     }
     deleteIds.forEach(id => selectedTrainingIds.delete(id));
     let blocksChanged = false;
@@ -12817,16 +13035,9 @@ async function handleBlockAction(id, action) {
 }
 async function startNewExercise() {
     setView('field');
-    const hasObjects = canvas.getObjects().some(o => !o.__temp);
-    if (hasObjects) {
-        const confirmed = await showConfirm('Очистить поле для нового упражнения?', { okLabel: 'Очистить' });
-        if (!confirmed) return;
-        await clearBoard(true);
-    }
-    activeTrainingId = '';
-    activeTrainingTitle = '';
-    activeTrainingCreatedAt = '';
-    updateFieldReturn();
+    const canReplace = await resolveUnsavedFieldChangesBeforeReplace('Новое упражнение');
+    if (!canReplace) return;
+    await resetFieldToBlank();
 }
 function toggleTrainingSort() {
     trainingSortDesc = !trainingSortDesc;
