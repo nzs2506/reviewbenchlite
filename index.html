@@ -4062,9 +4062,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.21" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.22" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.21</span>
+            <span class="version-tooltip">v0.9.22</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4695,13 +4695,13 @@
 
     <div class="panel-title">Фигуры</div>
     <div class="comp-item" draggable="true" data-comp="shapeRect" title="Прямоугольник">
-        <svg width="34" height="34" viewBox="0 0 34 34"><rect x="9" y="11" width="16" height="12" rx="1" fill="rgba(0,86,179,.14)" stroke="#0056b3" stroke-width="2" stroke-dasharray="4 3"/></svg>
+        <svg width="34" height="34" viewBox="0 0 34 34"><rect x="10" y="12" width="14" height="10" rx="1" fill="rgba(0,86,179,.14)" stroke="#0056b3" stroke-width="2.8" stroke-dasharray="3.5 2.5"/></svg>
     </div>
     <div class="comp-item" draggable="true" data-comp="shapeCircle" title="Круг">
-        <svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="8" fill="rgba(0,86,179,.14)" stroke="#0056b3" stroke-width="2" stroke-dasharray="4 3"/></svg>
+        <svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="6.5" fill="rgba(0,86,179,.14)" stroke="#0056b3" stroke-width="2.8" stroke-dasharray="3.5 2.5"/></svg>
     </div>
     <div class="comp-item" draggable="true" data-comp="shapeCross" title="Крестик">
-        <svg width="34" height="34" viewBox="0 0 34 34"><line x1="12" y1="12" x2="22" y2="22" stroke="#0056b3" stroke-width="3" stroke-linecap="round"/><line x1="22" y1="12" x2="12" y2="22" stroke="#0056b3" stroke-width="3" stroke-linecap="round"/></svg>
+        <svg width="34" height="34" viewBox="0 0 34 34"><line x1="13" y1="13" x2="21" y2="21" stroke="#0056b3" stroke-width="4" stroke-linecap="round"/><line x1="21" y1="13" x2="13" y2="21" stroke="#0056b3" stroke-width="4" stroke-linecap="round"/></svg>
     </div>
 </div>
 
@@ -4710,7 +4710,7 @@
     <div class="number-grid" id="numberPickerGrid" aria-label="Номера игроков"></div>
 </div>
 
-<div class="jersey-picker" id="jerseyPicker" hidden aria-label="Цвет майки"></div>
+<div class="jersey-picker" id="jerseyPicker" hidden aria-label="Цвет элемента"></div>
 
 <div class="confirm-overlay" id="confirmOverlay" hidden>
     <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
@@ -5047,7 +5047,7 @@ function rinkSVG(mode, rotation = 0) {
 
 // ================= ИНИЦИАЛИЗАЦИЯ =================
 const canvas = new fabric.Canvas('rink-canvas', { isDrawingMode: false, selection: true, preserveObjectStacking: true });
-const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase', 'jerseyColor', 'opponentColor'];
+const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase', 'jerseyColor', 'opponentColor', 'shapeColor'];
 
 let currentMode = 'select';
 let currentLineType = null;
@@ -5055,6 +5055,7 @@ let currentComponent = null;
 let currentColor = '#0056b3';
 let currentJerseyColor = '#2563eb';
 let currentOpponentColor = '#c0392b';
+let currentShapeColor = '#2563eb';
 let activeComponentColorTarget = 'jersey';
 let numCounter = 1;
 const TRAINING_STORAGE_KEY = 'benchreview-lite.trainings.v1';
@@ -6469,21 +6470,29 @@ function nextNumberMarkerText() {
     return text;
 }
 
+function opponentMarkerPalette(color) {
+    const accent = color || '#c0392b';
+    const normalized = accent.toLowerCase();
+    if (normalized === '#111111' || normalized === '#000000') return { fill: '#111111', stroke: '#111111', label: '#ffffff' };
+    if (normalized === '#ffffff') return { fill: '#ffffff', stroke: '#111827', label: '#111827' };
+    return { fill: '#ffffff', stroke: accent, label: accent };
+}
+
 function makeOpponentMarker(color = currentOpponentColor) {
     const accent = color || '#c0392b';
-    const stroke = accent.toLowerCase() === '#ffffff' ? '#111827' : accent;
+    const palette = opponentMarkerPalette(accent);
     const circle = new fabric.Circle({
         radius: 12,
-        fill: '#ffffff',
+        fill: palette.fill,
         originX: 'center',
         originY: 'center',
-        stroke,
+        stroke: palette.stroke,
         strokeWidth: 2
     });
     const label = new fabric.Text('X', {
         fontSize: 15,
         fontWeight: 'bold',
-        fill: stroke,
+        fill: palette.label,
         originX: 'center',
         originY: 'center',
         fontFamily: 'Arial'
@@ -6516,36 +6525,38 @@ function makeJersey(color = currentJerseyColor) {
 
 function makeShapeRect() {
     return new fabric.Rect({
-        width: 56,
-        height: 38,
-        fill: hexA(currentColor, 0.14),
-        stroke: currentColor,
-        strokeWidth: 1.3,
-        strokeDashArray: [5, 4],
+        width: 38,
+        height: 26,
+        fill: hexA(currentShapeColor, 0.14),
+        stroke: currentShapeColor,
+        strokeWidth: 2.4,
+        strokeDashArray: [4, 3],
         originX: 'center',
         originY: 'center',
+        shapeColor: currentShapeColor,
         customType: 'zone'
     });
 }
 
 function makeShapeCircle() {
     return new fabric.Circle({
-        radius: 20,
-        fill: hexA(currentColor, 0.14),
-        stroke: currentColor,
-        strokeWidth: 1.3,
-        strokeDashArray: [5, 4],
+        radius: 14,
+        fill: hexA(currentShapeColor, 0.14),
+        stroke: currentShapeColor,
+        strokeWidth: 2.4,
+        strokeDashArray: [4, 3],
         originX: 'center',
         originY: 'center',
+        shapeColor: currentShapeColor,
         customType: 'zone'
     });
 }
 
 function makeShapeCross() {
     return new fabric.Group([
-        new fabric.Line([-12, -12, 12, 12], { stroke: currentColor, strokeWidth: 3, strokeLineCap: 'round' }),
-        new fabric.Line([12, -12, -12, 12], { stroke: currentColor, strokeWidth: 3, strokeLineCap: 'round' })
-    ], { originX: 'center', originY: 'center', customType: 'shape-cross' });
+        new fabric.Line([-9, -9, 9, 9], { stroke: currentShapeColor, strokeWidth: 4, strokeLineCap: 'round' }),
+        new fabric.Line([9, -9, -9, 9], { stroke: currentShapeColor, strokeWidth: 4, strokeLineCap: 'round' })
+    ], { originX: 'center', originY: 'center', customType: 'shape-cross', shapeColor: currentShapeColor });
 }
 
 function makeImageComponent(src, targetW, targetH, customType, done) {
@@ -6770,6 +6781,10 @@ function closeJerseyPicker() {
     activeComponentColorTarget = 'jersey';
 }
 
+function isShapeObject(obj) {
+    return obj && (obj.customType === 'zone' || obj.customType === 'shape-cross');
+}
+
 function setJerseyObjectColor(jersey, color) {
     if (!jersey || jersey.customType !== 'obj-jersey') return;
     const fill = color || '#2563eb';
@@ -6786,17 +6801,33 @@ function setJerseyObjectColor(jersey, color) {
 function setOpponentObjectColor(opponent, color) {
     if (!opponent || opponent.customType !== 'opponent') return;
     const accent = color || '#c0392b';
-    const stroke = accent.toLowerCase() === '#ffffff' ? '#111827' : accent;
+    const palette = opponentMarkerPalette(accent);
     opponent.opponentColor = accent;
     const parts = opponent._objects || [];
-    if (parts[0]) parts[0].set({ stroke, fill: '#ffffff' });
-    if (parts[1]) parts[1].set({ fill: stroke });
+    if (parts[0]) parts[0].set({ fill: palette.fill, stroke: palette.stroke });
+    if (parts[1]) parts[1].set({ fill: palette.label });
     opponent.dirty = true;
     opponent.setCoords();
 }
 
+function setShapeObjectColor(shape, color) {
+    if (!isShapeObject(shape)) return;
+    const accent = color || '#2563eb';
+    shape.shapeColor = accent;
+    if (shape.customType === 'shape-cross') {
+        (shape._objects || []).forEach(part => part.set({ stroke: accent }));
+    } else {
+        shape.set({ stroke: accent, fill: hexA(accent, 0.14) });
+    }
+    shape.dirty = true;
+    shape.setCoords();
+}
+
 function chooseJerseyColor(color) {
-    const chosen = color || (activeComponentColorTarget === 'opponent' ? currentOpponentColor : currentJerseyColor);
+    const isShapeTarget = activeComponentColorTarget.startsWith('shape');
+    const chosen = color || (activeComponentColorTarget === 'opponent'
+        ? currentOpponentColor
+        : (isShapeTarget ? currentShapeColor : currentJerseyColor));
     const active = canvas.getActiveObject();
     if (activeComponentColorTarget === 'opponent') {
         currentOpponentColor = chosen;
@@ -6807,6 +6838,16 @@ function chooseJerseyColor(color) {
         } else {
             const p = dropPos();
             addComponent('oppX', p.x, p.y);
+        }
+    } else if (isShapeTarget) {
+        currentShapeColor = chosen;
+        if (isShapeObject(active)) {
+            setShapeObjectColor(active, currentShapeColor);
+            canvas.requestRenderAll();
+            snapshotNow();
+        } else {
+            const p = dropPos();
+            addComponent(activeComponentColorTarget, p.x, p.y);
         }
     } else {
         currentJerseyColor = chosen;
@@ -6829,6 +6870,7 @@ function openJerseyPicker(anchor, target = 'jersey') {
     const active = canvas.getActiveObject();
     if (target === 'opponent' && active?.customType === 'opponent') currentOpponentColor = active.opponentColor || currentOpponentColor;
     if (target === 'jersey' && active?.customType === 'obj-jersey') currentJerseyColor = active.jerseyColor || currentJerseyColor;
+    if (target.startsWith('shape') && isShapeObject(active)) currentShapeColor = active.shapeColor || active.stroke || currentShapeColor;
     const rect = anchor.getBoundingClientRect();
     picker.hidden = false;
     const pickerRect = picker.getBoundingClientRect();
@@ -6836,7 +6878,7 @@ function openJerseyPicker(anchor, target = 'jersey') {
     const top = Math.max(10, Math.min(window.innerHeight - pickerRect.height - 10, rect.top));
     picker.style.left = `${left}px`;
     picker.style.top = `${top}px`;
-    const activeColor = target === 'opponent' ? currentOpponentColor : currentJerseyColor;
+    const activeColor = target === 'opponent' ? currentOpponentColor : (target.startsWith('shape') ? currentShapeColor : currentJerseyColor);
     picker.querySelectorAll('.jersey-color-option').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.color === activeColor);
     });
@@ -6844,6 +6886,10 @@ function openJerseyPicker(anchor, target = 'jersey') {
 
 function openOpponentPicker(anchor) {
     openJerseyPicker(anchor, 'opponent');
+}
+
+function openShapePicker(anchor, shapeId) {
+    openJerseyPicker(anchor, shapeId);
 }
 
 function initJerseyPicker() {
@@ -6863,10 +6909,12 @@ function initJerseyPicker() {
     document.addEventListener('pointerdown', e => {
         const jerseyTrigger = document.getElementById('jerseyPlayerItem');
         const opponentTrigger = document.getElementById('opponentPlayerItem');
+        const shapeTrigger = e.target.closest('[data-comp^="shape"]');
         if (picker.hidden) return;
         if (picker.contains(e.target) ||
             (jerseyTrigger && jerseyTrigger.contains(e.target)) ||
-            (opponentTrigger && opponentTrigger.contains(e.target))) return;
+            (opponentTrigger && opponentTrigger.contains(e.target)) ||
+            shapeTrigger) return;
         closeJerseyPicker();
     });
 }
@@ -6948,6 +6996,12 @@ document.querySelectorAll('.comp-item').forEach(el => {
         if (id === 'oppX') {
             closeNumberPicker();
             openOpponentPicker(el);
+            return;
+        }
+        if (id.startsWith('shape')) {
+            closeNumberPicker();
+            closeJerseyPicker();
+            openShapePicker(el, id);
             return;
         }
         if (STAMP_COMPONENTS.has(id)) {
