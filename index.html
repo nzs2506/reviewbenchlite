@@ -4208,9 +4208,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.30" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.31" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.30</span>
+            <span class="version-tooltip">v0.9.31</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4808,12 +4808,10 @@
 <!-- ==== Interactive Components ==== -->
 <div class="side-panel" id="sidePanel">
     <div class="panel-title">Игроки</div>
-    <div class="comp-item" draggable="true" data-comp="mF1" title="Форвард 1"><div class="marker-icon" style="background:#2980b9">F1</div></div>
-    <div class="comp-item" draggable="true" data-comp="mF2" title="Форвард 2"><div class="marker-icon" style="background:#2980b9">F2</div></div>
-    <div class="comp-item" draggable="true" data-comp="mF3" title="Форвард 3"><div class="marker-icon" style="background:#2980b9">F3</div></div>
-    <div class="comp-item" draggable="true" data-comp="mD1" title="Защитник 1"><div class="marker-icon" style="background:#c0392b">D1</div></div>
-    <div class="comp-item" draggable="true" data-comp="mD2" title="Защитник 2"><div class="marker-icon" style="background:#c0392b">D2</div></div>
-    <div class="comp-item" draggable="true" data-comp="mC"  title="Тренер"><div class="marker-icon" style="background:#111">C</div></div>
+    <div class="comp-item" draggable="true" data-comp="mF1" title="Форвард"><div class="marker-icon" style="background:#2980b9">F</div></div>
+    <div class="comp-item" draggable="true" data-comp="mF2" title="Центр"><div class="marker-icon" style="background:#2980b9">C</div></div>
+    <div class="comp-item" draggable="true" data-comp="mD1" title="Защитник"><div class="marker-icon" style="background:#c0392b">D</div></div>
+    <div class="comp-item" draggable="true" data-comp="mC"  title="Тренер"><div class="marker-icon" style="background:#111">T</div></div>
     <div class="comp-item" draggable="true" data-comp="mG"  title="Вратарь"><div class="marker-icon" style="background:#7d3c98">G</div></div>
     <div class="comp-item" draggable="true" data-comp="oppX" id="opponentPlayerItem" title="Соперник (X)"><span class="opponent-panel-icon">X</span></div>
     <div class="comp-item" draggable="true" data-comp="mNum" id="numberPlayerItem" title="Игрок с номером"><b style="font-size:1.05em; color:#d4d4d8;">№</b></div>
@@ -6087,6 +6085,56 @@ function smoothPts(pts, iter) {
     }
     return pts;
 }
+function distanceToSegment(p, a, b) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy;
+    if (!len2) return Math.hypot(p.x - a.x, p.y - a.y);
+    const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
+    const x = a.x + dx * t;
+    const y = a.y + dy * t;
+    return Math.hypot(p.x - x, p.y - y);
+}
+function simplifyPts(pts, tolerance) {
+    if (!pts || pts.length <= 2) return pts ? pts.slice() : [];
+    let maxDistance = 0;
+    let index = 0;
+    const first = pts[0];
+    const last = pts[pts.length - 1];
+    for (let i = 1; i < pts.length - 1; i++) {
+        const d = distanceToSegment(pts[i], first, last);
+        if (d > maxDistance) {
+            maxDistance = d;
+            index = i;
+        }
+    }
+    if (maxDistance <= tolerance) return [first, last];
+    const left = simplifyPts(pts.slice(0, index + 1), tolerance);
+    const right = simplifyPts(pts.slice(index), tolerance);
+    return left.slice(0, -1).concat(right);
+}
+function removeJitterPts(pts, minDistance = 4) {
+    if (!pts || pts.length < 2) return pts ? pts.slice() : [];
+    const out = [pts[0]];
+    for (let i = 1; i < pts.length - 1; i++) {
+        const prev = out[out.length - 1];
+        if (Math.hypot(pts[i].x - prev.x, pts[i].y - prev.y) >= minDistance) out.push(pts[i]);
+    }
+    out.push(pts[pts.length - 1]);
+    return out;
+}
+function correctedFreehandPts(rawPts) {
+    const clean = removeJitterPts(rawPts, 5);
+    if (clean.length < 3) return resample(clean, 2.5);
+    const sampled = resample(clean, 7);
+    const len = pathLen(sampled);
+    const tolerance = Math.max(5, Math.min(15, len * 0.026));
+    const simplified = simplifyPts(sampled, tolerance);
+    const smoothed = simplified.length > 2
+        ? smoothPts(resample(simplified, 9), 3)
+        : simplified;
+    return resample(smoothed, 2.5);
+}
 function pathLen(pts) {
     let L = 0;
     for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i].x - pts[i-1].x, pts[i].y - pts[i-1].y);
@@ -6285,7 +6333,7 @@ function addStyledLine(rawPts, type, color) {
     const straight = (type === 'pass' || type === 'shot' || type === 'skateStraight');
     let pts = straight
         ? resample([rawPts[0], rawPts[rawPts.length - 1]], 3)
-        : resample(smoothPts(resample(rawPts, 6), 3), 2.5);
+        : correctedFreehandPts(rawPts);
     if (pathLen(pts) < 18) return null;
 
     const endPt = pts[pts.length - 1];
@@ -7129,12 +7177,12 @@ function makeImageComponent(src, targetW, targetH, customType, done) {
 
 // фабрики компонентов: id -> fabric-объект
 const COMPONENTS = {
-    mF1: () => makeMarker('F1', currentPlayerColors.mF1, 'mF1'),
-    mF2: () => makeMarker('F2', currentPlayerColors.mF2, 'mF2'),
+    mF1: () => makeMarker('F', currentPlayerColors.mF1, 'mF1'),
+    mF2: () => makeMarker('C', currentPlayerColors.mF2, 'mF2'),
     mF3: () => makeMarker('F3', currentPlayerColors.mF3, 'mF3'),
-    mD1: () => makeMarker('D1', currentPlayerColors.mD1, 'mD1'),
+    mD1: () => makeMarker('D', currentPlayerColors.mD1, 'mD1'),
     mD2: () => makeMarker('D2', currentPlayerColors.mD2, 'mD2'),
-    mC:  () => makeMarker('C',  '#111111'),
+    mC:  () => makeMarker('T',  '#111111'),
     mG:  () => makeMarker('G',  currentPlayerColors.mG, 'mG'),
     mNum: () => makeMarker(nextNumberMarkerText(), '#6c7a89'),
     oppX: () => makeOpponentMarker(),
@@ -7299,10 +7347,10 @@ function addComponent(id, x, y, keepMode = false) {
 
 const STAMP_COMPONENTS = new Set(['cone', 'puck', 'pucks', 'stick', 'stickPuck', 'barrierH', 'barrierV', 'stand']);
 const COMPONENT_LABELS = {
-    mF1: 'Форвард 1',
-    mF2: 'Форвард 2',
+    mF1: 'Форвард',
+    mF2: 'Центр',
     mF3: 'Форвард 3',
-    mD1: 'Защитник 1',
+    mD1: 'Защитник',
     mD2: 'Защитник 2',
     mC: 'Тренер',
     mG: 'Вратарь',
