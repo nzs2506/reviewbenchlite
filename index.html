@@ -549,6 +549,7 @@
     .icon-pass     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 h16' stroke-dasharray='4 3'/%3E%3Cpolyline points='22 12 18 9 18 15 22 12'/%3E%3C/svg%3E"); }
     .icon-shot     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 10 h16 M2 14 h16'/%3E%3Cpolyline points='23 12 18 8 18 16 23 12'/%3E%3C/svg%3E"); }
     .icon-stopline { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 h14'/%3E%3Cline x1='17' y1='7' x2='17' y2='17'/%3E%3Cline x1='21' y1='7' x2='21' y2='17'/%3E%3C/svg%3E"); }
+    .icon-plainline { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M3 8 h18'/%3E%3Cpath d='M3 16 h18' stroke-dasharray='4 3'/%3E%3C/svg%3E"); }
     .color-swatch {
         width: 24px; height: 24px; border-radius: 50%; border: 2px solid #22252c;
         box-shadow: 0 0 0 1px #3d424c; cursor: pointer; flex: 0 0 auto; margin: 0 2px;
@@ -4270,9 +4271,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.33" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.34" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.33</span>
+            <span class="version-tooltip">v0.9.34</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4763,6 +4764,16 @@
                 <button class="tool-btn line-tool" data-type="pass"     title="Пас"><i class="custom-icon icon-pass"></i></button>
                 <button class="tool-btn line-tool" data-type="shot"     title="Бросок"><i class="custom-icon icon-shot"></i></button>
                 <button class="tool-btn line-tool" data-type="stop"     title="Движение с остановкой"><i class="custom-icon icon-stopline"></i></button>
+                <div class="toolbar-combo" id="plainLineMenuWrap">
+                    <button class="tool-btn line-tool" id="btnPlainLineMenu" type="button" data-type="plainLine" title="Простые линии">
+                        <i class="custom-icon icon-plainline"></i>
+                        <i class="fa-solid fa-chevron-up menu-caret"></i>
+                    </button>
+                    <div class="tool-popover" id="plainLineMenu">
+                        <button class="menu-action" type="button" data-plain-line-type="plainLine"><i class="fa-solid fa-minus"></i><span>Сплошная</span></button>
+                        <button class="menu-action" type="button" data-plain-line-type="plainDash"><i class="fa-solid fa-ellipsis"></i><span>Пунктир</span></button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -5988,6 +5999,7 @@ function updateToolbarUI() {
     if (currentMode === 'line' && currentLineType) {
         const b = document.querySelector(`.line-tool[data-type="${currentLineType}"]`);
         if (b) b.classList.add('active');
+        if (currentLineType === 'plainDash') document.getElementById('btnPlainLineMenu')?.classList.add('active');
     }
     if (currentMode === 'place' && currentComponent) {
         const c = document.querySelector(`.comp-item[data-comp="${currentComponent}"]`);
@@ -6010,7 +6022,10 @@ function updateStampHint() {
 document.getElementById('btnSelectMode').addEventListener('click', () => setMode('select'));
 document.getElementById('btnFreeDraw').addEventListener('click', () => setMode('freedraw'));
 document.querySelectorAll('.line-tool').forEach(b =>
-    b.addEventListener('click', e => setMode('line', e.currentTarget.dataset.type)));
+    b.addEventListener('click', e => {
+        if (e.currentTarget.id === 'btnPlainLineMenu') return;
+        setMode('line', e.currentTarget.dataset.type);
+    }));
 document.getElementById('btnLineLabels').addEventListener('click', e => {
     e.stopPropagation();
     lineLabelsEnabled = !lineLabelsEnabled;
@@ -6111,6 +6126,16 @@ document.getElementById('btnShapeMenu').addEventListener('click', e => {
 document.getElementById('btnColorMenu').addEventListener('click', e => {
     e.stopPropagation();
     toggleToolMenu(document.getElementById('colorMenuWrap'));
+});
+document.getElementById('btnPlainLineMenu').addEventListener('click', e => {
+    e.stopPropagation();
+    toggleToolMenu(document.getElementById('plainLineMenuWrap'));
+});
+document.getElementById('plainLineMenu').addEventListener('click', e => {
+    const btn = e.target.closest('[data-plain-line-type]');
+    if (!btn) return;
+    setMode('line', btn.dataset.plainLineType);
+    closeToolMenus();
 });
 document.getElementById('btnRink').addEventListener('click', e => {
     e.stopPropagation();
@@ -6404,7 +6429,7 @@ function makeLineLabel(pts, type, color) {
 function addStyledLine(rawPts, type, color) {
     color = color || currentColor;
     if (!rawPts || rawPts.length < 2) return null;
-    const straight = (type === 'pass' || type === 'shot' || type === 'skateStraight');
+    const straight = (type === 'pass' || type === 'shot' || type === 'skateStraight' || type === 'plainLine' || type === 'plainDash');
     let pts = straight
         ? resample([rawPts[0], rawPts[rawPts.length - 1]], 3)
         : correctedFreehandPts(rawPts);
@@ -6453,11 +6478,17 @@ function addStyledLine(rawPts, type, color) {
             items.push(ptsToPath(trimEnd(pts, 4), color));
             items.push(...stopBars(endPt, dir, color));
             break;
+        case 'plainLine':
+            items.push(ptsToPath(pts, color));
+            break;
+        case 'plainDash':
+            items.push(ptsToPath(pts, color, { strokeDashArray: [9, 7] }));
+            break;
         default:
             items.push(ptsToPath(pts, color));
             items.push(arrowHead(endPt, dir, color));
     }
-    if (lineLabelsEnabled && type !== 'puckmove') {
+    if (lineLabelsEnabled && type !== 'puckmove' && type !== 'plainLine' && type !== 'plainDash') {
         const label = makeLineLabel(pts, type, color);
         if (label) items.push(label);
     }
@@ -7044,9 +7075,9 @@ canvas.on('mouse:move', o => {
     if (Math.hypot(p.x - last.x, p.y - last.y) < 3) return;
     dragPts.push({ x: p.x, y: p.y });
     if (previewObj) canvas.remove(previewObj);
-    const straight = (currentLineType === 'pass' || currentLineType === 'shot' || currentLineType === 'skateStraight');
+    const straight = (currentLineType === 'pass' || currentLineType === 'shot' || currentLineType === 'skateStraight' || currentLineType === 'plainLine' || currentLineType === 'plainDash');
     const puckMovePreview = currentLineType === 'puckmove';
-    const dashedPreview = currentLineType === 'pass';
+    const dashedPreview = currentLineType === 'pass' || currentLineType === 'plainDash';
     const pv = straight ? [dragPts[0], dragPts[dragPts.length - 1]] : dragPts;
     previewObj = new fabric.Polyline(pv, {
         stroke: currentColor,
