@@ -3517,6 +3517,35 @@
         background: rgba(37,99,235,.18);
         color: #fff;
     }
+    .role-picker {
+        position: fixed;
+        z-index: 86;
+        width: 146px;
+        padding: 9px;
+        border: 1px solid #34383f;
+        border-radius: 11px;
+        background: #1c1f26;
+        box-shadow: 0 20px 46px rgba(0,0,0,.48);
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 7px;
+    }
+    .role-picker[hidden] { display: none; }
+    .role-option {
+        height: 40px;
+        border: 1px solid #262a32;
+        border-radius: 999px;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 900;
+        cursor: pointer;
+        transition: transform .15s, border-color .15s, box-shadow .15s;
+    }
+    .role-option:hover {
+        transform: translateY(-1px);
+        border-color: #93c5fd;
+        box-shadow: 0 0 0 2px rgba(59,130,246,.2);
+    }
     .comp-item[data-comp="barrierH"] { order: 10; }
     .comp-item[data-comp="barrierV"] { order: 11; }
     .comp-item[data-comp="stand"] { order: 12; }
@@ -3602,42 +3631,43 @@
     }
     .confirm-overlay[hidden] { display: none; }
     .confirm-dialog {
-        width: min(450px, calc(100vw - 48px));
+        width: min(560px, calc(100vw - 48px));
         border: 1px solid #34383f;
         border-radius: 14px;
         background: #1c1f26;
         color: var(--text-main);
         box-shadow: 0 28px 70px rgba(0,0,0,.55);
-        padding: 22px;
+        padding: 26px;
     }
     .confirm-title {
-        margin: 0 0 10px;
+        margin: 0 0 12px;
         color: #fff;
-        font-size: 16px;
+        font-size: 21px;
         font-weight: 800;
         line-height: 1.2;
     }
     .confirm-message {
         margin: 0;
         color: #c9cdd6;
-        font-size: 14px;
-        line-height: 1.45;
+        font-size: 16px;
+        line-height: 1.5;
     }
     .confirm-actions {
         display: flex;
+        flex-wrap: wrap;
         justify-content: flex-end;
         gap: 10px;
-        margin-top: 22px;
+        margin-top: 26px;
     }
     .confirm-btn {
-        height: 36px;
-        min-width: 92px;
+        height: 44px;
+        min-width: 112px;
         border: 1px solid #34383f;
         border-radius: 999px;
         background: #262a32;
         color: #e4e4e7;
-        padding: 0 18px;
-        font-size: 13px;
+        padding: 0 20px;
+        font-size: 15px;
         font-weight: 800;
         cursor: pointer;
         transition: background .15s, border-color .15s, color .15s, transform .15s;
@@ -3654,6 +3684,16 @@
         box-shadow: 0 10px 22px rgba(37,99,235,.28);
     }
     .confirm-btn.primary:hover { background: #3b82f6; }
+    .confirm-btn.neutral {
+        background: #303643;
+        border-color: #4b5563;
+        color: #eef2f7;
+    }
+    .confirm-btn.neutral:hover {
+        background: #3a4354;
+        border-color: #6b7280;
+        color: #fff;
+    }
     .confirm-btn.cancel {
         background: #451a1a;
         border-color: #7f1d1d;
@@ -4208,9 +4248,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.31" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.32" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.31</span>
+            <span class="version-tooltip">v0.9.32</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4808,9 +4848,8 @@
 <!-- ==== Interactive Components ==== -->
 <div class="side-panel" id="sidePanel">
     <div class="panel-title">Игроки</div>
-    <div class="comp-item" draggable="true" data-comp="mF1" title="Форвард"><div class="marker-icon" style="background:#2980b9">F</div></div>
-    <div class="comp-item" draggable="true" data-comp="mF2" title="Центр"><div class="marker-icon" style="background:#2980b9">C</div></div>
-    <div class="comp-item" draggable="true" data-comp="mD1" title="Защитник"><div class="marker-icon" style="background:#c0392b">D</div></div>
+    <div class="comp-item" draggable="true" data-comp="mF1" data-role-picker="forward" id="forwardPlayerItem" title="Форварды F1-F3"><div class="marker-icon" style="background:#2980b9">F1</div></div>
+    <div class="comp-item" draggable="true" data-comp="mD1" data-role-picker="defense" id="defensePlayerItem" title="Защитники D1-D2"><div class="marker-icon" style="background:#c0392b">D1</div></div>
     <div class="comp-item" draggable="true" data-comp="mC"  title="Тренер"><div class="marker-icon" style="background:#111">T</div></div>
     <div class="comp-item" draggable="true" data-comp="mG"  title="Вратарь"><div class="marker-icon" style="background:#7d3c98">G</div></div>
     <div class="comp-item" draggable="true" data-comp="oppX" id="opponentPlayerItem" title="Соперник (X)"><span class="opponent-panel-icon">X</span></div>
@@ -4874,6 +4913,8 @@
     <div class="number-grid" id="numberPickerGrid" aria-label="Номера игроков"></div>
 </div>
 
+<div class="role-picker" id="rolePicker" hidden aria-label="Варианты игроков"></div>
+
 <div class="jersey-picker" id="jerseyPicker" hidden aria-label="Цвет элемента"></div>
 
 <div class="confirm-overlay" id="confirmOverlay" hidden>
@@ -4883,6 +4924,7 @@
         <div class="confirm-actions">
             <button class="confirm-btn primary" id="confirmOk" type="button">ОК</button>
             <button class="confirm-btn primary" id="confirmExtra" type="button" hidden>Сохранить как новую</button>
+            <button class="confirm-btn neutral" id="confirmSkip" type="button" hidden>Не сохранять</button>
             <button class="confirm-btn cancel" id="confirmCancel" type="button">Отмена</button>
         </div>
     </div>
@@ -5600,12 +5642,15 @@ function showConfirm(message, options = {}) {
     const overlay = document.getElementById('confirmOverlay');
     const ok = document.getElementById('confirmOk');
     const extra = document.getElementById('confirmExtra');
+    const skip = document.getElementById('confirmSkip');
     const cancel = document.getElementById('confirmCancel');
     document.getElementById('confirmTitle').textContent = options.title || 'Подтвердите действие';
     document.getElementById('confirmMessage').textContent = message;
     ok.textContent = options.okLabel || 'ОК';
     extra.textContent = options.extraLabel || '';
     extra.hidden = !options.extraLabel;
+    skip.textContent = options.skipLabel || '';
+    skip.hidden = !options.skipLabel;
     cancel.textContent = options.cancelLabel || 'Отмена';
     confirmPreviousFocus = document.activeElement;
     overlay.hidden = false;
@@ -5617,6 +5662,7 @@ function showConfirm(message, options = {}) {
 
 document.getElementById('confirmOk').addEventListener('click', () => closeConfirm(true));
 document.getElementById('confirmExtra').addEventListener('click', () => closeConfirm('extra'));
+document.getElementById('confirmSkip').addEventListener('click', () => closeConfirm('skip'));
 document.getElementById('confirmCancel').addEventListener('click', () => closeConfirm(false));
 document.getElementById('confirmOverlay').addEventListener('click', e => {
     if (e.target.id === 'confirmOverlay') closeConfirm(false);
@@ -5835,9 +5881,10 @@ async function resolveUnsavedFieldChangesBeforeReplace(title = 'Несохран
     if (!activeTrainingId) {
         const result = await showConfirm(
             'На поле есть несохранённые изменения. Можно сохранить их новой тренировкой или отменить переход.',
-            { title, okLabel: 'Сохранить как новую', cancelLabel: 'Отмена' }
+            { title, okLabel: 'Сохранить как новую', skipLabel: 'Не сохранять', cancelLabel: 'Отмена' }
         );
         if (!result) return false;
+        if (result === 'skip') return true;
         return saveFieldAsNewTraining();
     }
     const result = await showConfirm(
@@ -5846,10 +5893,12 @@ async function resolveUnsavedFieldChangesBeforeReplace(title = 'Несохран
             title,
             okLabel: 'Сохранить текущую',
             extraLabel: 'Сохранить как новую',
+            skipLabel: 'Не сохранять',
             cancelLabel: 'Отмена'
         }
     );
     if (!result) return false;
+    if (result === 'skip') return true;
     if (result === 'extra') return saveFieldAsNewTraining();
     return saveCurrentTrainingEdits();
 }
@@ -7177,10 +7226,10 @@ function makeImageComponent(src, targetW, targetH, customType, done) {
 
 // фабрики компонентов: id -> fabric-объект
 const COMPONENTS = {
-    mF1: () => makeMarker('F', currentPlayerColors.mF1, 'mF1'),
-    mF2: () => makeMarker('C', currentPlayerColors.mF2, 'mF2'),
+    mF1: () => makeMarker('F1', currentPlayerColors.mF1, 'mF1'),
+    mF2: () => makeMarker('F2', currentPlayerColors.mF2, 'mF2'),
     mF3: () => makeMarker('F3', currentPlayerColors.mF3, 'mF3'),
-    mD1: () => makeMarker('D', currentPlayerColors.mD1, 'mD1'),
+    mD1: () => makeMarker('D1', currentPlayerColors.mD1, 'mD1'),
     mD2: () => makeMarker('D2', currentPlayerColors.mD2, 'mD2'),
     mC:  () => makeMarker('T',  '#111111'),
     mG:  () => makeMarker('G',  currentPlayerColors.mG, 'mG'),
@@ -7347,10 +7396,10 @@ function addComponent(id, x, y, keepMode = false) {
 
 const STAMP_COMPONENTS = new Set(['cone', 'puck', 'pucks', 'stick', 'stickPuck', 'barrierH', 'barrierV', 'stand']);
 const COMPONENT_LABELS = {
-    mF1: 'Форвард',
-    mF2: 'Центр',
+    mF1: 'Форвард 1',
+    mF2: 'Форвард 2',
     mF3: 'Форвард 3',
-    mD1: 'Защитник',
+    mD1: 'Защитник 1',
     mD2: 'Защитник 2',
     mC: 'Тренер',
     mG: 'Вратарь',
@@ -7387,11 +7436,27 @@ const JERSEY_COLORS = [
     { label: 'Зелёный', value: '#16a34a' },
     { label: 'Фиолетовый', value: '#7e22ce' }
 ];
+const ROLE_PICKER_OPTIONS = {
+    forward: [
+        { id: 'mF1', label: 'F1' },
+        { id: 'mF2', label: 'F2' },
+        { id: 'mF3', label: 'F3' }
+    ],
+    defense: [
+        { id: 'mD1', label: 'D1' },
+        { id: 'mD2', label: 'D2' }
+    ]
+};
 
 function closeJerseyPicker() {
     const picker = document.getElementById('jerseyPicker');
     if (picker) picker.hidden = true;
     activeComponentColorTarget = 'jersey';
+}
+
+function closeRolePicker() {
+    const picker = document.getElementById('rolePicker');
+    if (picker) picker.hidden = true;
 }
 
 function isShapeObject(obj) {
@@ -7546,6 +7611,39 @@ function openPlayerMarkerPicker(anchor, markerId) {
     openJerseyPicker(anchor, markerId);
 }
 
+function chooseRolePlayer(id) {
+    if (!id || !COMPONENTS[id]) return;
+    const p = dropPos();
+    addComponent(id, p.x, p.y);
+    closeRolePicker();
+}
+
+function openRolePicker(anchor, role) {
+    const picker = document.getElementById('rolePicker');
+    const options = ROLE_PICKER_OPTIONS[role] || [];
+    if (!picker || !anchor || !options.length) return;
+    picker.innerHTML = '';
+    options.forEach(option => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'role-option';
+        btn.dataset.comp = option.id;
+        btn.textContent = option.label;
+        const color = currentPlayerColors[option.id] || DEFAULT_PLAYER_COLORS[option.id] || '#2980b9';
+        btn.style.background = color;
+        btn.style.color = markerTextColor(color);
+        btn.addEventListener('click', () => chooseRolePlayer(option.id));
+        picker.appendChild(btn);
+    });
+    const rect = anchor.getBoundingClientRect();
+    picker.hidden = false;
+    const pickerRect = picker.getBoundingClientRect();
+    const left = Math.max(10, Math.min(window.innerWidth - pickerRect.width - 10, rect.left - pickerRect.width - 10));
+    const top = Math.max(10, Math.min(window.innerHeight - pickerRect.height - 10, rect.top));
+    picker.style.left = `${left}px`;
+    picker.style.top = `${top}px`;
+}
+
 function initJerseyPicker() {
     const picker = document.getElementById('jerseyPicker');
     if (!picker) return;
@@ -7572,6 +7670,15 @@ function initJerseyPicker() {
             shapeTrigger ||
             (playerTrigger && PLAYER_COLOR_COMPONENTS.has(playerTrigger.dataset.comp))) return;
         closeJerseyPicker();
+    });
+}
+
+function initRolePicker() {
+    document.addEventListener('pointerdown', e => {
+        const picker = document.getElementById('rolePicker');
+        if (!picker || picker.hidden) return;
+        if (picker.contains(e.target) || e.target.closest('[data-role-picker]')) return;
+        closeRolePicker();
     });
 }
 
@@ -7639,27 +7746,38 @@ document.querySelectorAll('.comp-item').forEach(el => {
     el.dataset.label = COMPONENT_LABELS[id] || el.title || '';
     el.classList.toggle('stampable', STAMP_COMPONENTS.has(id));
     el.addEventListener('click', () => {
+        if (el.dataset.rolePicker) {
+            closeNumberPicker();
+            closeJerseyPicker();
+            openRolePicker(el, el.dataset.rolePicker);
+            return;
+        }
         if (PLAYER_COLOR_COMPONENTS.has(id)) {
             closeNumberPicker();
+            closeRolePicker();
             openPlayerMarkerPicker(el, id);
             return;
         }
         if (id === 'mNum') {
+            closeRolePicker();
             closeJerseyPicker();
             openNumberPicker(el);
             return;
         }
         if (id === 'jersey') {
+            closeRolePicker();
             closeNumberPicker();
             openJerseyPicker(el);
             return;
         }
         if (id === 'oppX') {
+            closeRolePicker();
             closeNumberPicker();
             openOpponentPicker(el);
             return;
         }
         if (id.startsWith('shape')) {
+            closeRolePicker();
             closeNumberPicker();
             closeJerseyPicker();
             openShapePicker(el, id);
@@ -13708,6 +13826,7 @@ renderTrainingList();
 renderGoaliePage();
 initNumberPicker();
 initJerseyPicker();
+initRolePicker();
 initSidePanelToggle();
 setBackground(() => {
     fitCanvas();
