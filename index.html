@@ -455,6 +455,7 @@
         filter: invert(62%) sepia(91%) saturate(1851%) hue-rotate(194deg) brightness(100%) contrast(96%);
     }
     .icon-skate    { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 18 C 7 6, 15 6, 20 10'/%3E%3Cpolyline points='20 10 14 10 18 4'/%3E%3C/svg%3E"); }
+    .icon-skate-straight { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12 h15'/%3E%3Cpolyline points='22 12 17 8 17 16 22 12'/%3E%3C/svg%3E"); }
     .icon-back     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 l3 -4 3 8 3 -8 3 8 3 -4'/%3E%3Cpolyline points='22 12 18 9 18 15 22 12'/%3E%3C/svg%3E"); }
     .icon-puckline { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 12 c2 -4 4 -4 6 0 s4 4 6 0 4 -4 6 0'/%3E%3Cpolyline points='22 12 18 9 18 15 22 12'/%3E%3C/svg%3E"); }
     .icon-puckroll { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='4' cy='13' r='1.8'/%3E%3Ccircle cx='9' cy='10' r='1.8'/%3E%3Ccircle cx='14' cy='13' r='1.8'/%3E%3Ccircle cx='19' cy='10' r='1.8'/%3E%3C/svg%3E"); }
@@ -4062,9 +4063,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.24" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.25" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.24</span>
+            <span class="version-tooltip">v0.9.25</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4545,12 +4546,37 @@
             </div>
             <div class="toolbar-group">
                 <button class="tool-btn line-tool" data-type="skate"    title="Катание без шайбы"><i class="custom-icon icon-skate"></i></button>
+                <button class="tool-btn line-tool" data-type="skateStraight" title="Катание прямо"><i class="custom-icon icon-skate-straight"></i></button>
                 <button class="tool-btn line-tool" data-type="backward" title="Катание спиной вперёд"><i class="custom-icon icon-back"></i></button>
                 <button class="tool-btn line-tool" data-type="puck"     title="Ведение шайбы"><i class="custom-icon icon-puckline"></i></button>
                 <button class="tool-btn line-tool" data-type="puckmove" title="Движение шайбы"><i class="custom-icon icon-puckroll"></i></button>
                 <button class="tool-btn line-tool" data-type="pass"     title="Пас"><i class="custom-icon icon-pass"></i></button>
                 <button class="tool-btn line-tool" data-type="shot"     title="Бросок"><i class="custom-icon icon-shot"></i></button>
                 <button class="tool-btn line-tool" data-type="stop"     title="Движение с остановкой"><i class="custom-icon icon-stopline"></i></button>
+            </div>
+        </div>
+
+        <div class="vsep"></div>
+
+        <div class="tool-group-block">
+            <div class="group-cap">Цвет</div>
+            <div class="toolbar-group">
+                <div class="toolbar-combo" id="colorMenuWrap">
+                    <button class="tool-btn" id="btnColorMenu" type="button" title="Цвет катания">
+                        <span class="active-color-dot" id="activeColorDot"></span>
+                        <i class="fa-solid fa-chevron-up menu-caret"></i>
+                    </button>
+                    <div class="tool-popover color-popover" id="colorMenu">
+                        <div class="color-swatch" data-color="#111111" style="background:#111111" title="Чёрный"></div>
+                        <div class="color-swatch" data-color="#ffffff" style="background:#ffffff" title="Белый"></div>
+                        <div class="color-swatch" data-color="#c0392b" style="background:#c0392b" title="Красный"></div>
+                        <div class="color-swatch active" data-color="#0056b3" style="background:#0056b3" title="Синий"></div>
+                        <div class="color-swatch" data-color="#facc15" style="background:#facc15" title="Жёлтый"></div>
+                        <div class="color-swatch" data-color="#16a34a" style="background:#16a34a" title="Зелёный"></div>
+                        <div class="color-swatch" data-color="#7e22ce" style="background:#7e22ce" title="Фиолетовый"></div>
+                        <input type="color" id="colorPicker" value="#0056b3" title="Свой цвет">
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -4569,19 +4595,6 @@
                     <div class="tool-popover" id="shapeMenu">
                         <button class="menu-action" id="btnAddText" type="button"><i class="fa-solid fa-font"></i><span>Текст</span></button>
                         <button class="menu-action" id="btnAddImage" type="button"><i class="fa-regular fa-image"></i><span>Картинка</span></button>
-                    </div>
-                </div>
-                <div class="toolbar-combo" id="colorMenuWrap">
-                    <button class="tool-btn" id="btnColorMenu" type="button" title="Цвет линий">
-                        <span class="active-color-dot" id="activeColorDot"></span>
-                        <i class="fa-solid fa-chevron-up menu-caret"></i>
-                    </button>
-                    <div class="tool-popover color-popover" id="colorMenu">
-                        <div class="color-swatch active" data-color="#0056b3" style="background:#0056b3" title="Синий"></div>
-                        <div class="color-swatch" data-color="#c0392b" style="background:#c0392b" title="Красный"></div>
-                        <div class="color-swatch" data-color="#111111" style="background:#111111" title="Чёрный"></div>
-                        <div class="color-swatch" data-color="#1e8449" style="background:#1e8449" title="Зелёный"></div>
-                        <input type="color" id="colorPicker" value="#0056b3" title="Свой цвет">
                     </div>
                 </div>
                 <input type="file" id="imgInput" accept="image/*" style="display:none">
@@ -5161,6 +5174,7 @@ const TRAINING_TAGS = {
 };
 const LINE_LABELS = {
     skate: 'без шайбы',
+    skateStraight: 'без шайбы',
     backward: 'спиной',
     puck: 'с шайбой',
     pass: 'ПАС',
@@ -5804,7 +5818,7 @@ function makeLineLabel(pts, type, color) {
 function addStyledLine(rawPts, type, color) {
     color = color || currentColor;
     if (!rawPts || rawPts.length < 2) return null;
-    const straight = (type === 'pass' || type === 'shot');
+    const straight = (type === 'pass' || type === 'shot' || type === 'skateStraight');
     let pts = straight
         ? resample([rawPts[0], rawPts[rawPts.length - 1]], 3)
         : resample(smoothPts(resample(rawPts, 6), 3), 2.5);
@@ -5817,6 +5831,10 @@ function addStyledLine(rawPts, type, color) {
     const items = [];
     switch (type) {
         case 'skate':
+            items.push(ptsToPath(trimEnd(pts, 8), color));
+            items.push(arrowHead(endPt, dir, color));
+            break;
+        case 'skateStraight':
             items.push(ptsToPath(trimEnd(pts, 8), color));
             items.push(arrowHead(endPt, dir, color));
             break;
@@ -5870,7 +5888,7 @@ function addStyledLine(rawPts, type, color) {
 }
 
 // ================= АНИМАЦИЯ УПРАЖНЕНИЯ =================
-const ANIMATION_LINE_TYPES = new Set(['skate', 'backward', 'puck', 'stop']);
+const ANIMATION_LINE_TYPES = new Set(['skate', 'skateStraight', 'backward', 'puck', 'stop']);
 const ANIMATION_ACTION_LINE_TYPES = new Set(['pass', 'shot', 'puckmove']);
 
 function delay(ms) {
@@ -6439,15 +6457,16 @@ canvas.on('mouse:move', o => {
     if (Math.hypot(p.x - last.x, p.y - last.y) < 3) return;
     dragPts.push({ x: p.x, y: p.y });
     if (previewObj) canvas.remove(previewObj);
-    const straight = (currentLineType === 'pass' || currentLineType === 'shot');
+    const straight = (currentLineType === 'pass' || currentLineType === 'shot' || currentLineType === 'skateStraight');
     const puckMovePreview = currentLineType === 'puckmove';
+    const dashedPreview = currentLineType === 'pass';
     const pv = straight ? [dragPts[0], dragPts[dragPts.length - 1]] : dragPts;
     previewObj = new fabric.Polyline(pv, {
         stroke: puckMovePreview ? '#111' : currentColor,
         strokeWidth: puckMovePreview ? 2.2 : 2,
         fill: '',
         opacity: puckMovePreview ? 0.75 : 0.5,
-        strokeDashArray: puckMovePreview ? [1, 13] : (straight ? [8, 6] : null),
+        strokeDashArray: puckMovePreview ? [1, 13] : (dashedPreview ? [8, 6] : null),
         selectable: false, evented: false, objectCaching: false, __temp: true
     });
     canvas.add(previewObj);
