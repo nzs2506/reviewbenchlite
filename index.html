@@ -4062,9 +4062,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.22" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.23" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.22</span>
+            <span class="version-tooltip">v0.9.23</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5047,7 +5047,7 @@ function rinkSVG(mode, rotation = 0) {
 
 // ================= ИНИЦИАЛИЗАЦИЯ =================
 const canvas = new fabric.Canvas('rink-canvas', { isDrawingMode: false, selection: true, preserveObjectStacking: true });
-const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase', 'jerseyColor', 'opponentColor', 'shapeColor'];
+const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase', 'jerseyColor', 'opponentColor', 'shapeColor', 'markerColor', 'markerId'];
 
 let currentMode = 'select';
 let currentLineType = null;
@@ -5057,6 +5057,16 @@ let currentJerseyColor = '#2563eb';
 let currentOpponentColor = '#c0392b';
 let currentShapeColor = '#2563eb';
 let activeComponentColorTarget = 'jersey';
+const DEFAULT_PLAYER_COLORS = {
+    mF1: '#2980b9',
+    mF2: '#2980b9',
+    mF3: '#2980b9',
+    mD1: '#c0392b',
+    mD2: '#c0392b',
+    mG: '#7d3c98'
+};
+const PLAYER_COLOR_COMPONENTS = new Set(Object.keys(DEFAULT_PLAYER_COLORS));
+let currentPlayerColors = { ...DEFAULT_PLAYER_COLORS };
 let numCounter = 1;
 const TRAINING_STORAGE_KEY = 'benchreview-lite.trainings.v1';
 const BLOCK_STORAGE_KEY = 'benchreview-lite.blocks.v1';
@@ -6455,10 +6465,16 @@ canvas.on('mouse:up', () => {
 });
 
 // ================= INTERACTIVE COMPONENTS =================
-function makeMarker(text, color) {
-    const circle = new fabric.Circle({ radius: 16, fill: color, originX: 'center', originY: 'center', stroke: 'rgba(0,0,0,0.25)', strokeWidth: 1 });
-    const label = new fabric.Text(text, { fontSize: text.length > 2 ? 10.5 : (text.length > 1 ? 13 : 15), fontWeight: 'bold', fill: 'white', originX: 'center', originY: 'center', fontFamily: 'Arial' });
-    return new fabric.Group([circle, label], { customType: 'marker' });
+function markerTextColor(color) {
+    const normalized = String(color || '').toLowerCase();
+    return normalized === '#ffffff' || normalized === '#facc15' ? '#111827' : '#ffffff';
+}
+
+function makeMarker(text, color, markerId = '') {
+    const fill = color || '#2980b9';
+    const circle = new fabric.Circle({ radius: 16, fill, originX: 'center', originY: 'center', stroke: 'rgba(0,0,0,0.25)', strokeWidth: 1 });
+    const label = new fabric.Text(text, { fontSize: text.length > 2 ? 10.5 : (text.length > 1 ? 13 : 15), fontWeight: 'bold', fill: markerTextColor(fill), originX: 'center', originY: 'center', fontFamily: 'Arial' });
+    return new fabric.Group([circle, label], { customType: 'marker', markerColor: fill, markerId });
 }
 
 function nextNumberMarkerText() {
@@ -6569,13 +6585,13 @@ function makeImageComponent(src, targetW, targetH, customType, done) {
 
 // фабрики компонентов: id -> fabric-объект
 const COMPONENTS = {
-    mF1: () => makeMarker('F1', '#2980b9'),
-    mF2: () => makeMarker('F2', '#2980b9'),
-    mF3: () => makeMarker('F3', '#2980b9'),
-    mD1: () => makeMarker('D1', '#c0392b'),
-    mD2: () => makeMarker('D2', '#c0392b'),
+    mF1: () => makeMarker('F1', currentPlayerColors.mF1, 'mF1'),
+    mF2: () => makeMarker('F2', currentPlayerColors.mF2, 'mF2'),
+    mF3: () => makeMarker('F3', currentPlayerColors.mF3, 'mF3'),
+    mD1: () => makeMarker('D1', currentPlayerColors.mD1, 'mD1'),
+    mD2: () => makeMarker('D2', currentPlayerColors.mD2, 'mD2'),
     mC:  () => makeMarker('C',  '#111111'),
-    mG:  () => makeMarker('G',  '#7d3c98'),
+    mG:  () => makeMarker('G',  currentPlayerColors.mG, 'mG'),
     mNum: () => makeMarker(nextNumberMarkerText(), '#6c7a89'),
     oppX: () => makeOpponentMarker(),
     jersey: () => makeJersey(currentJerseyColor),
@@ -6785,6 +6801,17 @@ function isShapeObject(obj) {
     return obj && (obj.customType === 'zone' || obj.customType === 'shape-cross');
 }
 
+function isColorableMarker(obj) {
+    return obj && obj.customType === 'marker';
+}
+
+function updatePlayerPanelColor(markerId, color) {
+    const icon = document.querySelector(`[data-comp="${markerId}"] .marker-icon`);
+    if (!icon) return;
+    icon.style.background = color || DEFAULT_PLAYER_COLORS[markerId] || '#2980b9';
+    icon.style.color = markerTextColor(color || DEFAULT_PLAYER_COLORS[markerId]);
+}
+
 function setJerseyObjectColor(jersey, color) {
     if (!jersey || jersey.customType !== 'obj-jersey') return;
     const fill = color || '#2563eb';
@@ -6823,11 +6850,23 @@ function setShapeObjectColor(shape, color) {
     shape.setCoords();
 }
 
+function setMarkerObjectColor(marker, color) {
+    if (!isColorableMarker(marker)) return;
+    const fill = color || '#2980b9';
+    marker.markerColor = fill;
+    const parts = marker._objects || [];
+    if (parts[0]) parts[0].set({ fill });
+    if (parts[1]) parts[1].set({ fill: markerTextColor(fill) });
+    marker.dirty = true;
+    marker.setCoords();
+}
+
 function chooseJerseyColor(color) {
     const isShapeTarget = activeComponentColorTarget.startsWith('shape');
+    const isPlayerTarget = PLAYER_COLOR_COMPONENTS.has(activeComponentColorTarget);
     const chosen = color || (activeComponentColorTarget === 'opponent'
         ? currentOpponentColor
-        : (isShapeTarget ? currentShapeColor : currentJerseyColor));
+        : (isShapeTarget ? currentShapeColor : (isPlayerTarget ? currentPlayerColors[activeComponentColorTarget] : currentJerseyColor)));
     const active = canvas.getActiveObject();
     if (activeComponentColorTarget === 'opponent') {
         currentOpponentColor = chosen;
@@ -6843,6 +6882,17 @@ function chooseJerseyColor(color) {
         currentShapeColor = chosen;
         if (isShapeObject(active)) {
             setShapeObjectColor(active, currentShapeColor);
+            canvas.requestRenderAll();
+            snapshotNow();
+        } else {
+            const p = dropPos();
+            addComponent(activeComponentColorTarget, p.x, p.y);
+        }
+    } else if (isPlayerTarget) {
+        currentPlayerColors[activeComponentColorTarget] = chosen;
+        updatePlayerPanelColor(activeComponentColorTarget, chosen);
+        if (isColorableMarker(active)) {
+            setMarkerObjectColor(active, chosen);
             canvas.requestRenderAll();
             snapshotNow();
         } else {
@@ -6871,6 +6921,7 @@ function openJerseyPicker(anchor, target = 'jersey') {
     if (target === 'opponent' && active?.customType === 'opponent') currentOpponentColor = active.opponentColor || currentOpponentColor;
     if (target === 'jersey' && active?.customType === 'obj-jersey') currentJerseyColor = active.jerseyColor || currentJerseyColor;
     if (target.startsWith('shape') && isShapeObject(active)) currentShapeColor = active.shapeColor || active.stroke || currentShapeColor;
+    if (PLAYER_COLOR_COMPONENTS.has(target) && isColorableMarker(active)) currentPlayerColors[target] = active.markerColor || currentPlayerColors[target];
     const rect = anchor.getBoundingClientRect();
     picker.hidden = false;
     const pickerRect = picker.getBoundingClientRect();
@@ -6878,7 +6929,9 @@ function openJerseyPicker(anchor, target = 'jersey') {
     const top = Math.max(10, Math.min(window.innerHeight - pickerRect.height - 10, rect.top));
     picker.style.left = `${left}px`;
     picker.style.top = `${top}px`;
-    const activeColor = target === 'opponent' ? currentOpponentColor : (target.startsWith('shape') ? currentShapeColor : currentJerseyColor);
+    const activeColor = target === 'opponent'
+        ? currentOpponentColor
+        : (target.startsWith('shape') ? currentShapeColor : (PLAYER_COLOR_COMPONENTS.has(target) ? currentPlayerColors[target] : currentJerseyColor));
     picker.querySelectorAll('.jersey-color-option').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.color === activeColor);
     });
@@ -6890,6 +6943,10 @@ function openOpponentPicker(anchor) {
 
 function openShapePicker(anchor, shapeId) {
     openJerseyPicker(anchor, shapeId);
+}
+
+function openPlayerMarkerPicker(anchor, markerId) {
+    openJerseyPicker(anchor, markerId);
 }
 
 function initJerseyPicker() {
@@ -6910,11 +6967,13 @@ function initJerseyPicker() {
         const jerseyTrigger = document.getElementById('jerseyPlayerItem');
         const opponentTrigger = document.getElementById('opponentPlayerItem');
         const shapeTrigger = e.target.closest('[data-comp^="shape"]');
+        const playerTrigger = e.target.closest('[data-comp]');
         if (picker.hidden) return;
         if (picker.contains(e.target) ||
             (jerseyTrigger && jerseyTrigger.contains(e.target)) ||
             (opponentTrigger && opponentTrigger.contains(e.target)) ||
-            shapeTrigger) return;
+            shapeTrigger ||
+            (playerTrigger && PLAYER_COLOR_COMPONENTS.has(playerTrigger.dataset.comp))) return;
         closeJerseyPicker();
     });
 }
@@ -6983,6 +7042,11 @@ document.querySelectorAll('.comp-item').forEach(el => {
     el.dataset.label = COMPONENT_LABELS[id] || el.title || '';
     el.classList.toggle('stampable', STAMP_COMPONENTS.has(id));
     el.addEventListener('click', () => {
+        if (PLAYER_COLOR_COMPONENTS.has(id)) {
+            closeNumberPicker();
+            openPlayerMarkerPicker(el, id);
+            return;
+        }
         if (id === 'mNum') {
             closeJerseyPicker();
             openNumberPicker(el);
