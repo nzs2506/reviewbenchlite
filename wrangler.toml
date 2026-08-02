@@ -1,0 +1,8 @@
+name = "benchreview-lite-api"
+main = "cloudflare/benchreview-worker.js"
+compatibility_date = "2026-08-02"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "BENCHREVIEW_KV"
+id = "a7fb375c8fe741678d7475afc5dd9799"

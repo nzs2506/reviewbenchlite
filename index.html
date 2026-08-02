@@ -4062,9 +4062,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.23" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.24" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.23</span>
+            <span class="version-tooltip">v0.9.24</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5069,6 +5069,11 @@ const PLAYER_COLOR_COMPONENTS = new Set(Object.keys(DEFAULT_PLAYER_COLORS));
 let currentPlayerColors = { ...DEFAULT_PLAYER_COLORS };
 let numCounter = 1;
 const TRAINING_STORAGE_KEY = 'benchreview-lite.trainings.v1';
+const TRAINING_META_STORAGE_KEY = 'benchreview-lite.trainings.meta.v1';
+const BENCHREVIEW_DB_NAME = 'benchreview-lite.storage';
+const BENCHREVIEW_DB_VERSION = 1;
+const BENCHREVIEW_DB_STORE = 'records';
+const DEFAULT_SYNC_API_URL = 'https://benchreview-lite-api.nzs2593.workers.dev';
 const BLOCK_STORAGE_KEY = 'benchreview-lite.blocks.v1';
 const PLANNED_STORAGE_KEY = 'benchreview-lite.planned.v1';
 const GOALIE_STORAGE_KEY = 'benchreview-lite.goalie-matches.v1';
@@ -7470,30 +7475,157 @@ function trainingDayLabel(iso) {
         year: 'numeric'
     });
 }
-function loadTrainingRecords() {
+function normalizeTrainingRecords(value) {
+    const list = Array.isArray(value) ? value : [];
+    const byId = new Map();
+    list.forEach(item => {
+        if (!item || typeof item !== 'object') return;
+        const id = String(item.id || '').trim();
+        if (!id) return;
+        const previous = byId.get(id);
+        const prevTime = new Date(previous?.updatedAt || previous?.createdAt || 0).getTime();
+        const nextTime = new Date(item.updatedAt || item.createdAt || 0).getTime();
+        if (!previous || nextTime >= prevTime) byId.set(id, item);
+    });
+    return Array.from(byId.values())
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+}
+function mergeTrainingRecordLists(...lists) {
+    return normalizeTrainingRecords(lists.flatMap(list => Array.isArray(list) ? list : []));
+}
+function readLocalTrainingRecords() {
     try {
         const raw = localStorage.getItem(TRAINING_STORAGE_KEY);
-        trainingRecords = raw ? JSON.parse(raw) : [];
-        if (!Array.isArray(trainingRecords)) trainingRecords = [];
-        trainingRecords.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        return normalizeTrainingRecords(raw ? JSON.parse(raw) : []);
     } catch (_) {
-        trainingRecords = [];
+        return [];
     }
 }
-function persistTrainingRecords() {
-    const trimmed = trainingRecords.slice(0, 18);
-    try {
-        localStorage.setItem(TRAINING_STORAGE_KEY, JSON.stringify(trimmed));
-        trainingRecords = trimmed;
-    } catch (_) {
-        const smaller = trimmed.slice(0, 10);
-        try {
-            localStorage.setItem(TRAINING_STORAGE_KEY, JSON.stringify(smaller));
-            trainingRecords = smaller;
-        } catch (_) {
-            trainingRecords = [];
+function compactTrainingRecordsForLocalStorage(records) {
+    return normalizeTrainingRecords(records).map(record => ({
+        id: record.id,
+        title: record.title,
+        tag: record.tag,
+        createdAt: record.createdAt,
+        updatedAt: record.updatedAt,
+        screenW: record.screenW,
+        screenH: record.screenH,
+        rinkMode: record.rinkMode,
+        rinkRotation: record.rinkRotation,
+        objectCount: record.objectCount
+    }));
+}
+function openBenchReviewDb() {
+    return new Promise((resolve, reject) => {
+        if (!('indexedDB' in window)) {
+            reject(new Error('IndexedDB unavailable'));
+            return;
         }
+        const request = indexedDB.open(BENCHREVIEW_DB_NAME, BENCHREVIEW_DB_VERSION);
+        request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(BENCHREVIEW_DB_STORE)) {
+                db.createObjectStore(BENCHREVIEW_DB_STORE);
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('IndexedDB open failed'));
+    });
+}
+async function benchDbGet(key) {
+    const db = await openBenchReviewDb();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(BENCHREVIEW_DB_STORE, 'readonly');
+        const request = tx.objectStore(BENCHREVIEW_DB_STORE).get(key);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('IndexedDB read failed'));
+        tx.oncomplete = () => db.close();
+        tx.onerror = () => {
+            db.close();
+            reject(tx.error || new Error('IndexedDB transaction failed'));
+        };
+    });
+}
+async function benchDbSet(key, value) {
+    const db = await openBenchReviewDb();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(BENCHREVIEW_DB_STORE, 'readwrite');
+        const request = tx.objectStore(BENCHREVIEW_DB_STORE).put(value, key);
+        request.onsuccess = () => {};
+        request.onerror = () => reject(request.error || new Error('IndexedDB write failed'));
+        tx.oncomplete = () => {
+            db.close();
+            resolve();
+        };
+        tx.onerror = () => {
+            db.close();
+            reject(tx.error || new Error('IndexedDB transaction failed'));
+        };
+    });
+}
+function trainingSyncApiUrl(path = '') {
+    const configured = window.BENCHREVIEW_API_URL || DEFAULT_SYNC_API_URL;
+    const base = String(configured || '').replace(/\/+$/, '');
+    return base ? `${base}${path}` : '';
+}
+async function fetchRemoteTrainingRecords() {
+    const url = trainingSyncApiUrl('/api/trainings?team=default');
+    if (!url) return [];
+    try {
+        const response = await fetch(url, { method: 'GET', mode: 'cors' });
+        if (!response.ok) return [];
+        const data = await response.json();
+        return normalizeTrainingRecords(data.records || []);
+    } catch (_) {
+        return [];
     }
+}
+async function pushRemoteTrainingRecords() {
+    const url = trainingSyncApiUrl('/api/trainings?team=default');
+    if (!url || !trainingRecords.length) return;
+    try {
+        await fetch(url, {
+            method: 'PUT',
+            mode: 'cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ records: normalizeTrainingRecords(trainingRecords) })
+        });
+    } catch (_) {}
+}
+async function deleteRemoteTrainingRecord(id) {
+    const url = trainingSyncApiUrl(`/api/trainings?team=default&id=${encodeURIComponent(id)}`);
+    if (!url) return;
+    try {
+        await fetch(url, { method: 'DELETE', mode: 'cors' });
+    } catch (_) {}
+}
+function loadTrainingRecords() {
+    trainingRecords = readLocalTrainingRecords();
+}
+async function initTrainingRecordStorage() {
+    const legacy = readLocalTrainingRecords();
+    let stored = [];
+    try {
+        stored = normalizeTrainingRecords(await benchDbGet(TRAINING_STORAGE_KEY));
+    } catch (_) {}
+    const remote = await fetchRemoteTrainingRecords();
+    trainingRecords = mergeTrainingRecordLists(stored, legacy, remote);
+    await persistTrainingRecords({ pushRemote: Boolean(remote.length || trainingRecords.length) });
+    renderTrainingList();
+}
+async function persistTrainingRecords(options = {}) {
+    trainingRecords = normalizeTrainingRecords(trainingRecords);
+    try {
+        await benchDbSet(TRAINING_STORAGE_KEY, trainingRecords);
+    } catch (_) {
+        try {
+            localStorage.setItem(TRAINING_STORAGE_KEY, JSON.stringify(trainingRecords));
+        } catch (_) {}
+    }
+    try {
+        localStorage.setItem(TRAINING_META_STORAGE_KEY, JSON.stringify(compactTrainingRecordsForLocalStorage(trainingRecords)));
+    } catch (_) {}
+    if (options.pushRemote !== false) pushRemoteTrainingRecords();
 }
 function loadTrainingBlocks() {
     try {
@@ -11714,9 +11846,17 @@ function saveTrainingEdit() {
     endTrainingEdit();
     setView('trainings');
 }
-function loadTrainingRecord(id) {
+async function loadTrainingRecord(id) {
     const record = trainingRecords.find(item => item.id === id);
     if (!record || !record.canvas || trainingDraft) return;
+    const hasCurrentWork = canvas.getObjects().some(o => !o.__temp);
+    if (hasCurrentWork && activeTrainingId !== record.id) {
+        const confirmed = await showConfirm(
+            'Текущее поле будет перезаписано выбранной тренировкой. Несохранённые изменения пропадут.',
+            { title: 'Открыть тренировку', okLabel: 'Открыть' }
+        );
+        if (!confirmed) return;
+    }
     rinkMode = RINK[record.rinkMode] ? record.rinkMode : 'full';
     rinkRotation = rinkMode !== 'full' ? normalizeRinkRotation(record.rinkRotation) : 0;
     numCounter = record.numCounter || 1;
@@ -11822,6 +11962,7 @@ async function deleteTrainingRecord(id) {
     });
     if (plansChanged) persistPlannedTrainings();
     persistTrainingRecords();
+    deleteRemoteTrainingRecord(id);
     renderTrainingList();
 }
 async function handleTrainingAction(id, action) {
@@ -11831,7 +11972,7 @@ async function handleTrainingAction(id, action) {
         toggleTrainingSelection(id);
         return;
     }
-    if (action === 'open') loadTrainingRecord(id);
+    if (action === 'open') await loadTrainingRecord(id);
     if (action === 'duplicate') duplicateTrainingRecord(id);
     if (action === 'screen') downloadTrainingScreen(record);
     if (action === 'pdf') downloadTrainingPdf(record);
@@ -12729,6 +12870,7 @@ document.getElementById('btnRinkRotate').addEventListener('click', rotateHalfRin
 
 // ================= СТАРТ =================
 loadTrainingRecords();
+initTrainingRecordStorage();
 loadTrainingBlocks();
 loadPlannedTrainings();
 loadRosterRemovedKeys();

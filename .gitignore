@@ -3,5 +3,6 @@ assets/fonts/Hyper-Oxide-*.otf
 assets/fonts/Hyper-Oxide-*.woff
 assets/fonts/Hyper-Oxide-*.woff2
 *.log
+.wrangler/
 .DS_Store
 Thumbs.db
