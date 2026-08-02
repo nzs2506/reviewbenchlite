@@ -4050,9 +4050,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.17" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.18" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.17</span>
+            <span class="version-tooltip">v0.9.18</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5011,8 +5011,8 @@ function rinkSVG(mode, rotation = 0) {
     const transformClose = transform ? '</g>' : '';
     return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${outputW}" height="${outputH}" viewBox="0 0 ${outputW} ${outputH}">` +
         `<defs><clipPath id="${clipId}">${clip}</clipPath></defs>` + transformOpen +
-        `<rect width="${W}" height="${H}" fill="white"/>` +
-        `<g clip-path="url(#${clipId})">${inner}</g>` + outline + transformClose + `</svg>`;
+        `<g clip-path="url(#${clipId})"><rect width="${W}" height="${H}" fill="white"/>${inner}</g>` +
+        outline + transformClose + `</svg>`;
 }
 
 // ================= ИНИЦИАЛИЗАЦИЯ =================
