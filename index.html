@@ -3020,6 +3020,15 @@
         border-color: #3b82f6;
         color: #fff;
     }
+    .training-action.delete-selected {
+        border-color: rgba(239,68,68,.42);
+        color: #fca5a5;
+    }
+    .training-action.delete-selected:hover {
+        border-color: #ef4444;
+        color: #fff;
+        background: rgba(127,29,29,.42);
+    }
     .training-form-field {
         width: 100%;
         height: 30px;
@@ -4143,7 +4152,7 @@
 <div class="auth-overlay" id="authOverlay" hidden>
     <form class="auth-card" id="authForm">
         <h2>BenchReview <span>Lite</span></h2>
-        <p>Вход в облачное хранилище команды.</p>
+        <p>После входа локальные данные этого устройства будут объединены с облаком.</p>
         <label class="auth-field">
             Логин
             <input id="authUsername" type="text" autocomplete="username" spellcheck="false" value="Shaidullin.a">
@@ -4159,9 +4168,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.27" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.28" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.27</span>
+            <span class="version-tooltip">v0.9.28</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4219,6 +4228,9 @@
                     </button>
                     <button class="training-action add-block" id="btnAddSelectedToBlock" type="button" disabled>
                         <i class="fa-solid fa-layer-group"></i>Добавить в блок
+                    </button>
+                    <button class="training-action delete-selected" id="btnDeleteSelectedTrainings" type="button" disabled hidden>
+                        <i class="fa-regular fa-trash-can"></i>Удалить выбранные
                     </button>
                     <button class="training-action block" id="btnCreateBlock" type="button">
                         <i class="fa-solid fa-layer-group"></i>Создать блок
@@ -11834,19 +11846,25 @@ function updateBlockAddControls() {
     pruneSelectedTrainingIds();
     const blockBtn = document.getElementById('btnAddSelectedToBlock');
     const scheduleBtn = document.getElementById('btnScheduleSelected');
-    if (!blockBtn || !scheduleBtn) return;
+    const deleteBtn = document.getElementById('btnDeleteSelectedTrainings');
+    if (!blockBtn || !scheduleBtn || !deleteBtn) return;
     const isSavedMode = trainingMode === 'saved';
     const selectedCount = selectedTrainingIds.size;
     blockBtn.hidden = !isSavedMode;
     scheduleBtn.hidden = !isSavedMode;
+    deleteBtn.hidden = !isSavedMode;
     blockBtn.disabled = !isSavedMode || !selectedCount;
     scheduleBtn.disabled = !isSavedMode || !selectedCount;
+    deleteBtn.disabled = !isSavedMode || !selectedCount;
     blockBtn.innerHTML = selectedCount
         ? `<i class="fa-solid fa-layer-group"></i>Добавить в блок (${selectedCount})`
         : '<i class="fa-solid fa-layer-group"></i>Добавить в блок';
     scheduleBtn.innerHTML = selectedCount
         ? `<i class="fa-regular fa-calendar-plus"></i>Запланировать (${selectedCount})`
         : '<i class="fa-regular fa-calendar-plus"></i>Запланировать';
+    deleteBtn.innerHTML = selectedCount
+        ? `<i class="fa-regular fa-trash-can"></i>Удалить (${selectedCount})`
+        : '<i class="fa-regular fa-trash-can"></i>Удалить выбранные';
 }
 function setTrainingMode(mode) {
     trainingMode = mode;
@@ -12051,7 +12069,7 @@ function renderTrainingList() {
         row.tabIndex = 0;
         row.dataset.id = record.id;
         row.innerHTML = `
-            <button class="training-select-box${marked ? ' on' : ''}" type="button" data-action="toggleSelect" title="Отметить для блока" aria-label="Отметить для блока"><i class="fa-solid fa-check"></i></button>
+            <button class="training-select-box${marked ? ' on' : ''}" type="button" data-action="toggleSelect" title="Выбрать тренировку" aria-label="Выбрать тренировку"><i class="fa-solid fa-check"></i></button>
             <img class="training-row-thumb" alt="">
             <div class="training-row-main">
                 <div class="training-row-title">
@@ -12272,18 +12290,25 @@ async function deleteTrainingRecord(id) {
     if (!record) return;
     const confirmed = await showConfirm(`Удалить тренировку "${record.title || 'Тренировка'}"?`, { okLabel: 'Удалить' });
     if (!confirmed) return;
-    trainingRecords = trainingRecords.filter(item => item.id !== id);
-    if (activeTrainingId === id) {
+    removeTrainingRecordsByIds([id]);
+    renderTrainingList();
+}
+function removeTrainingRecordsByIds(ids = []) {
+    const deleteIds = [...new Set(ids.map(String).filter(Boolean))];
+    if (!deleteIds.length) return;
+    const deleteSet = new Set(deleteIds);
+    trainingRecords = trainingRecords.filter(item => !deleteSet.has(item.id));
+    if (deleteSet.has(activeTrainingId)) {
         activeTrainingId = '';
         activeTrainingTitle = '';
         activeTrainingCreatedAt = '';
         updateFieldReturn();
     }
-    selectedTrainingIds.delete(id);
+    deleteIds.forEach(id => selectedTrainingIds.delete(id));
     let blocksChanged = false;
     trainingBlocks.forEach(block => {
         const exerciseIds = Array.isArray(block.exerciseIds) ? block.exerciseIds : [];
-        const nextIds = exerciseIds.filter(exerciseId => exerciseId !== id);
+        const nextIds = exerciseIds.filter(exerciseId => !deleteSet.has(exerciseId));
         if (nextIds.length !== exerciseIds.length) {
             block.exerciseIds = nextIds;
             block.updatedAt = new Date().toISOString();
@@ -12294,7 +12319,7 @@ async function deleteTrainingRecord(id) {
     let plansChanged = false;
     plannedTrainings = plannedTrainings.map(plan => {
         const exerciseIds = Array.isArray(plan.exerciseIds) ? plan.exerciseIds : [];
-        const nextIds = exerciseIds.filter(exerciseId => exerciseId !== id);
+        const nextIds = exerciseIds.filter(exerciseId => !deleteSet.has(exerciseId));
         if (nextIds.length !== exerciseIds.length) {
             plansChanged = true;
             return Object.assign({}, plan, { exerciseIds: nextIds, updatedAt: new Date().toISOString() });
@@ -12307,7 +12332,17 @@ async function deleteTrainingRecord(id) {
     });
     if (plansChanged) persistPlannedTrainings();
     persistTrainingRecords();
-    deleteRemoteTrainingRecord(id);
+    deleteIds.forEach(id => deleteRemoteTrainingRecord(id));
+}
+async function deleteSelectedTrainingRecords() {
+    const ids = selectedExerciseIds();
+    if (!ids.length) return;
+    const confirmed = await showConfirm(
+        ids.length === 1 ? 'Удалить выбранную тренировку?' : `Удалить выбранные тренировки (${ids.length})?`,
+        { title: 'Удалить выбранные', okLabel: 'Удалить' }
+    );
+    if (!confirmed) return;
+    removeTrainingRecordsByIds(ids);
     renderTrainingList();
 }
 async function handleTrainingAction(id, action) {
@@ -12810,6 +12845,7 @@ document.getElementById('btnNewExercise').addEventListener('click', startNewExer
 document.getElementById('btnScheduleSelected').addEventListener('click', openScheduleModal);
 document.getElementById('btnCreateBlock').addEventListener('click', createTrainingBlock);
 document.getElementById('btnAddSelectedToBlock').addEventListener('click', addSelectedTrainingsToBlock);
+document.getElementById('btnDeleteSelectedTrainings').addEventListener('click', deleteSelectedTrainingRecords);
 document.getElementById('btnTrainingSort').addEventListener('click', toggleTrainingSort);
 document.getElementById('trainingSearch').addEventListener('input', renderTrainingList);
 document.querySelectorAll('.training-label-choice').forEach(btn => {
