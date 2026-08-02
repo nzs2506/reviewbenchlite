@@ -6,6 +6,16 @@ const JSON_HEADERS = {
 };
 
 const MAX_RECORDS_PER_WRITE = 500;
+const MAX_STATE_BYTES = 2400000;
+const STATE_KEYS = [
+  'blocks',
+  'planned',
+  'goalieMatches',
+  'roster',
+  'rosterRemoved',
+  'matchSheet',
+  'matchArchive'
+];
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
@@ -25,6 +35,15 @@ function indexKey(team) {
 
 function recordKey(team, id) {
   return `team:${team}:trainings:${id}`;
+}
+
+function stateKey(team, key) {
+  return `team:${team}:state:${key}`;
+}
+
+function cleanStateKey(value) {
+  const key = String(value || '').trim();
+  return STATE_KEYS.includes(key) ? key : '';
 }
 
 function publicRecordMeta(record) {
@@ -112,6 +131,41 @@ async function deleteTraining(request, env, team) {
   return json({ ok: true, count: index.length });
 }
 
+async function getState(request, env, team) {
+  const url = new URL(request.url);
+  const key = cleanStateKey(url.searchParams.get('key'));
+  if (key) {
+    const state = await env.BENCHREVIEW_KV.get(stateKey(team, key), 'json');
+    return json({ ok: true, key, state: state || null });
+  }
+  const states = {};
+  for (const item of STATE_KEYS) {
+    states[item] = await env.BENCHREVIEW_KV.get(stateKey(team, item), 'json') || null;
+  }
+  return json({ ok: true, states });
+}
+
+async function putState(request, env, team) {
+  const url = new URL(request.url);
+  const key = cleanStateKey(url.searchParams.get('key'));
+  if (!key) return json({ ok: false, error: 'valid key required' }, 400);
+  const bodyText = await request.text();
+  if (bodyText.length > MAX_STATE_BYTES) return json({ ok: false, error: 'payload too large' }, 413);
+  let body = {};
+  try {
+    body = bodyText ? JSON.parse(bodyText) : {};
+  } catch (_) {
+    return json({ ok: false, error: 'invalid json' }, 400);
+  }
+  const state = {
+    key,
+    value: body.value === undefined ? null : body.value,
+    updatedAt: new Date().toISOString()
+  };
+  await env.BENCHREVIEW_KV.put(stateKey(team, key), JSON.stringify(state));
+  return json({ ok: true, key, updatedAt: state.updatedAt });
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { headers: JSON_HEADERS });
@@ -130,6 +184,12 @@ export default {
     }
     if (url.pathname === '/api/trainings' && request.method === 'DELETE') {
       return deleteTraining(request, env, team);
+    }
+    if (url.pathname === '/api/state' && request.method === 'GET') {
+      return getState(request, env, team);
+    }
+    if (url.pathname === '/api/state' && (request.method === 'PUT' || request.method === 'POST')) {
+      return putState(request, env, team);
     }
     return json({ ok: false, error: 'not found' }, 404);
   }
