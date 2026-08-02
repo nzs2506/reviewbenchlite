@@ -394,17 +394,6 @@
         font-weight: 700;
     }
     .btn-export.pdf-spacing { margin-left: 8px; }
-    .btn-share {
-        border-color: #34383f;
-        background: #1c1f26;
-        font-size: 15px;
-    }
-    .btn-share.telegram { color: #60a5fa; }
-    .btn-share.whatsapp { color: #34d399; }
-    .btn-share:hover {
-        border-color: currentColor;
-        background: rgba(255,255,255,.06);
-    }
     .training-start-block {
         margin-right: 22px;
         padding-right: 22px;
@@ -3310,6 +3299,7 @@
         overflow-wrap: anywhere;
     }
     .comp-item[data-comp="mNum"],
+    .comp-item[data-comp="jersey"],
     .comp-item[data-comp="stickPuck"] {
         grid-column: 1 / -1;
         min-height: 44px;
@@ -3318,6 +3308,7 @@
         padding: 7px 8px;
     }
     .comp-item[data-comp="mNum"]::after,
+    .comp-item[data-comp="jersey"]::after,
     .comp-item[data-comp="stickPuck"]::after {
         width: auto;
         text-align: left;
@@ -3403,6 +3394,40 @@
     .comp-item[data-comp="cone"] { order: 18; }
     .comp-item[data-comp="puck"] { order: 19; }
     .comp-item[data-comp="pucks"] { order: 20; }
+    .jersey-panel-icon {
+        width: 34px;
+        height: 28px;
+        display: block;
+        pointer-events: none;
+        filter: none !important;
+        opacity: 1 !important;
+    }
+    .jersey-picker {
+        position: fixed;
+        z-index: 75;
+        width: 176px;
+        padding: 9px;
+        border: 1px solid #34383f;
+        border-radius: 9px;
+        background: #191c22;
+        box-shadow: 0 14px 34px rgba(0,0,0,.36);
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 7px;
+    }
+    .jersey-picker[hidden] { display: none; }
+    .jersey-color-option {
+        width: 32px;
+        height: 30px;
+        border: 1px solid #3d424c;
+        border-radius: 7px;
+        cursor: pointer;
+    }
+    .jersey-color-option:hover,
+    .jersey-color-option.active {
+        border-color: var(--active-color);
+        box-shadow: 0 0 0 2px rgba(59,130,246,.25);
+    }
     .comp-wide {
         grid-column: span 2;
         min-height: 42px;
@@ -4025,9 +4050,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.16" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.17" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.16</span>
+            <span class="version-tooltip">v0.9.17</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4533,6 +4558,7 @@
                         <button class="menu-action" id="btnAddText" type="button"><i class="fa-solid fa-font"></i><span>Текст</span></button>
                         <button class="menu-action" id="btnAddZone" type="button"><i class="fa-regular fa-square-full"></i><span>Прямоугольник</span></button>
                         <button class="menu-action" id="btnAddEllipse" type="button"><i class="fa-regular fa-circle"></i><span>Овал</span></button>
+                        <button class="menu-action" id="btnAddCross" type="button"><i class="fa-solid fa-xmark"></i><span>Крестик</span></button>
                         <button class="menu-action" id="btnAddImage" type="button"><i class="fa-regular fa-image"></i><span>Картинка</span></button>
                     </div>
                 </div>
@@ -4584,8 +4610,6 @@
                 <button class="tool-btn" id="btnSaveJson" title="Сохранить упражнение (файл)"><i class="fa-regular fa-floppy-disk"></i></button>
                 <button class="tool-btn btn-primary" id="btnSavePng" title="Скачать PNG"><i class="fa-solid fa-download"></i><span>PNG</span></button>
                 <button class="tool-btn btn-export pdf-spacing" id="btnSavePdf" title="Скачать PDF"><i class="fa-regular fa-file-lines"></i><span>PDF</span></button>
-                <button class="tool-btn btn-share telegram" id="btnShareTelegram" type="button" title="Отправить в Telegram"><i class="fa-brands fa-telegram"></i></button>
-                <button class="tool-btn btn-share whatsapp" id="btnShareWhatsapp" type="button" title="Отправить в WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>
                 <input type="file" id="jsonInput" accept=".json" style="display:none">
             </div>
         </div>
@@ -4608,6 +4632,12 @@
     <div class="comp-item" draggable="true" data-comp="mG"  title="Вратарь"><div class="marker-icon" style="background:#7d3c98">G</div></div>
     <div class="comp-item" draggable="true" data-comp="oppX" title="Соперник (X)"><span class="opponent-panel-icon">X</span></div>
     <div class="comp-item" draggable="true" data-comp="mNum" id="numberPlayerItem" title="Игрок с номером"><b style="font-size:1.05em; color:#d4d4d8;">№</b></div>
+    <div class="comp-item" draggable="true" data-comp="jersey" id="jerseyPlayerItem" title="Майка">
+        <svg class="jersey-panel-icon" viewBox="0 0 72 52" fill="none">
+            <path d="M22 8 L30 4 H42 L50 8 L68 20 L60 33 L50 27 V48 H22 V27 L12 33 L4 20 Z" fill="#2563eb" stroke="#e5e7eb" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M30 4 L34 14 H38 L42 4" stroke="#dbeafe" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+    </div>
 
     <div class="panel-title">Оборудование</div>
     <div class="comp-item" draggable="true" data-comp="barrierH" title="Борт / барьер (горизонтальный)">
@@ -4649,6 +4679,8 @@
     <input id="numberPickerInput" type="text" inputmode="numeric" maxlength="3" placeholder="Номер">
     <div class="number-grid" id="numberPickerGrid" aria-label="Номера игроков"></div>
 </div>
+
+<div class="jersey-picker" id="jerseyPicker" hidden aria-label="Цвет майки"></div>
 
 <div class="confirm-overlay" id="confirmOverlay" hidden>
     <div class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
@@ -4864,7 +4896,8 @@ const CONE_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEoAAABhCAYAAABx
 // ================= ПЛОЩАДКА (SVG, рисуется кодом — без внешних файлов) =================
 const RINK = {
     full: { w: 1000, h: 470 },
-    half: { w: 505,  h: 470 }
+    half: { w: 505,  h: 470 },
+    neutral: { w: 320, h: 470 }
 };
 let rinkMode = 'full';
 let rinkRotation = 0;
@@ -4896,6 +4929,15 @@ function rinkSVG(mode, rotation = 0) {
     function creaseArc(x, dir) {
         return `<path d="M ${x} ${235-34} A 34 34 0 0 ${dir===1?1:0} ${x} ${235+34} Z" fill="${crease}" stroke="${pink}" stroke-width="2.5"/>`;
     }
+    function goalieTrapezoid(x, dir) {
+        const boardX = dir === 1 ? 4 : fullW - 4;
+        return `<line x1="${x}" y1="178" x2="${boardX}" y2="154" stroke="${pink}" stroke-width="2.5"/>` +
+            `<line x1="${x}" y1="292" x2="${boardX}" y2="316" stroke="${pink}" stroke-width="2.5"/>`;
+    }
+    function refereeSemiCircle(cx) {
+        const y = H - 5;
+        return `<path d="M ${cx-42} ${y} A 42 42 0 0 0 ${cx+42} ${y}" fill="none" stroke="${pink}" stroke-width="3"/>`;
+    }
     // логотип клуба в центральном круге (opacity 0.7)
     function centerLogo() {
         const w = 116, h = w * 88 / 93;
@@ -4905,19 +4947,38 @@ function rinkSVG(mode, rotation = 0) {
     let inner = '';
     inner += `<line x1="55" y1="0" x2="55" y2="${H}" stroke="${pink}" stroke-width="3"/>`;
     inner += creaseArc(55, 1);
-    inner += `<line x1="377" y1="0" x2="377" y2="${H}" stroke="${blue}" stroke-width="10"/>`;
+    const leftBlue = 360;
+    const rightBlue = 640;
+    if (mode === 'neutral') {
+        const Wn = RINK.neutral.w;
+        const centerX = Wn / 2;
+        inner = '';
+        inner += `<line x1="26" y1="0" x2="26" y2="${H}" stroke="${blue}" stroke-width="10"/>`;
+        inner += `<line x1="${Wn-26}" y1="0" x2="${Wn-26}" y2="${H}" stroke="${blue}" stroke-width="10"/>`;
+        inner += `<line x1="${centerX}" y1="0" x2="${centerX}" y2="${H}" stroke="${pink}" stroke-width="10"/>`;
+        inner += `<circle cx="${centerX}" cy="235" r="80" fill="white" stroke="${pink}" stroke-width="3"/>`;
+        const w = 116, h = w * 88 / 93;
+        inner += `<image x="${centerX - w/2}" y="${235 - h/2}" width="${w}" height="${h}" opacity="0.7" href="${ADMIRAL_LOGO}"/>`;
+        inner += dot(38, 133) + dot(38, 337) + dot(Wn-38, 133) + dot(Wn-38, 337);
+        inner += refereeSemiCircle(centerX);
+    } else {
+    inner += `<line x1="${leftBlue}" y1="0" x2="${leftBlue}" y2="${H}" stroke="${blue}" stroke-width="10"/>`;
     inner += `<line x1="500" y1="0" x2="500" y2="${H}" stroke="${pink}" stroke-width="10"/>`;
     inner += `<circle cx="500" cy="235" r="80" fill="white" stroke="${pink}" stroke-width="3"/>`;
     inner += centerLogo();
     inner += endCircle(212, 133) + endCircle(212, 337);
     inner += dot(390, 133) + dot(390, 337);
+    inner += goalieTrapezoid(55, 1);
+    inner += refereeSemiCircle(500);
 
     if (mode === 'full') {
-        inner += `<line x1="623" y1="0" x2="623" y2="${H}" stroke="${blue}" stroke-width="10"/>`;
+        inner += `<line x1="${rightBlue}" y1="0" x2="${rightBlue}" y2="${H}" stroke="${blue}" stroke-width="10"/>`;
         inner += `<line x1="945" y1="0" x2="945" y2="${H}" stroke="${pink}" stroke-width="3"/>`;
         inner += creaseArc(945, 0);
         inner += endCircle(788, 133) + endCircle(788, 337);
         inner += dot(610, 133) + dot(610, 337);
+        inner += goalieTrapezoid(945, -1);
+    }
     }
 
     let outline, clip, W;
@@ -4925,6 +4986,10 @@ function rinkSVG(mode, rotation = 0) {
         W = fullW;
         clip = `<rect x="4" y="4" width="${W-8}" height="${H-8}" rx="${R}"/>`;
         outline = `<rect x="4" y="4" width="${W-8}" height="${H-8}" rx="${R}" fill="none" stroke="${navy}" stroke-width="8"/>`;
+    } else if (mode === 'neutral') {
+        W = RINK.neutral.w;
+        clip = `<rect x="4" y="4" width="${W-8}" height="${H-8}"/>`;
+        outline = `<rect x="4" y="4" width="${W-8}" height="${H-8}" fill="none" stroke="${navy}" stroke-width="8"/>`;
     } else {
         W = RINK.half.w;
         const p = `M ${W} 4 L ${R+4} 4 Q 4 4 4 ${R+4} L 4 ${H-R-4} Q 4 ${H-4} ${R+4} ${H-4} L ${W} ${H-4}`;
@@ -4932,7 +4997,7 @@ function rinkSVG(mode, rotation = 0) {
         outline = `<path d="${p}" fill="none" stroke="${navy}" stroke-width="8"/>`;
     }
 
-    const appliedRotation = mode === 'half' ? normalizeRinkRotation(rotation) : 0;
+    const appliedRotation = mode !== 'full' ? normalizeRinkRotation(rotation) : 0;
     const outputW = appliedRotation % 180 ? H : W;
     const outputH = appliedRotation % 180 ? W : H;
     const transforms = {
@@ -4952,12 +5017,13 @@ function rinkSVG(mode, rotation = 0) {
 
 // ================= ИНИЦИАЛИЗАЦИЯ =================
 const canvas = new fabric.Canvas('rink-canvas', { isDrawingMode: false, selection: true, preserveObjectStacking: true });
-const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase'];
+const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase', 'jerseyColor'];
 
 let currentMode = 'select';
 let currentLineType = null;
 let currentComponent = null;
 let currentColor = '#0056b3';
+let currentJerseyColor = '#2563eb';
 let numCounter = 1;
 const TRAINING_STORAGE_KEY = 'benchreview-lite.trainings.v1';
 const BLOCK_STORAGE_KEY = 'benchreview-lite.blocks.v1';
@@ -5058,10 +5124,11 @@ canvas.freeDrawingBrush.color = currentColor;
 canvas.freeDrawingBrush.width = 3;
 
 function designSize() {
-    if (rinkMode === 'half' && normalizeRinkRotation(rinkRotation) % 180) {
-        return { w: RINK.half.h, h: RINK.half.w };
+    const mode = RINK[rinkMode] ? rinkMode : 'full';
+    if (mode !== 'full' && normalizeRinkRotation(rinkRotation) % 180) {
+        return { w: RINK[mode].h, h: RINK[mode].w };
     }
-    return RINK[rinkMode];
+    return RINK[mode];
 }
 function designCenter() { const d = designSize(); return { x: d.w / 2, y: d.h / 2 }; }
 
@@ -5089,13 +5156,15 @@ function fitCanvas() {
         180: `0 ${r} ${r} 0`,
         270: `0 0 ${r} ${r}`
     };
-    document.getElementById('canvasBox').style.borderRadius = rinkMode === 'half' ? halfRadii[normalizeRinkRotation(rinkRotation)] : r;
+    document.getElementById('canvasBox').style.borderRadius = rinkMode === 'half'
+        ? halfRadii[normalizeRinkRotation(rinkRotation)]
+        : (rinkMode === 'neutral' ? '8px' : r);
     canvas.renderAll();
 }
 
 function shouldRotateWithRink(obj) {
     const type = obj?.customType || '';
-    if (type === 'marker' || type === 'opponent' || type === 'obj-puck' || type === 'obj-pucks' || type === 'obj-tire' || type === 'obj-cone') return false;
+    if (type === 'marker' || type === 'opponent' || type === 'obj-jersey' || type === 'obj-puck' || type === 'obj-pucks' || type === 'obj-tire' || type === 'obj-cone') return false;
     return !['i-text', 'text', 'textbox'].includes(obj?.type);
 }
 
@@ -5117,14 +5186,16 @@ function rotateBoardObjectsClockwise() {
 }
 
 function updateRinkControls() {
-    const half = rinkMode === 'half';
+    const rotatable = rinkMode === 'half' || rinkMode === 'neutral';
     const rinkButton = document.getElementById('btnRink');
     const rotateButton = document.getElementById('btnRinkRotate');
-    rinkButton.classList.toggle('active', half);
-    rinkButton.title = half ? 'Вернуть полную площадку' : 'Показать половину площадки';
-    rotateButton.disabled = !half;
-    rotateButton.classList.toggle('active', half && normalizeRinkRotation(rinkRotation) !== 0);
-    rotateButton.title = half ? `Повернуть половину площадки на 90° (сейчас ${normalizeRinkRotation(rinkRotation)}°)` : 'Поворот доступен для половины площадки';
+    rinkButton.classList.toggle('active', rinkMode !== 'full');
+    rinkButton.title = rinkMode === 'full'
+        ? 'Показать половину площадки'
+        : (rinkMode === 'half' ? 'Показать среднюю зону' : 'Вернуть полную площадку');
+    rotateButton.disabled = !rotatable;
+    rotateButton.classList.toggle('active', rotatable && normalizeRinkRotation(rinkRotation) !== 0);
+    rotateButton.title = rotatable ? `Повернуть площадку на 90° (сейчас ${normalizeRinkRotation(rinkRotation)}°)` : 'Поворот доступен для половины и средней зоны';
     rotateButton.querySelector('i').style.transform = `rotate(${normalizeRinkRotation(rinkRotation)}deg)`;
 }
 
@@ -5141,7 +5212,7 @@ function finishRinkChange() {
 }
 
 function rotateHalfRink() {
-    if (rinkMode !== 'half') return;
+    if (rinkMode !== 'half' && rinkMode !== 'neutral') return;
     suspendHistory = true;
     hidePlayerHalo();
     canvas.discardActiveObject();
@@ -6363,6 +6434,29 @@ function makeOpponentMarker() {
     return new fabric.Group([circle, label], { customType: 'opponent' });
 }
 
+function makeJersey(color = currentJerseyColor) {
+    const fill = color || '#2563eb';
+    const stroke = fill.toLowerCase() === '#ffffff' ? '#111827' : '#ffffff';
+    return new fabric.Group([
+        new fabric.Path('M -22 -18 L -9 -28 L -3 -28 L 3 -15 L 9 -28 L 22 -18 L 34 -9 L 25 8 L 16 1 L 16 28 L -16 28 L -16 1 L -25 8 L -34 -9 Z', {
+            fill,
+            stroke,
+            strokeWidth: 2,
+            strokeLineJoin: 'round',
+            originX: 'center',
+            originY: 'center'
+        }),
+        new fabric.Path('M -3 -28 L 0 -20 L 3 -28', {
+            fill: '',
+            stroke,
+            strokeWidth: 2,
+            strokeLineJoin: 'round',
+            originX: 'center',
+            originY: 'center'
+        })
+    ], { customType: 'obj-jersey', jerseyColor: fill });
+}
+
 function makeImageComponent(src, targetW, targetH, customType, done) {
     fabric.Image.fromURL(src, img => {
         const s = Math.min(targetW / (img.width || targetW), targetH / (img.height || targetH));
@@ -6382,6 +6476,7 @@ const COMPONENTS = {
     mG:  () => makeMarker('G',  '#7d3c98'),
     mNum: () => makeMarker(nextNumberMarkerText(), '#6c7a89'),
     oppX: () => makeOpponentMarker(),
+    jersey: () => makeJersey(currentJerseyColor),
 
     puck: () => new fabric.Circle({ radius: 6.5, fill: '#111', customType: 'obj-puck' }),
     pucks: () => {
@@ -6415,7 +6510,7 @@ const COMPONENTS = {
 
 // у игроков и оборудования размер фиксированный: масштабирование выключено,
 // поворот оставлен только там, где он имеет смысл
-const NO_ROTATE = new Set(['marker', 'opponent', 'obj-puck', 'obj-pucks', 'obj-tire', 'obj-cone']);
+const NO_ROTATE = new Set(['marker', 'opponent', 'obj-jersey', 'obj-puck', 'obj-pucks', 'obj-tire', 'obj-cone']);
 function applyComponentLocks(o) {
     const t = o.customType || '';
     if (t !== 'marker' && t !== 'opponent' && !t.startsWith('obj-')) return;
@@ -6432,7 +6527,7 @@ function applyComponentLocks(o) {
 }
 
 function isPlayerLikeObject(o) {
-    return o && (o.customType === 'marker' || o.customType === 'opponent');
+    return o && (o.customType === 'marker' || o.customType === 'opponent' || o.customType === 'obj-jersey');
 }
 
 function objectLayerRank(obj) {
@@ -6440,7 +6535,7 @@ function objectLayerRank(obj) {
     if (type === 'zone') return 5;
     if (type.startsWith('line-')) return 10;
     if (type === 'selection-halo') return 35;
-    if (type === 'marker' || type === 'opponent') return 40;
+    if (type === 'marker' || type === 'opponent' || type === 'obj-jersey') return 40;
     if (type === 'obj-puck' || type === 'obj-pucks') return 50;
     if (obj?.type === 'i-text' || obj?.type === 'text' || obj?.type === 'textbox') return 60;
     if (obj?.__temp) return 70;
@@ -6543,6 +6638,7 @@ const COMPONENT_LABELS = {
     mG: 'Вратарь',
     oppX: 'Соперник',
     mNum: 'Игрок с номером',
+    jersey: 'Майка',
     barrierH: 'Борт',
     barrierV: 'Борт верт.',
     stand: 'Стойка',
@@ -6559,6 +6655,85 @@ const COMPONENT_LABELS = {
 function closeNumberPicker() {
     const picker = document.getElementById('numberPicker');
     if (picker) picker.hidden = true;
+}
+
+const JERSEY_COLORS = [
+    { label: 'Чёрный', value: '#111111' },
+    { label: 'Белый', value: '#ffffff' },
+    { label: 'Красный', value: '#c0392b' },
+    { label: 'Синий', value: '#2563eb' },
+    { label: 'Жёлтый', value: '#facc15' },
+    { label: 'Зелёный', value: '#16a34a' },
+    { label: 'Фиолетовый', value: '#7e22ce' }
+];
+
+function closeJerseyPicker() {
+    const picker = document.getElementById('jerseyPicker');
+    if (picker) picker.hidden = true;
+}
+
+function setJerseyObjectColor(jersey, color) {
+    if (!jersey || jersey.customType !== 'obj-jersey') return;
+    const fill = color || '#2563eb';
+    const stroke = fill.toLowerCase() === '#ffffff' ? '#111827' : '#ffffff';
+    jersey.jerseyColor = fill;
+    (jersey._objects || []).forEach(part => {
+        part.set({ stroke });
+        if (part.fill !== '') part.set({ fill });
+    });
+    jersey.dirty = true;
+    jersey.setCoords();
+}
+
+function chooseJerseyColor(color) {
+    currentJerseyColor = color || currentJerseyColor;
+    const active = canvas.getActiveObject();
+    if (active?.customType === 'obj-jersey') {
+        setJerseyObjectColor(active, currentJerseyColor);
+        canvas.requestRenderAll();
+        snapshotNow();
+    } else {
+        const p = dropPos();
+        addComponent('jersey', p.x, p.y);
+    }
+    closeJerseyPicker();
+}
+
+function openJerseyPicker(anchor) {
+    const picker = document.getElementById('jerseyPicker');
+    if (!picker || !anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    picker.hidden = false;
+    const pickerRect = picker.getBoundingClientRect();
+    const left = Math.max(10, Math.min(window.innerWidth - pickerRect.width - 10, rect.left - pickerRect.width - 10));
+    const top = Math.max(10, Math.min(window.innerHeight - pickerRect.height - 10, rect.top));
+    picker.style.left = `${left}px`;
+    picker.style.top = `${top}px`;
+    picker.querySelectorAll('.jersey-color-option').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.color === currentJerseyColor);
+    });
+}
+
+function initJerseyPicker() {
+    const picker = document.getElementById('jerseyPicker');
+    if (!picker) return;
+    picker.innerHTML = '';
+    JERSEY_COLORS.forEach(color => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'jersey-color-option';
+        btn.dataset.color = color.value;
+        btn.title = color.label;
+        btn.style.background = color.value;
+        btn.addEventListener('click', () => chooseJerseyColor(color.value));
+        picker.appendChild(btn);
+    });
+    document.addEventListener('pointerdown', e => {
+        const trigger = document.getElementById('jerseyPlayerItem');
+        if (picker.hidden) return;
+        if (picker.contains(e.target) || (trigger && trigger.contains(e.target))) return;
+        closeJerseyPicker();
+    });
 }
 
 function chooseNumberPlayer(value) {
@@ -6626,7 +6801,13 @@ document.querySelectorAll('.comp-item').forEach(el => {
     el.classList.toggle('stampable', STAMP_COMPONENTS.has(id));
     el.addEventListener('click', () => {
         if (id === 'mNum') {
+            closeJerseyPicker();
             openNumberPicker(el);
+            return;
+        }
+        if (id === 'jersey') {
+            closeNumberPicker();
+            openJerseyPicker(el);
             return;
         }
         if (STAMP_COMPONENTS.has(id)) {
@@ -6682,6 +6863,14 @@ document.getElementById('btnAddEllipse').addEventListener('click', () => {
     closeToolMenus();
     const p = dropPos();
     addToBoard(new fabric.Ellipse({ left: p.x, top: p.y, rx: 70, ry: 45, fill: hexA(currentColor, 0.15), stroke: currentColor, strokeWidth: 1.5, strokeDashArray: [6, 5], originX: 'center', originY: 'center', customType: 'zone' }));
+});
+document.getElementById('btnAddCross').addEventListener('click', () => {
+    closeToolMenus();
+    const p = dropPos();
+    addToBoard(new fabric.Group([
+        new fabric.Line([-22, -22, 22, 22], { stroke: currentColor, strokeWidth: 5, strokeLineCap: 'round' }),
+        new fabric.Line([22, -22, -22, 22], { stroke: currentColor, strokeWidth: 5, strokeLineCap: 'round' })
+    ], { left: p.x, top: p.y, originX: 'center', originY: 'center', customType: 'shape-cross' }));
 });
 function hexA(hex, a) {
     const n = parseInt(hex.slice(1), 16);
@@ -6745,6 +6934,7 @@ window.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
         closeToolMenus();
         closeNumberPicker();
+        closeJerseyPicker();
         if (document.body.dataset.view === 'trainings' || document.body.dataset.view === 'calendar') { setView('field'); return; }
         if (currentMode !== 'select') { setMode('select'); return; }
     }
@@ -6976,27 +7166,6 @@ function dataUrlToBlob(dataUrl) {
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     return new Blob([bytes], { type: mime });
 }
-function shareTargetUrl(platform, text) {
-    const pageUrl = location.href.split('#')[0];
-    return platform === 'telegram'
-        ? `https://t.me/share/url?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(text)}`
-        : `https://api.whatsapp.com/send?text=${encodeURIComponent(`${text} ${pageUrl}`)}`;
-}
-function shareBoard(platform) {
-    const meta = currentExportMeta();
-    const text = `BenchReview Lite${meta.title ? `: ${meta.title}` : ''}`;
-    const shareUrl = shareTargetUrl(platform, `${text}. PDF сохранён отдельно для отправки.`);
-    const popup = window.open(shareUrl, '_blank');
-    if (!popup) {
-        window.location.href = shareUrl;
-    }
-
-    try {
-        const shot = captureBoardWithFooter('jpeg', 2, 0.94, meta);
-        const filename = `${safeFileStamp(meta.title || activeTrainingTitle || 'benchreview')}.pdf`;
-        downloadBlob(filename, buildPdfFromJpeg(shot.dataUrl, shot.width, shot.height));
-    } catch (_) {}
-}
 document.getElementById('btnSavePng').addEventListener('click', () => {
     const shot = captureBoardWithFooter('png', 2, 0.95, currentExportMeta());
     download(`${safeFileStamp(activeTrainingTitle || 'drill')}.png`, shot.dataUrl);
@@ -7013,8 +7182,6 @@ document.getElementById('btnSavePdf').addEventListener('click', () => {
         alert('Не удалось сохранить PDF: ' + err.message);
     }
 });
-document.getElementById('btnShareTelegram').addEventListener('click', () => shareBoard('telegram'));
-document.getElementById('btnShareWhatsapp').addEventListener('click', () => shareBoard('whatsapp'));
 document.getElementById('btnSaveJson').addEventListener('click', () => {
     const data = { rinkMode, rinkRotation, numCounter, canvas: canvas.toJSON(EXTRA_PROPS) };
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
@@ -7028,8 +7195,8 @@ document.getElementById('jsonInput').addEventListener('change', e => {
     rd.onload = ev => {
         try {
             const data = JSON.parse(ev.target.result);
-            rinkMode = data.rinkMode || 'full';
-            rinkRotation = rinkMode === 'half' ? normalizeRinkRotation(data.rinkRotation) : 0;
+            rinkMode = RINK[data.rinkMode] ? data.rinkMode : 'full';
+            rinkRotation = rinkMode !== 'full' ? normalizeRinkRotation(data.rinkRotation) : 0;
             numCounter = data.numCounter || 1;
             suspendHistory = true;
             canvas.loadFromJSON(data.canvas, () => {
@@ -11259,8 +11426,8 @@ function endTrainingEdit() {
 function cancelTrainingEdit() {
     if (!trainingDraft) return;
     const draft = trainingDraft;
-    rinkMode = draft.rinkMode || 'full';
-    rinkRotation = rinkMode === 'half' ? normalizeRinkRotation(draft.rinkRotation) : 0;
+    rinkMode = RINK[draft.rinkMode] ? draft.rinkMode : 'full';
+    rinkRotation = rinkMode !== 'full' ? normalizeRinkRotation(draft.rinkRotation) : 0;
     numCounter = draft.numCounter || 1;
     suspendHistory = true;
     canvas.loadFromJSON(draft.canvas, () => {
@@ -11310,8 +11477,8 @@ function saveTrainingEdit() {
 function loadTrainingRecord(id) {
     const record = trainingRecords.find(item => item.id === id);
     if (!record || !record.canvas || trainingDraft) return;
-    rinkMode = record.rinkMode || 'full';
-    rinkRotation = rinkMode === 'half' ? normalizeRinkRotation(record.rinkRotation) : 0;
+    rinkMode = RINK[record.rinkMode] ? record.rinkMode : 'full';
+    rinkRotation = rinkMode !== 'full' ? normalizeRinkRotation(record.rinkRotation) : 0;
     numCounter = record.numCounter || 1;
     activeTrainingId = record.id;
     activeTrainingTitle = record.title || '';
@@ -12325,6 +12492,10 @@ document.getElementById('btnRink').addEventListener('click', () => {
     if (rinkMode === 'full') {
         rinkMode = 'half';
         rinkRotation = 0;
+    } else if (rinkMode === 'half') {
+        resetHalfRinkRotation();
+        rinkMode = 'neutral';
+        rinkRotation = 0;
     } else {
         resetHalfRinkRotation();
         rinkMode = 'full';
@@ -12349,6 +12520,7 @@ document.getElementById('goalieMatchDate').value = todayInputValue();
 renderTrainingList();
 renderGoaliePage();
 initNumberPicker();
+initJerseyPicker();
 initSidePanelToggle();
 setBackground(() => {
     fitCanvas();
