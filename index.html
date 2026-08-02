@@ -245,7 +245,7 @@
     .canvas-container-wrapper {
         box-shadow: 0 24px 60px -12px rgba(0,0,0,0.72);
         overflow: hidden;
-        background: white;
+        background: transparent;
         line-height: 0;
         outline: 1px solid rgba(255,255,255,0.1);
     }
@@ -516,6 +516,11 @@
         white-space: nowrap;
     }
     .menu-action:hover { background: #2a2e36; color: #fff; }
+    .menu-action.active {
+        background: rgba(37,99,235,.18);
+        color: #f8fbff;
+        border-color: rgba(59,130,246,.5);
+    }
     .color-popover {
         min-width: 150px;
         grid-template-columns: repeat(4, 1fr);
@@ -4050,9 +4055,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.18" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.20" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.18</span>
+            <span class="version-tooltip">v0.9.20</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4584,7 +4589,17 @@
         <div class="tool-group-block">
             <div class="group-cap">Площадка</div>
             <div class="toolbar-group">
-                <button class="tool-btn" id="btnRink" title="Полная / половина площадки"><i class="fa-solid fa-table-columns"></i></button>
+                <div class="toolbar-combo" id="rinkMenuWrap">
+                    <button class="tool-btn" id="btnRink" type="button" title="Выбрать площадку">
+                        <i class="fa-solid fa-table-columns"></i>
+                        <i class="fa-solid fa-chevron-up menu-caret"></i>
+                    </button>
+                    <div class="tool-popover" id="rinkMenu">
+                        <button class="menu-action active" type="button" data-rink-mode="full"><i class="fa-solid fa-table-cells-large"></i><span>Основной лед</span></button>
+                        <button class="menu-action" type="button" data-rink-mode="half"><i class="fa-solid fa-square"></i><span>Зона</span></button>
+                        <button class="menu-action" type="button" data-rink-mode="neutral"><i class="fa-solid fa-grip-lines-vertical"></i><span>Средняя зона</span></button>
+                    </div>
+                </div>
                 <button class="tool-btn" id="btnRinkRotate" title="Повернуть половину площадки на 90°" disabled><i class="fa-solid fa-rotate"></i></button>
             </div>
         </div>
@@ -4634,8 +4649,8 @@
     <div class="comp-item" draggable="true" data-comp="mNum" id="numberPlayerItem" title="Игрок с номером"><b style="font-size:1.05em; color:#d4d4d8;">№</b></div>
     <div class="comp-item" draggable="true" data-comp="jersey" id="jerseyPlayerItem" title="Майка">
         <svg class="jersey-panel-icon" viewBox="0 0 72 52" fill="none">
-            <path d="M22 8 L30 4 H42 L50 8 L68 20 L60 33 L50 27 V48 H22 V27 L12 33 L4 20 Z" fill="#2563eb" stroke="#e5e7eb" stroke-width="2" stroke-linejoin="round"/>
-            <path d="M30 4 L34 14 H38 L42 4" stroke="#dbeafe" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M27 13 L33 9 H39 L45 13 L61 22 L54 33 L47 29 V45 H25 V29 L18 33 L11 22 Z" fill="#2563eb" stroke="#e5e7eb" stroke-width="2.6" stroke-linejoin="round"/>
+            <path d="M33 9 L36 16 L39 9" stroke="#dbeafe" stroke-width="2.2" stroke-linejoin="round"/>
         </svg>
     </div>
 
@@ -4897,7 +4912,7 @@ const CONE_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEoAAABhCAYAAABx
 const RINK = {
     full: { w: 1000, h: 470 },
     half: { w: 505,  h: 470 },
-    neutral: { w: 320, h: 470 }
+    neutral: { w: 360, h: 470 }
 };
 let rinkMode = 'full';
 let rinkRotation = 0;
@@ -4935,8 +4950,8 @@ function rinkSVG(mode, rotation = 0) {
             `<line x1="${x}" y1="292" x2="${boardX}" y2="316" stroke="${pink}" stroke-width="2.5"/>`;
     }
     function refereeSemiCircle(cx) {
-        const y = H - 5;
-        return `<path d="M ${cx-42} ${y} A 42 42 0 0 0 ${cx+42} ${y}" fill="none" stroke="${pink}" stroke-width="3"/>`;
+        const y = H - 10;
+        return `<path d="M ${cx-54} ${y} Q ${cx} ${H-92} ${cx+54} ${y}" fill="none" stroke="${pink}" stroke-width="3"/>`;
     }
     // логотип клуба в центральном круге (opacity 0.7)
     function centerLogo() {
@@ -4947,19 +4962,19 @@ function rinkSVG(mode, rotation = 0) {
     let inner = '';
     inner += `<line x1="55" y1="0" x2="55" y2="${H}" stroke="${pink}" stroke-width="3"/>`;
     inner += creaseArc(55, 1);
-    const leftBlue = 360;
-    const rightBlue = 640;
+    const leftBlue = 340;
+    const rightBlue = 660;
     if (mode === 'neutral') {
         const Wn = RINK.neutral.w;
         const centerX = Wn / 2;
         inner = '';
-        inner += `<line x1="26" y1="0" x2="26" y2="${H}" stroke="${blue}" stroke-width="10"/>`;
-        inner += `<line x1="${Wn-26}" y1="0" x2="${Wn-26}" y2="${H}" stroke="${blue}" stroke-width="10"/>`;
+        inner += `<line x1="40" y1="0" x2="40" y2="${H}" stroke="${blue}" stroke-width="10"/>`;
+        inner += `<line x1="${Wn-40}" y1="0" x2="${Wn-40}" y2="${H}" stroke="${blue}" stroke-width="10"/>`;
         inner += `<line x1="${centerX}" y1="0" x2="${centerX}" y2="${H}" stroke="${pink}" stroke-width="10"/>`;
         inner += `<circle cx="${centerX}" cy="235" r="80" fill="white" stroke="${pink}" stroke-width="3"/>`;
         const w = 116, h = w * 88 / 93;
         inner += `<image x="${centerX - w/2}" y="${235 - h/2}" width="${w}" height="${h}" opacity="0.7" href="${ADMIRAL_LOGO}"/>`;
-        inner += dot(38, 133) + dot(38, 337) + dot(Wn-38, 133) + dot(Wn-38, 337);
+        inner += dot(62, 133) + dot(62, 337) + dot(Wn-62, 133) + dot(Wn-62, 337);
         inner += refereeSemiCircle(centerX);
     } else {
     inner += `<line x1="${leftBlue}" y1="0" x2="${leftBlue}" y2="${H}" stroke="${blue}" stroke-width="10"/>`;
@@ -5189,14 +5204,27 @@ function updateRinkControls() {
     const rotatable = rinkMode === 'half' || rinkMode === 'neutral';
     const rinkButton = document.getElementById('btnRink');
     const rotateButton = document.getElementById('btnRinkRotate');
+    const labels = { full: 'Основной лед', half: 'Зона', neutral: 'Средняя зона' };
     rinkButton.classList.toggle('active', rinkMode !== 'full');
-    rinkButton.title = rinkMode === 'full'
-        ? 'Показать половину площадки'
-        : (rinkMode === 'half' ? 'Показать среднюю зону' : 'Вернуть полную площадку');
+    rinkButton.title = `Площадка: ${labels[rinkMode] || labels.full}`;
+    document.querySelectorAll('[data-rink-mode]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.rinkMode === rinkMode);
+    });
     rotateButton.disabled = !rotatable;
     rotateButton.classList.toggle('active', rotatable && normalizeRinkRotation(rinkRotation) !== 0);
     rotateButton.title = rotatable ? `Повернуть площадку на 90° (сейчас ${normalizeRinkRotation(rinkRotation)}°)` : 'Поворот доступен для половины и средней зоны';
     rotateButton.querySelector('i').style.transform = `rotate(${normalizeRinkRotation(rinkRotation)}deg)`;
+}
+
+function setRinkMode(nextMode) {
+    if (!RINK[nextMode] || nextMode === rinkMode) return;
+    suspendHistory = true;
+    hidePlayerHalo();
+    canvas.discardActiveObject();
+    resetHalfRinkRotation();
+    rinkMode = nextMode;
+    rinkRotation = 0;
+    finishRinkChange();
 }
 
 function finishRinkChange() {
@@ -5500,6 +5528,16 @@ document.getElementById('btnShapeMenu').addEventListener('click', e => {
 document.getElementById('btnColorMenu').addEventListener('click', e => {
     e.stopPropagation();
     toggleToolMenu(document.getElementById('colorMenuWrap'));
+});
+document.getElementById('btnRink').addEventListener('click', e => {
+    e.stopPropagation();
+    toggleToolMenu(document.getElementById('rinkMenuWrap'));
+});
+document.getElementById('rinkMenu').addEventListener('click', e => {
+    const btn = e.target.closest('[data-rink-mode]');
+    if (!btn) return;
+    setRinkMode(btn.dataset.rinkMode);
+    closeToolMenus();
 });
 document.querySelectorAll('.tool-popover').forEach(menu =>
     menu.addEventListener('click', e => e.stopPropagation()));
@@ -6438,7 +6476,7 @@ function makeJersey(color = currentJerseyColor) {
     const fill = color || '#2563eb';
     const stroke = fill.toLowerCase() === '#ffffff' ? '#111827' : '#ffffff';
     return new fabric.Group([
-        new fabric.Path('M -22 -18 L -9 -28 L -3 -28 L 3 -15 L 9 -28 L 22 -18 L 34 -9 L 25 8 L 16 1 L 16 28 L -16 28 L -16 1 L -25 8 L -34 -9 Z', {
+        new fabric.Path('M -13 -15 L -6 -20 H 6 L 13 -15 L 24 -9 L 18 2 L 12 -2 V18 H -12 V-2 L -18 2 L -24 -9 Z', {
             fill,
             stroke,
             strokeWidth: 2,
@@ -6446,7 +6484,7 @@ function makeJersey(color = currentJerseyColor) {
             originX: 'center',
             originY: 'center'
         }),
-        new fabric.Path('M -3 -28 L 0 -20 L 3 -28', {
+        new fabric.Path('M -5 -20 L 0 -13 L 5 -20', {
             fill: '',
             stroke,
             strokeWidth: 2,
@@ -12485,24 +12523,6 @@ document.getElementById('goalieSeasonSelect').addEventListener('change', e => {
     });
 });
 
-document.getElementById('btnRink').addEventListener('click', () => {
-    suspendHistory = true;
-    hidePlayerHalo();
-    canvas.discardActiveObject();
-    if (rinkMode === 'full') {
-        rinkMode = 'half';
-        rinkRotation = 0;
-    } else if (rinkMode === 'half') {
-        resetHalfRinkRotation();
-        rinkMode = 'neutral';
-        rinkRotation = 0;
-    } else {
-        resetHalfRinkRotation();
-        rinkMode = 'full';
-        rinkRotation = 0;
-    }
-    finishRinkChange();
-});
 document.getElementById('btnRinkRotate').addEventListener('click', rotateHalfRink);
 
 // ================= СТАРТ =================
