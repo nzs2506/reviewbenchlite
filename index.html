@@ -3070,6 +3070,15 @@
         color: #fff;
         background: rgba(127,29,29,.42);
     }
+    .training-action.dropbox {
+        border-color: rgba(96,165,250,.45);
+        color: #bfdbfe;
+    }
+    .training-action.dropbox:hover {
+        border-color: #60a5fa;
+        color: #fff;
+        background: rgba(30,64,175,.28);
+    }
     .training-form-field {
         width: 100%;
         height: 30px;
@@ -4271,9 +4280,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.37" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.38" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.37</span>
+            <span class="version-tooltip">v0.9.38</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4334,6 +4343,9 @@
                     </button>
                     <button class="training-action delete-selected" id="btnDeleteSelectedTrainings" type="button" disabled hidden>
                         <i class="fa-regular fa-trash-can"></i>Удалить выбранные
+                    </button>
+                    <button class="training-action dropbox" id="btnDropboxBackup" type="button" title="Резервная копия в Dropbox">
+                        <i class="fa-brands fa-dropbox"></i>Dropbox
                     </button>
                     <button class="training-action block" id="btnCreateBlock" type="button">
                         <i class="fa-solid fa-layer-group"></i>Создать блок
@@ -5315,6 +5327,11 @@ let numCounter = 1;
 const TRAINING_STORAGE_KEY = 'benchreview-lite.trainings.v1';
 const TRAINING_META_STORAGE_KEY = 'benchreview-lite.trainings.meta.v1';
 const DRILL_JSON_BACKUP_STORAGE_KEY = 'benchreview-lite.drill-backup.v1';
+const DROPBOX_CONNECTION_STORAGE_KEY = 'benchreview-lite.dropbox.connection.v1';
+const DROPBOX_PENDING_STORAGE_KEY = 'benchreview-lite.dropbox.pending.v1';
+const DROPBOX_APP_KEY_STORAGE_KEY = 'benchreview-lite.dropbox.app-key.v1';
+const DROPBOX_BACKUP_LOG_STORAGE_KEY = 'benchreview-lite.dropbox.backups.v1';
+const DROPBOX_BACKUP_ROOT = '/BenchReview Lite Backups/latest';
 const BENCHREVIEW_DB_NAME = 'benchreview-lite.storage';
 const BENCHREVIEW_DB_VERSION = 1;
 const BENCHREVIEW_DB_STORE = 'records';
@@ -5355,6 +5372,8 @@ let animationStopRequested = false;
 let animationRunToken = 0;
 let animationDelayTimer = null;
 let animationDelayResolver = null;
+let dropboxBackupTimer = null;
+let dropboxBackupInProgress = false;
 let collectionEditing = null;
 let collectionExerciseIds = [];
 let calendarCursor = new Date();
@@ -8266,6 +8285,319 @@ function dataUrlToBlob(dataUrl) {
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     return new Blob([bytes], { type: mime });
 }
+function dropboxReadConnection() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(DROPBOX_CONNECTION_STORAGE_KEY) || '{}');
+        return parsed && parsed.refreshToken ? parsed : null;
+    } catch (_) {
+        return null;
+    }
+}
+function dropboxWriteConnection(connection) {
+    localStorage.setItem(DROPBOX_CONNECTION_STORAGE_KEY, JSON.stringify(connection));
+    updateDropboxBackupButton();
+}
+function dropboxRedirectUri() {
+    return `${window.location.origin}${window.location.pathname}`;
+}
+function dropboxAsciiJson(value) {
+    return JSON.stringify(value).replace(/[\u007f-\uffff]/g, c => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
+}
+function dropboxSafeSegment(value, fallback = 'training') {
+    const clean = String(value || fallback)
+        .replace(/[\\/:*?"<>|]+/g, '_')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 82);
+    return clean || fallback;
+}
+function dropboxStamp(value = new Date()) {
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return dropboxStamp(new Date());
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+function base64UrlFromBytes(bytes) {
+    let binary = '';
+    bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+async function dropboxCodeChallenge(verifier) {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+    return base64UrlFromBytes(new Uint8Array(digest));
+}
+function randomDropboxToken(size = 32) {
+    const bytes = new Uint8Array(size);
+    crypto.getRandomValues(bytes);
+    return base64UrlFromBytes(bytes);
+}
+function getDropboxAppKey() {
+    const configured = String(window.BENCHREVIEW_DROPBOX_APP_KEY || '').trim();
+    if (configured) return configured;
+    try {
+        const stored = String(localStorage.getItem(DROPBOX_APP_KEY_STORAGE_KEY) || '').trim();
+        if (stored) return stored;
+    } catch (_) {}
+    const entered = window.prompt('Вставь Dropbox App key. Redirect URI для приложения: ' + dropboxRedirectUri());
+    const clean = String(entered || '').trim();
+    if (clean) localStorage.setItem(DROPBOX_APP_KEY_STORAGE_KEY, clean);
+    return clean;
+}
+async function connectDropboxFromBoard() {
+    const appKey = getDropboxAppKey();
+    if (!appKey) return false;
+    const verifier = randomDropboxToken(48);
+    const state = randomDropboxToken(24);
+    const redirectUri = dropboxRedirectUri();
+    localStorage.setItem(DROPBOX_PENDING_STORAGE_KEY, JSON.stringify({
+        appKey,
+        verifier,
+        state,
+        redirectUri,
+        createdAt: new Date().toISOString()
+    }));
+    const authUrl = new URL('https://www.dropbox.com/oauth2/authorize');
+    authUrl.searchParams.set('client_id', appKey);
+    authUrl.searchParams.set('response_type', 'code');
+    authUrl.searchParams.set('token_access_type', 'offline');
+    authUrl.searchParams.set('code_challenge_method', 'S256');
+    authUrl.searchParams.set('code_challenge', await dropboxCodeChallenge(verifier));
+    authUrl.searchParams.set('state', state);
+    authUrl.searchParams.set('redirect_uri', redirectUri);
+    window.location.href = authUrl.toString();
+    return true;
+}
+async function handleDropboxOAuthReturn() {
+    const params = new URLSearchParams(window.location.search);
+    const state = params.get('state') || '';
+    const code = params.get('code') || '';
+    if (!state && !code) return;
+    let pending = null;
+    try {
+        pending = JSON.parse(localStorage.getItem(DROPBOX_PENDING_STORAGE_KEY) || '{}');
+    } catch (_) {}
+    if (!pending?.state || pending.state !== state) return;
+    const cleanUrl = () => {
+        params.delete('code');
+        params.delete('state');
+        params.delete('error');
+        params.delete('error_description');
+        const next = `${window.location.pathname}${params.toString() ? `?${params}` : ''}${window.location.hash || ''}`;
+        window.history.replaceState(null, '', next);
+    };
+    try {
+        if (params.get('error')) throw new Error(params.get('error_description') || params.get('error'));
+        const form = new URLSearchParams();
+        form.set('code', code);
+        form.set('grant_type', 'authorization_code');
+        form.set('client_id', pending.appKey);
+        form.set('code_verifier', pending.verifier);
+        form.set('redirect_uri', pending.redirectUri || dropboxRedirectUri());
+        const response = await fetch('https://api.dropboxapi.com/oauth2/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: form
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.refresh_token) throw new Error(data.error_description || data.error || 'Dropbox не вернул refresh token');
+        dropboxWriteConnection({
+            appKey: pending.appKey,
+            refreshToken: data.refresh_token,
+            accountId: data.account_id || '',
+            scope: data.scope || '',
+            connectedAt: new Date().toISOString()
+        });
+        localStorage.removeItem(DROPBOX_PENDING_STORAGE_KEY);
+        cleanUrl();
+        alert('Dropbox подключен. Теперь резервная копия создаётся прямо с доски.');
+    } catch (err) {
+        cleanUrl();
+        alert('Не удалось подключить Dropbox: ' + (err.message || err));
+    }
+}
+async function dropboxAccessToken() {
+    const connection = dropboxReadConnection();
+    if (!connection?.refreshToken) throw new Error('Dropbox не подключен');
+    const form = new URLSearchParams();
+    form.set('grant_type', 'refresh_token');
+    form.set('refresh_token', connection.refreshToken);
+    form.set('client_id', connection.appKey);
+    const response = await fetch('https://api.dropboxapi.com/oauth2/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.access_token) throw new Error(data.error_description || data.error || 'Dropbox token refresh failed');
+    return data.access_token;
+}
+async function dropboxCreateFolder(accessToken, path) {
+    const response = await fetch('https://api.dropboxapi.com/2/files/create_folder_v2', {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ path, autorename: false })
+    });
+    if (response.ok) return;
+    const data = await response.json().catch(() => ({}));
+    const summary = String(data.error_summary || '');
+    if (summary.includes('path/conflict/folder') || summary.includes('path/conflict')) return;
+    throw new Error(data.error_summary || 'Не удалось создать папку Dropbox');
+}
+async function dropboxUpload(accessToken, path, body, mode = 'overwrite') {
+    const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/octet-stream',
+            'Dropbox-API-Arg': dropboxAsciiJson({
+                path,
+                mode: { '.tag': mode },
+                autorename: mode !== 'overwrite',
+                mute: true,
+                strict_conflict: false
+            })
+        },
+        body
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error_summary || 'Dropbox upload failed');
+    return data;
+}
+function textJsonBlob(value) {
+    return new Blob([JSON.stringify(value, null, 2)], { type: 'application/json;charset=utf-8' });
+}
+function currentBoardBackupRecord(createdAt) {
+    const title = currentExportMeta().title || activeTrainingTitle || 'Текущая доска';
+    const screen = captureBoardWithFooter('jpeg', 1, 0.86, { title, createdAt });
+    return {
+        title,
+        createdAt,
+        activeTrainingId,
+        activeTrainingTitle,
+        rinkMode,
+        rinkRotation,
+        numCounter,
+        objectCount: canvas.getObjects().filter(o => !o.__temp).length,
+        screen: screen.dataUrl,
+        screenW: screen.width,
+        screenH: screen.height,
+        canvas: canvas.toJSON(EXTRA_PROPS)
+    };
+}
+function buildBoardDropboxBundle() {
+    const createdAt = new Date().toISOString();
+    const currentBoard = currentBoardBackupRecord(createdAt);
+    return {
+        kind: 'benchreview-lite-board-backup',
+        version: 1,
+        createdAt,
+        source: window.location.href,
+        counts: {
+            trainings: trainingRecords.length,
+            blocks: trainingBlocks.length,
+            planned: plannedTrainings.length
+        },
+        currentBoard,
+        records: normalizeTrainingRecords(trainingRecords),
+        states: {
+            blocks: trainingBlocks,
+            planned: plannedTrainings,
+            goalieMatches: goalieSavedMatches,
+            roster: rosterPlayers,
+            rosterRemoved: rosterRemovedKeys,
+            matchSheet: matchSheetState,
+            matchArchive: matchSheetArchive
+        }
+    };
+}
+async function backupBoardToDropbox() {
+    const accessToken = await dropboxAccessToken();
+    const bundle = buildBoardDropboxBundle();
+    const root = DROPBOX_BACKUP_ROOT;
+    await dropboxCreateFolder(accessToken, '/BenchReview Lite Backups');
+    await dropboxCreateFolder(accessToken, root);
+    await dropboxCreateFolder(accessToken, `${root}/screens`);
+    await dropboxCreateFolder(accessToken, `${root}/records-json`);
+    let uploaded = 0;
+    await dropboxUpload(accessToken, `${root}/benchreview-restore-bundle.json`, textJsonBlob(bundle)); uploaded++;
+    await dropboxUpload(accessToken, `${root}/trainings-full.json`, textJsonBlob(bundle.records)); uploaded++;
+    await dropboxUpload(accessToken, `${root}/training-page-state.json`, textJsonBlob(bundle.states)); uploaded++;
+    await dropboxUpload(accessToken, `${root}/current-board.json`, textJsonBlob(bundle.currentBoard)); uploaded++;
+    if (bundle.currentBoard.screen) {
+        await dropboxUpload(accessToken, `${root}/screens/000_current-board.jpg`, dataUrlToBlob(bundle.currentBoard.screen));
+        uploaded++;
+    }
+    for (let i = 0; i < bundle.records.length; i++) {
+        const record = bundle.records[i];
+        const base = `${String(i + 1).padStart(3, '0')}_${dropboxStamp(record.createdAt)}_${dropboxSafeSegment(record.title)}`;
+        await dropboxUpload(accessToken, `${root}/records-json/${base}.json`, textJsonBlob(record)); uploaded++;
+        if (record.screen) {
+            const ext = record.screen.startsWith('data:image/png') ? 'png' : record.screen.startsWith('data:image/webp') ? 'webp' : 'jpg';
+            await dropboxUpload(accessToken, `${root}/screens/${base}.${ext}`, dataUrlToBlob(record.screen));
+            uploaded++;
+        }
+    }
+    const log = readDropboxBackupLog();
+    const entry = { createdAt: bundle.createdAt, root, trainings: bundle.records.length, uploaded };
+    localStorage.setItem(DROPBOX_BACKUP_LOG_STORAGE_KEY, JSON.stringify([entry, ...log].slice(0, 20)));
+    return entry;
+}
+function scheduleDropboxBoardBackup(reason = 'change') {
+    if (!dropboxReadConnection()) return;
+    clearTimeout(dropboxBackupTimer);
+    dropboxBackupTimer = window.setTimeout(async () => {
+        if (dropboxBackupInProgress || !dropboxReadConnection()) return;
+        dropboxBackupInProgress = true;
+        updateDropboxBackupButton(true);
+        try {
+            await backupBoardToDropbox(reason);
+        } catch (err) {
+            console.warn('Dropbox backup failed', err);
+        } finally {
+            dropboxBackupInProgress = false;
+            updateDropboxBackupButton(false);
+        }
+    }, 30000);
+}
+function readDropboxBackupLog() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(DROPBOX_BACKUP_LOG_STORAGE_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (_) {
+        return [];
+    }
+}
+function updateDropboxBackupButton(working = false) {
+    const btn = document.getElementById('btnDropboxBackup');
+    if (!btn) return;
+    const connected = Boolean(dropboxReadConnection());
+    btn.disabled = working;
+    btn.innerHTML = working
+        ? '<i class="fa-solid fa-spinner fa-spin"></i>Dropbox'
+        : connected
+            ? '<i class="fa-brands fa-dropbox"></i>Бэкап'
+            : '<i class="fa-brands fa-dropbox"></i>Подключить Dropbox';
+    btn.title = connected ? 'Обновить резервную копию в Dropbox' : `Подключить Dropbox. Redirect URI: ${dropboxRedirectUri()}`;
+}
+async function handleDropboxBackupClick() {
+    const btn = document.getElementById('btnDropboxBackup');
+    try {
+        if (!dropboxReadConnection()) {
+            await connectDropboxFromBoard();
+            return;
+        }
+        updateDropboxBackupButton(true);
+        const entry = await backupBoardToDropbox();
+        alert(`Резервная копия обновлена в Dropbox: ${entry.trainings} тренировок, ${entry.uploaded} файлов.`);
+    } catch (err) {
+        alert('Dropbox-бэкап не удался: ' + (err.message || err));
+    } finally {
+        if (btn) updateDropboxBackupButton(false);
+    }
+}
 document.getElementById('btnSavePng').addEventListener('click', () => {
     const shot = captureBoardWithFooter('png', 2, 0.95, currentExportMeta());
     download(`${safeFileStamp(activeTrainingTitle || 'drill')}.png`, shot.dataUrl);
@@ -8649,8 +8981,8 @@ async function initCloudStateStorage() {
     cloudStateHydrating = true;
     const states = await fetchRemoteCloudState();
     applyRemoteCloudState(states);
-    persistTrainingBlocks({ pushRemote: false });
-    persistPlannedTrainings({ pushRemote: false });
+    persistTrainingBlocks({ pushRemote: false, dropboxBackup: false });
+    persistPlannedTrainings({ pushRemote: false, dropboxBackup: false });
     persistGoalieMatches({ pushRemote: false });
     persistRosterRemovedKeys({ pushRemote: false });
     persistRosterPlayers({ pushRemote: false });
@@ -8676,7 +9008,7 @@ async function initTrainingRecordStorage() {
     } catch (_) {}
     const remote = await fetchRemoteTrainingRecords();
     trainingRecords = mergeTrainingRecordLists(stored, legacy, remote);
-    await persistTrainingRecords({ pushRemote: Boolean(remote.length || trainingRecords.length) });
+    await persistTrainingRecords({ pushRemote: Boolean(remote.length || trainingRecords.length), dropboxBackup: false });
     renderTrainingList();
 }
 async function persistTrainingRecords(options = {}) {
@@ -8692,6 +9024,7 @@ async function persistTrainingRecords(options = {}) {
         localStorage.setItem(TRAINING_META_STORAGE_KEY, JSON.stringify(compactTrainingRecordsForLocalStorage(trainingRecords)));
     } catch (_) {}
     if (options.pushRemote !== false) pushRemoteTrainingRecords();
+    if (options.dropboxBackup !== false) scheduleDropboxBoardBackup('trainings');
 }
 function loadTrainingBlocks() {
     try {
@@ -8712,6 +9045,7 @@ function persistTrainingBlocks(options = {}) {
         trainingBlocks = [];
     }
     if (options.pushRemote !== false) scheduleCloudStatePush('blocks');
+    if (options.dropboxBackup !== false) scheduleDropboxBoardBackup('blocks');
 }
 function loadPlannedTrainings() {
     try {
@@ -8732,6 +9066,7 @@ function persistPlannedTrainings(options = {}) {
         plannedTrainings = [];
     }
     if (options.pushRemote !== false) scheduleCloudStatePush('planned');
+    if (options.dropboxBackup !== false) scheduleDropboxBoardBackup('planned');
 }
 function recordObjectCount(record) {
     if (Number.isFinite(record.objectCount)) return record.objectCount;
@@ -13552,6 +13887,7 @@ document.getElementById('btnScheduleSelected').addEventListener('click', openSch
 document.getElementById('btnCreateBlock').addEventListener('click', createTrainingBlock);
 document.getElementById('btnAddSelectedToBlock').addEventListener('click', addSelectedTrainingsToBlock);
 document.getElementById('btnDeleteSelectedTrainings').addEventListener('click', deleteSelectedTrainingRecords);
+document.getElementById('btnDropboxBackup').addEventListener('click', handleDropboxBackupClick);
 document.getElementById('btnTrainingSort').addEventListener('click', toggleTrainingSort);
 document.getElementById('trainingSearch').addEventListener('input', renderTrainingList);
 document.querySelectorAll('.training-label-choice').forEach(btn => {
@@ -13966,6 +14302,7 @@ loadMatchSheetArchive();
 applyMatchSheetPlayerColWidth(storedMatchSheetPlayerColWidth());
 loadGoalieMatches();
 syncRosterGoaliesFromMatches();
+handleDropboxOAuthReturn().finally(updateDropboxBackupButton);
 initBenchAuth();
 document.getElementById('goalieMatchDate').value = todayInputValue();
 renderTrainingList();
