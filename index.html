@@ -4308,9 +4308,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.43" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.44" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.43</span>
+            <span class="version-tooltip">v0.9.44</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -8457,8 +8457,12 @@ function dropboxErrorMessage(data, fallback = 'Dropbox API error') {
     }
 }
 function dropboxIsMissingScope(error) {
-    const text = String(error?.message || error || '');
-    return text.includes('missing_scope') || text.includes('required_scope') || text.includes('insufficient_scope');
+    const text = String(error?.message || error || '').toLowerCase();
+    return text.includes('missing_scope')
+        || text.includes('required_scope')
+        || text.includes('insufficient_scope')
+        || text.includes('required scope')
+        || text.includes('does not have the required scope');
 }
 async function dropboxReadErrorData(response) {
     const raw = await response.text().catch(() => '');
