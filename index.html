@@ -4308,9 +4308,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.42" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.43" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.42</span>
+            <span class="version-tooltip">v0.9.43</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -8448,6 +8448,7 @@ function dropboxErrorMessage(data, fallback = 'Dropbox API error') {
     if (summary) return summary;
     if (typeof data.error_description === 'string' && data.error_description.trim()) return data.error_description.trim();
     if (typeof data.error === 'string' && data.error.trim()) return data.error.trim();
+    if (typeof data.raw === 'string' && data.raw.trim()) return data.raw.trim().slice(0, 700);
     try {
         const text = JSON.stringify(data);
         return text && text !== '{}' ? text : fallback;
@@ -8458,6 +8459,16 @@ function dropboxErrorMessage(data, fallback = 'Dropbox API error') {
 function dropboxIsMissingScope(error) {
     const text = String(error?.message || error || '');
     return text.includes('missing_scope') || text.includes('required_scope') || text.includes('insufficient_scope');
+}
+async function dropboxReadErrorData(response) {
+    const raw = await response.text().catch(() => '');
+    if (!raw) return {};
+    try {
+        const data = JSON.parse(raw);
+        return data && typeof data === 'object' ? Object.assign({ raw }, data) : { raw };
+    } catch (_) {
+        return { raw };
+    }
 }
 function dropboxSafeSegment(value, fallback = 'training') {
     const clean = String(value || fallback)
@@ -8621,8 +8632,8 @@ async function dropboxUpload(accessToken, path, body, mode = 'overwrite') {
         },
         body: uploadBody
     });
-    const data = await response.json().catch(() => ({}));
-    if (response.ok) return data;
+    if (response.ok) return response.json().catch(() => ({}));
+    const data = await dropboxReadErrorData(response);
     if (mode === 'overwrite') {
         const retry = await fetch('https://content.dropboxapi.com/2/files/upload', {
             method: 'POST',
@@ -8633,8 +8644,8 @@ async function dropboxUpload(accessToken, path, body, mode = 'overwrite') {
             },
             body: uploadBody
         });
-        const retryData = await retry.json().catch(() => ({}));
-        if (retry.ok) return retryData;
+        if (retry.ok) return retry.json().catch(() => ({}));
+        const retryData = await dropboxReadErrorData(retry);
         throw new Error(dropboxErrorMessage(retryData, `Dropbox upload failed (${retry.status})`));
     }
     throw new Error(dropboxErrorMessage(data, `Dropbox upload failed (${response.status})`));
@@ -8686,26 +8697,47 @@ function buildBoardDropboxBundle() {
         }
     };
 }
+function dropboxCompactBackupRecord(record, screenFile = '') {
+    const compact = Object.assign({}, record || {});
+    if (compact.screen) {
+        compact.screenFile = screenFile || compact.screenFile || '';
+        compact.screenStoredSeparately = true;
+        delete compact.screen;
+    }
+    return compact;
+}
 async function backupBoardToDropbox() {
     const accessToken = await dropboxAccessToken();
     const bundle = buildBoardDropboxBundle();
     const prefix = DROPBOX_BACKUP_PREFIX;
+    const currentScreenPath = bundle.currentBoard.screen ? `/${prefix}__screen__000_current-board.jpg` : '';
+    const recordItems = bundle.records.map((record, index) => {
+        const base = `${String(index + 1).padStart(3, '0')}_${dropboxStamp(record.createdAt)}_${dropboxSafeSegment(record.title)}`;
+        const ext = record.screen?.startsWith('data:image/png') ? 'png' : record.screen?.startsWith('data:image/webp') ? 'webp' : 'jpg';
+        return {
+            record,
+            base,
+            jsonPath: `/${prefix}__record__${base}.json`,
+            screenPath: record.screen ? `/${prefix}__screen__${base}.${ext}` : ''
+        };
+    });
+    const compactBundle = Object.assign({}, bundle, {
+        currentBoard: dropboxCompactBackupRecord(bundle.currentBoard, currentScreenPath),
+        records: recordItems.map(item => dropboxCompactBackupRecord(item.record, item.screenPath))
+    });
     let uploaded = 0;
-    await dropboxUpload(accessToken, `/${prefix}__benchreview-restore-bundle.json`, textJsonBlob(bundle)); uploaded++;
-    await dropboxUpload(accessToken, `/${prefix}__trainings-full.json`, textJsonBlob(bundle.records)); uploaded++;
+    await dropboxUpload(accessToken, `/${prefix}__benchreview-restore-bundle.json`, textJsonBlob(compactBundle)); uploaded++;
+    await dropboxUpload(accessToken, `/${prefix}__trainings-full.json`, textJsonBlob(compactBundle.records)); uploaded++;
     await dropboxUpload(accessToken, `/${prefix}__training-page-state.json`, textJsonBlob(bundle.states)); uploaded++;
-    await dropboxUpload(accessToken, `/${prefix}__current-board.json`, textJsonBlob(bundle.currentBoard)); uploaded++;
+    await dropboxUpload(accessToken, `/${prefix}__current-board.json`, textJsonBlob(compactBundle.currentBoard)); uploaded++;
     if (bundle.currentBoard.screen) {
-        await dropboxUpload(accessToken, `/${prefix}__screen__000_current-board.jpg`, dataUrlToBlob(bundle.currentBoard.screen));
+        await dropboxUpload(accessToken, currentScreenPath, dataUrlToBlob(bundle.currentBoard.screen));
         uploaded++;
     }
-    for (let i = 0; i < bundle.records.length; i++) {
-        const record = bundle.records[i];
-        const base = `${String(i + 1).padStart(3, '0')}_${dropboxStamp(record.createdAt)}_${dropboxSafeSegment(record.title)}`;
-        await dropboxUpload(accessToken, `/${prefix}__record__${base}.json`, textJsonBlob(record)); uploaded++;
-        if (record.screen) {
-            const ext = record.screen.startsWith('data:image/png') ? 'png' : record.screen.startsWith('data:image/webp') ? 'webp' : 'jpg';
-            await dropboxUpload(accessToken, `/${prefix}__screen__${base}.${ext}`, dataUrlToBlob(record.screen));
+    for (const item of recordItems) {
+        await dropboxUpload(accessToken, item.jsonPath, textJsonBlob(dropboxCompactBackupRecord(item.record, item.screenPath))); uploaded++;
+        if (item.screenPath) {
+            await dropboxUpload(accessToken, item.screenPath, dataUrlToBlob(item.record.screen));
             uploaded++;
         }
     }
@@ -13313,7 +13345,7 @@ function renderTrainingList() {
             <div class="training-row-actions">
                 <button class="training-icon-btn" type="button" data-action="open" title="Открыть на поле"><i class="fa-solid fa-pen"></i></button>
                 <button class="training-icon-btn" type="button" data-action="duplicate" title="Дублировать"><i class="fa-regular fa-copy"></i></button>
-                <button class="training-icon-btn" type="button" data-action="screen" title="Скачать скрин"><i class="fa-solid fa-download"></i></button>
+                <button class="training-icon-btn" type="button" data-action="screen" title="Скачать скрин в PDF"><i class="fa-solid fa-download"></i></button>
                 <button class="training-icon-btn" type="button" data-action="pdf" title="Скачать PDF"><i class="fa-regular fa-file-lines"></i></button>
                 <button class="training-icon-btn danger" type="button" data-action="delete" title="Удалить"><i class="fa-regular fa-trash-can"></i></button>
             </div>`;
@@ -13579,7 +13611,7 @@ async function handleTrainingAction(id, action) {
     }
     if (action === 'open') await loadTrainingRecord(id);
     if (action === 'duplicate') duplicateTrainingRecord(id);
-    if (action === 'screen') downloadTrainingScreen(record);
+    if (action === 'screen') downloadTrainingPdf(record);
     if (action === 'pdf') downloadTrainingPdf(record);
     if (action === 'delete') await deleteTrainingRecord(id);
 }
