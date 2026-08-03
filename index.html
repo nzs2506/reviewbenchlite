@@ -4308,9 +4308,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.40" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.41" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.40</span>
+            <span class="version-tooltip">v0.9.41</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5364,7 +5364,7 @@ const DROPBOX_PENDING_STORAGE_KEY = 'benchreview-lite.dropbox.pending.v1';
 const DROPBOX_APP_KEY_STORAGE_KEY = 'benchreview-lite.dropbox.app-key.v1';
 const DROPBOX_BACKUP_LOG_STORAGE_KEY = 'benchreview-lite.dropbox.backups.v1';
 window.BENCHREVIEW_DROPBOX_APP_KEY = window.BENCHREVIEW_DROPBOX_APP_KEY || 'lgey122v75qit4a';
-const DROPBOX_BACKUP_ROOT = '/BenchReview Lite Backups/latest';
+const DROPBOX_BACKUP_PREFIX = 'latest';
 const BENCHREVIEW_DB_NAME = 'benchreview-lite.storage';
 const BENCHREVIEW_DB_VERSION = 1;
 const BENCHREVIEW_DB_STORE = 'records';
@@ -8516,7 +8516,7 @@ async function connectDropboxFromBoard() {
     authUrl.searchParams.set('client_id', appKey);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('token_access_type', 'offline');
-    authUrl.searchParams.set('scope', 'files.content.write files.content.read files.metadata.write files.metadata.read');
+    authUrl.searchParams.set('scope', 'files.content.write files.content.read');
     authUrl.searchParams.set('code_challenge_method', 'S256');
     authUrl.searchParams.set('code_challenge', await dropboxCodeChallenge(verifier));
     authUrl.searchParams.set('state', state);
@@ -8673,32 +8673,28 @@ function buildBoardDropboxBundle() {
 async function backupBoardToDropbox() {
     const accessToken = await dropboxAccessToken();
     const bundle = buildBoardDropboxBundle();
-    const root = DROPBOX_BACKUP_ROOT;
-    await dropboxCreateFolder(accessToken, '/BenchReview Lite Backups');
-    await dropboxCreateFolder(accessToken, root);
-    await dropboxCreateFolder(accessToken, `${root}/screens`);
-    await dropboxCreateFolder(accessToken, `${root}/records-json`);
+    const prefix = DROPBOX_BACKUP_PREFIX;
     let uploaded = 0;
-    await dropboxUpload(accessToken, `${root}/benchreview-restore-bundle.json`, textJsonBlob(bundle)); uploaded++;
-    await dropboxUpload(accessToken, `${root}/trainings-full.json`, textJsonBlob(bundle.records)); uploaded++;
-    await dropboxUpload(accessToken, `${root}/training-page-state.json`, textJsonBlob(bundle.states)); uploaded++;
-    await dropboxUpload(accessToken, `${root}/current-board.json`, textJsonBlob(bundle.currentBoard)); uploaded++;
+    await dropboxUpload(accessToken, `/${prefix}__benchreview-restore-bundle.json`, textJsonBlob(bundle)); uploaded++;
+    await dropboxUpload(accessToken, `/${prefix}__trainings-full.json`, textJsonBlob(bundle.records)); uploaded++;
+    await dropboxUpload(accessToken, `/${prefix}__training-page-state.json`, textJsonBlob(bundle.states)); uploaded++;
+    await dropboxUpload(accessToken, `/${prefix}__current-board.json`, textJsonBlob(bundle.currentBoard)); uploaded++;
     if (bundle.currentBoard.screen) {
-        await dropboxUpload(accessToken, `${root}/screens/000_current-board.jpg`, dataUrlToBlob(bundle.currentBoard.screen));
+        await dropboxUpload(accessToken, `/${prefix}__screen__000_current-board.jpg`, dataUrlToBlob(bundle.currentBoard.screen));
         uploaded++;
     }
     for (let i = 0; i < bundle.records.length; i++) {
         const record = bundle.records[i];
         const base = `${String(i + 1).padStart(3, '0')}_${dropboxStamp(record.createdAt)}_${dropboxSafeSegment(record.title)}`;
-        await dropboxUpload(accessToken, `${root}/records-json/${base}.json`, textJsonBlob(record)); uploaded++;
+        await dropboxUpload(accessToken, `/${prefix}__record__${base}.json`, textJsonBlob(record)); uploaded++;
         if (record.screen) {
             const ext = record.screen.startsWith('data:image/png') ? 'png' : record.screen.startsWith('data:image/webp') ? 'webp' : 'jpg';
-            await dropboxUpload(accessToken, `${root}/screens/${base}.${ext}`, dataUrlToBlob(record.screen));
+            await dropboxUpload(accessToken, `/${prefix}__screen__${base}.${ext}`, dataUrlToBlob(record.screen));
             uploaded++;
         }
     }
     const log = readDropboxBackupLog();
-    const entry = { createdAt: bundle.createdAt, root, trainings: bundle.records.length, uploaded };
+    const entry = { createdAt: bundle.createdAt, root: '/Apps/BenchReviewLiteBackup', prefix, trainings: bundle.records.length, uploaded };
     localStorage.setItem(DROPBOX_BACKUP_LOG_STORAGE_KEY, JSON.stringify([entry, ...log].slice(0, 20)));
     return entry;
 }
