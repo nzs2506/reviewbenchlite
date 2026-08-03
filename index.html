@@ -4271,9 +4271,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.36" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.37" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.36</span>
+            <span class="version-tooltip">v0.9.37</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -6361,12 +6361,12 @@ function puckTrailDots(pts, color = '#111111') {
     return dots.map(point => new fabric.Circle({
         left: point.x,
         top: point.y,
-        radius: 4.6,
+        radius: 3.1,
         originX: 'center',
         originY: 'center',
         fill: 'rgba(0,0,0,0)',
         stroke: color,
-        strokeWidth: 1.7,
+        strokeWidth: 1.2,
         objectCaching: false
     }));
 }
@@ -6377,11 +6377,11 @@ function puckTrailArrow(pt, dir, color = '#111111') {
     const uy = dir.y / len;
     const ang = Math.atan2(uy, ux) * 180 / Math.PI;
     return new fabric.Triangle({
-        width: 16,
-        height: 12,
+        width: 12,
+        height: 9,
         fill: color,
-        left: pt.x + ux * 14,
-        top: pt.y + uy * 14,
+        left: pt.x + ux * 11,
+        top: pt.y + uy * 11,
         originX: 'center',
         originY: 'center',
         angle: ang + 90,
@@ -7105,7 +7105,7 @@ canvas.on('mouse:move', o => {
     const pv = straight ? [dragPts[0], dragPts[dragPts.length - 1]] : dragPts;
     previewObj = new fabric.Polyline(pv, {
         stroke: currentColor,
-        strokeWidth: puckMovePreview ? 1.7 : 2,
+        strokeWidth: puckMovePreview ? 1.2 : 2,
         fill: '',
         opacity: puckMovePreview ? 0.75 : 0.5,
         strokeDashArray: puckMovePreview ? [1, 13] : (dashedPreview ? [8, 6] : null),
