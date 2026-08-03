@@ -528,6 +528,29 @@
         border-color: #f87171;
         color: #fff;
     }
+    .animation-scrubber {
+        width: 150px;
+        height: 34px;
+        border: 1px solid #262a32;
+        border-radius: 8px;
+        background: #151922;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 8px;
+    }
+    .animation-scrubber input {
+        width: 92px;
+        accent-color: #3b82f6;
+    }
+    .animation-time {
+        min-width: 34px;
+        color: #9ca3af;
+        font-size: 10px;
+        font-weight: 800;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+    }
     .custom-icon {
         width: 24px;
         height: 24px;
@@ -4037,6 +4060,8 @@
         .tool-btn.btn-share { width: 34px; min-width: 0; padding: 0; }
         .btn-record { min-width: 156px; padding: 0 12px; font-size: 12px; }
         .btn-animation { min-width: 104px; padding: 0 10px; font-size: 11.5px; }
+        .animation-scrubber { width: 124px; height: 34px; padding: 0 7px; }
+        .animation-scrubber input { width: 70px; }
         .training-start-block { margin-right: 16px; padding-right: 16px; }
         .custom-icon { width: 22px; height: 22px; }
         .color-swatch { width: 22px; height: 22px; }
@@ -4101,6 +4126,9 @@
         .btn-record { min-width: 128px; padding: 0 10px; font-size: 10.5px; }
         .btn-animation { min-width: 34px; padding: 0 9px; }
         .btn-animation span { display: none; }
+        .animation-scrubber { width: 96px; height: 30px; padding: 0 5px; gap: 5px; }
+        .animation-scrubber input { width: 54px; }
+        .animation-time { min-width: 28px; font-size: 9px; }
         .training-start-block { margin-right: 10px; padding-right: 10px; }
         .training-editor { top: calc(50% + 78px); width: min(420px, calc(100% - 24px)); grid-template-columns: 1fr; }
         .custom-icon { width: 20px; height: 20px; }
@@ -4280,9 +4308,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.38" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.40" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.38</span>
+            <span class="version-tooltip">v0.9.40</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4759,6 +4787,10 @@
                 <button class="tool-btn btn-animation" id="btnPlayAnimation" type="button" title="Воспроизвести анимацию">
                     <i class="fa-solid fa-play"></i><span>Анимация</span>
                 </button>
+                <label class="animation-scrubber" title="Прокрутка анимации">
+                    <input id="animationScrubber" type="range" min="0" max="1000" value="0" step="1" aria-label="Прокрутка анимации">
+                    <span class="animation-time" id="animationTimeLabel">0:00</span>
+                </label>
             </div>
         </div>
 
@@ -5331,6 +5363,7 @@ const DROPBOX_CONNECTION_STORAGE_KEY = 'benchreview-lite.dropbox.connection.v1';
 const DROPBOX_PENDING_STORAGE_KEY = 'benchreview-lite.dropbox.pending.v1';
 const DROPBOX_APP_KEY_STORAGE_KEY = 'benchreview-lite.dropbox.app-key.v1';
 const DROPBOX_BACKUP_LOG_STORAGE_KEY = 'benchreview-lite.dropbox.backups.v1';
+window.BENCHREVIEW_DROPBOX_APP_KEY = window.BENCHREVIEW_DROPBOX_APP_KEY || 'lgey122v75qit4a';
 const DROPBOX_BACKUP_ROOT = '/BenchReview Lite Backups/latest';
 const BENCHREVIEW_DB_NAME = 'benchreview-lite.storage';
 const BENCHREVIEW_DB_VERSION = 1;
@@ -5372,6 +5405,7 @@ let animationStopRequested = false;
 let animationRunToken = 0;
 let animationDelayTimer = null;
 let animationDelayResolver = null;
+let currentAnimationTimeline = null;
 let dropboxBackupTimer = null;
 let dropboxBackupInProgress = false;
 let collectionEditing = null;
@@ -5983,6 +6017,7 @@ async function resolveUnsavedFieldChangesBeforeReplace(title = 'Несохран
 }
 function scheduleSnapshot() {
     if (suspendHistory) return;
+    currentAnimationTimeline = null;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(snapshotNow, 80);
 }
@@ -5998,6 +6033,7 @@ let restoring = false;
 function restoreState(json) {
     suspendHistory = true;
     restoring = true;
+    currentAnimationTimeline = null;
     canvas.loadFromJSON(json, () => {
         canvas.forEachObject(applyModeToObject);
         normalizeObjectStacking();
@@ -6736,6 +6772,10 @@ function nearestPassReceiver(endPoint, entries, processed, sender) {
     return best?.entry || null;
 }
 
+function passReceiverNearPoint(endPoint, entries, processed, sender) {
+    return nearestPassReceiver(endPoint, entries, processed, sender);
+}
+
 function collectAnimationPlan() {
     const objects = canvas.getObjects().filter(obj => !obj.__temp);
     const movementLines = objects.filter(isMovementLine);
@@ -6811,12 +6851,14 @@ function collectAnimationPlan() {
                     usedActionLines.add(action.line);
                     steps.push({ kind: 'puck-action', puck, pts: action.pts, actionType: action.type });
 
-                    if (action.type === 'pass') {
-                        const receiver = nearestPassReceiver(action.pts[action.pts.length - 1], entries, processed, entry.player);
+                    if (action.type === 'pass' || action.type === 'puckmove') {
+                        const receiver = passReceiverNearPoint(action.pts[action.pts.length - 1], entries, processed, entry.player);
                         if (receiver) {
                             playerPucks.delete(entry.player);
                             playerPucks.set(receiver.player, puck);
                             preferred = receiver;
+                        } else {
+                            playerPucks.delete(entry.player);
                         }
                     } else {
                         playerPucks.delete(entry.player);
@@ -6915,6 +6957,110 @@ function restoreCanvasStacking(order) {
     });
 }
 
+function animationStepDuration(step) {
+    const pts = step.pts || [];
+    const len = pathLen(pts);
+    if (step.kind === 'puck-action') {
+        return step.actionType === 'shot'
+            ? Math.min(850, Math.max(280, len * 2.1))
+            : Math.min(1350, Math.max(420, len * 3.4));
+    }
+    return Math.min(3000, Math.max(1000, len * 8.5));
+}
+
+function formatAnimationTime(ms) {
+    const total = Math.max(0, Math.round(ms / 1000));
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+function setAnimationScrubberValue(timeline, ms) {
+    const input = document.getElementById('animationScrubber');
+    const label = document.getElementById('animationTimeLabel');
+    const total = Math.max(1, timeline?.totalDuration || 1);
+    if (input) input.value = String(Math.round(Math.max(0, Math.min(total, ms)) / total * 1000));
+    if (label) label.textContent = formatAnimationTime(ms);
+}
+
+function buildAnimationTimeline(steps) {
+    const prepared = steps.map(step => ({
+        ...step,
+        duration: animationStepDuration(step),
+        gapAfter: 140
+    }));
+    const totalDuration = prepared.reduce((sum, step, index) => {
+        return sum + step.duration + (index < prepared.length - 1 ? step.gapAfter : 0);
+    }, 0);
+    return {
+        steps: prepared,
+        totalDuration,
+        originals: saveAnimationOriginals(prepared),
+        stackingOrder: canvas.getObjects().slice()
+    };
+}
+
+function applyMovementStepAt(step, ratio) {
+    const t = Math.max(0, Math.min(1, ratio));
+    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const playerStart = objectCenter(step.player);
+    const puckStart = step.puck ? objectCenter(step.puck) : null;
+    const puckOffset = puckStart ? { x: puckStart.x - playerStart.x, y: puckStart.y - playerStart.y } : null;
+    const at = pointAlongPath(step.pts, eased);
+    if (!at?.point) return;
+    moveObjectCenter(step.player, at.point.x, at.point.y);
+    if (step.puck && puckOffset) moveObjectCenter(step.puck, at.point.x + puckOffset.x, at.point.y + puckOffset.y);
+}
+
+function applyPuckActionStepAt(step, ratio) {
+    if (!step.puck) return;
+    const puckStart = objectCenter(step.puck);
+    const pts = distance(puckStart, step.pts[0]) > 1.5 ? [puckStart, ...step.pts] : step.pts;
+    const at = pointAlongPath(pts, Math.max(0, Math.min(1, ratio)));
+    if (at?.point) moveObjectCenter(step.puck, at.point.x, at.point.y);
+}
+
+function renderAnimationTimelineAt(timeline, ms) {
+    if (!timeline) return;
+    restoreAnimationOriginals(timeline.originals);
+    let timeLeft = Math.max(0, Math.min(timeline.totalDuration, ms));
+    timeline.steps.forEach(step => {
+        if (timeLeft <= 0) return;
+        const ratio = Math.min(1, timeLeft / step.duration);
+        if (step.kind === 'puck-action') applyPuckActionStepAt(step, ratio);
+        else applyMovementStepAt(step, ratio);
+        timeLeft -= step.duration;
+        if (timeLeft > 0) timeLeft -= step.gapAfter;
+    });
+    restoreCanvasStacking(timeline.stackingOrder);
+    canvas.requestRenderAll();
+    setAnimationScrubberValue(timeline, ms);
+}
+
+function ensureAnimationTimeline() {
+    if (currentAnimationTimeline?.steps?.length) return currentAnimationTimeline;
+    const { steps } = collectAnimationPlan();
+    if (!steps.length) return null;
+    currentAnimationTimeline = buildAnimationTimeline(steps);
+    setAnimationScrubberValue(currentAnimationTimeline, 0);
+    return currentAnimationTimeline;
+}
+
+function runAnimationTimelineCycle(timeline, token) {
+    return new Promise(resolve => {
+        const startedAt = performance.now();
+        const tick = now => {
+            if (!animationRunning || animationStopRequested || token !== animationRunToken) {
+                resolve(false);
+                return;
+            }
+            const elapsed = Math.min(timeline.totalDuration, now - startedAt);
+            renderAnimationTimelineAt(timeline, elapsed);
+            if (elapsed < timeline.totalDuration) requestAnimationFrame(tick);
+            else resolve(true);
+        };
+        requestAnimationFrame(tick);
+    });
+}
+
 function animateMovementStep(step, token) {
     const len = pathLen(step.pts);
     const duration = Math.min(3000, Math.max(1000, len * 8.5));
@@ -6985,30 +7131,22 @@ async function playDrillAnimation() {
         setAnimationButtonState('idle');
         return;
     }
+    const timeline = buildAnimationTimeline(steps);
+    currentAnimationTimeline = timeline;
     animationRunning = true;
     animationStopRequested = false;
     const token = ++animationRunToken;
     const previousHistoryState = suspendHistory;
     suspendHistory = true;
-    const originals = saveAnimationOriginals(steps);
-    const stackingOrder = canvas.getObjects().slice();
     canvas.discardActiveObject();
     hidePlayerHalo();
     setAnimationButtonState('running', 'Стоп');
     try {
         while (animationRunning && !animationStopRequested && token === animationRunToken) {
-            let cycleCompleted = true;
-            for (const step of steps) {
-                const stepCompleted = step.kind === 'puck-action'
-                    ? await animatePuckActionStep(step, token)
-                    : await animateMovementStep(step, token);
-                if (!stepCompleted || !(await animationDelay(140, token))) {
-                    cycleCompleted = false;
-                    break;
-                }
-            }
-            restoreAnimationOriginals(originals);
-            restoreCanvasStacking(stackingOrder);
+            const cycleCompleted = await runAnimationTimelineCycle(timeline, token);
+            restoreAnimationOriginals(timeline.originals);
+            restoreCanvasStacking(timeline.stackingOrder);
+            setAnimationScrubberValue(timeline, 0);
             canvas.requestRenderAll();
             if (!cycleCompleted || animationStopRequested || token !== animationRunToken) break;
             setAnimationButtonState('waiting', 'Стоп');
@@ -7019,8 +7157,9 @@ async function playDrillAnimation() {
         if (animationDelayTimer) clearTimeout(animationDelayTimer);
         animationDelayTimer = null;
         animationDelayResolver = null;
-        restoreAnimationOriginals(originals);
-        restoreCanvasStacking(stackingOrder);
+        restoreAnimationOriginals(timeline.originals);
+        restoreCanvasStacking(timeline.stackingOrder);
+        setAnimationScrubberValue(timeline, 0);
         suspendHistory = previousHistoryState;
         animationRunning = false;
         animationStopRequested = false;
@@ -8303,6 +8442,23 @@ function dropboxRedirectUri() {
 function dropboxAsciiJson(value) {
     return JSON.stringify(value).replace(/[\u007f-\uffff]/g, c => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
 }
+function dropboxErrorMessage(data, fallback = 'Dropbox API error') {
+    if (!data) return fallback;
+    const summary = String(data.error_summary || '').trim();
+    if (summary) return summary;
+    if (typeof data.error_description === 'string' && data.error_description.trim()) return data.error_description.trim();
+    if (typeof data.error === 'string' && data.error.trim()) return data.error.trim();
+    try {
+        const text = JSON.stringify(data);
+        return text && text !== '{}' ? text : fallback;
+    } catch (_) {
+        return fallback;
+    }
+}
+function dropboxIsMissingScope(error) {
+    const text = String(error?.message || error || '');
+    return text.includes('missing_scope') || text.includes('required_scope') || text.includes('insufficient_scope');
+}
 function dropboxSafeSegment(value, fallback = 'training') {
     const clean = String(value || fallback)
         .replace(/[\\/:*?"<>|]+/g, '_')
@@ -8360,6 +8516,7 @@ async function connectDropboxFromBoard() {
     authUrl.searchParams.set('client_id', appKey);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('token_access_type', 'offline');
+    authUrl.searchParams.set('scope', 'files.content.write files.content.read files.metadata.write files.metadata.read');
     authUrl.searchParams.set('code_challenge_method', 'S256');
     authUrl.searchParams.set('code_challenge', await dropboxCodeChallenge(verifier));
     authUrl.searchParams.set('state', state);
@@ -8399,7 +8556,7 @@ async function handleDropboxOAuthReturn() {
             body: form
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok || !data.refresh_token) throw new Error(data.error_description || data.error || 'Dropbox не вернул refresh token');
+    if (!response.ok || !data.refresh_token) throw new Error(dropboxErrorMessage(data, 'Dropbox не вернул refresh token'));
         dropboxWriteConnection({
             appKey: pending.appKey,
             refreshToken: data.refresh_token,
@@ -8428,7 +8585,7 @@ async function dropboxAccessToken() {
         body: form
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.access_token) throw new Error(data.error_description || data.error || 'Dropbox token refresh failed');
+    if (!response.ok || !data.access_token) throw new Error(dropboxErrorMessage(data, 'Dropbox token refresh failed'));
     return data.access_token;
 }
 async function dropboxCreateFolder(accessToken, path) {
@@ -8444,7 +8601,7 @@ async function dropboxCreateFolder(accessToken, path) {
     const data = await response.json().catch(() => ({}));
     const summary = String(data.error_summary || '');
     if (summary.includes('path/conflict/folder') || summary.includes('path/conflict')) return;
-    throw new Error(data.error_summary || 'Не удалось создать папку Dropbox');
+    throw new Error(dropboxErrorMessage(data, `Не удалось создать папку Dropbox (${response.status})`));
 }
 async function dropboxUpload(accessToken, path, body, mode = 'overwrite') {
     const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
@@ -8463,7 +8620,7 @@ async function dropboxUpload(accessToken, path, body, mode = 'overwrite') {
         body
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error_summary || 'Dropbox upload failed');
+    if (!response.ok) throw new Error(dropboxErrorMessage(data, `Dropbox upload failed (${response.status})`));
     return data;
 }
 function textJsonBlob(value) {
@@ -8556,6 +8713,9 @@ function scheduleDropboxBoardBackup(reason = 'change') {
             await backupBoardToDropbox(reason);
         } catch (err) {
             console.warn('Dropbox backup failed', err);
+            if (dropboxIsMissingScope(err)) {
+                localStorage.removeItem(DROPBOX_CONNECTION_STORAGE_KEY);
+            }
         } finally {
             dropboxBackupInProgress = false;
             updateDropboxBackupButton(false);
@@ -8593,7 +8753,12 @@ async function handleDropboxBackupClick() {
         const entry = await backupBoardToDropbox();
         alert(`Резервная копия обновлена в Dropbox: ${entry.trainings} тренировок, ${entry.uploaded} файлов.`);
     } catch (err) {
-        alert('Dropbox-бэкап не удался: ' + (err.message || err));
+        if (dropboxIsMissingScope(err)) {
+            localStorage.removeItem(DROPBOX_CONNECTION_STORAGE_KEY);
+            alert('Dropbox-доступ нужно переподключить: старый токен был выдан без прав на запись файлов. Нажми кнопку Dropbox ещё раз и разреши доступ.');
+        } else {
+            alert('Dropbox-бэкап не удался: ' + (err.message || err));
+        }
     } finally {
         if (btn) updateDropboxBackupButton(false);
     }
@@ -13880,6 +14045,27 @@ function toggleTrainingSort() {
 }
 document.getElementById('btnStartTraining').addEventListener('click', beginTrainingEdit);
 document.getElementById('btnPlayAnimation').addEventListener('click', playDrillAnimation);
+document.getElementById('animationScrubber').addEventListener('input', e => {
+    const renderScrub = () => {
+        const timeline = ensureAnimationTimeline();
+        if (!timeline) {
+            e.target.value = '0';
+            document.getElementById('animationTimeLabel').textContent = '0:00';
+            return;
+        }
+        const ms = (Number(e.target.value) || 0) / 1000 * timeline.totalDuration;
+        const previousHistoryState = suspendHistory;
+        suspendHistory = true;
+        renderAnimationTimelineAt(timeline, ms);
+        suspendHistory = previousHistoryState;
+    };
+    if (animationRunning) {
+        stopDrillAnimation();
+        window.setTimeout(renderScrub, 80);
+        return;
+    }
+    renderScrub();
+});
 document.getElementById('btnSaveTraining').addEventListener('click', saveTrainingEdit);
 document.getElementById('btnCancelTraining').addEventListener('click', cancelTrainingEdit);
 document.getElementById('btnNewExercise').addEventListener('click', startNewExercise);
