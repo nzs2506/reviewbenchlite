@@ -4308,9 +4308,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.41" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.42" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.41</span>
+            <span class="version-tooltip">v0.9.42</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -8604,24 +8604,40 @@ async function dropboxCreateFolder(accessToken, path) {
     throw new Error(dropboxErrorMessage(data, `Не удалось создать папку Dropbox (${response.status})`));
 }
 async function dropboxUpload(accessToken, path, body, mode = 'overwrite') {
+    const uploadBody = body instanceof Blob ? body : new Blob([body]);
+    const makeArgs = writeMode => ({
+        path,
+        mode: writeMode,
+        autorename: writeMode !== 'overwrite',
+        mute: true,
+        strict_conflict: false
+    });
     const response = await fetch('https://content.dropboxapi.com/2/files/upload', {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${accessToken}`,
             'Content-Type': 'application/octet-stream',
-            'Dropbox-API-Arg': dropboxAsciiJson({
-                path,
-                mode: { '.tag': mode },
-                autorename: mode !== 'overwrite',
-                mute: true,
-                strict_conflict: false
-            })
+            'Dropbox-API-Arg': dropboxAsciiJson(makeArgs(mode))
         },
-        body
+        body: uploadBody
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(dropboxErrorMessage(data, `Dropbox upload failed (${response.status})`));
-    return data;
+    if (response.ok) return data;
+    if (mode === 'overwrite') {
+        const retry = await fetch('https://content.dropboxapi.com/2/files/upload', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/octet-stream',
+                'Dropbox-API-Arg': dropboxAsciiJson(makeArgs('add'))
+            },
+            body: uploadBody
+        });
+        const retryData = await retry.json().catch(() => ({}));
+        if (retry.ok) return retryData;
+        throw new Error(dropboxErrorMessage(retryData, `Dropbox upload failed (${retry.status})`));
+    }
+    throw new Error(dropboxErrorMessage(data, `Dropbox upload failed (${response.status})`));
 }
 function textJsonBlob(value) {
     return new Blob([JSON.stringify(value, null, 2)], { type: 'application/json;charset=utf-8' });
