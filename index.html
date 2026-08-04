@@ -4351,9 +4351,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.47" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.48" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.47</span>
+            <span class="version-tooltip">v0.9.48</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5536,6 +5536,13 @@ function designSize() {
     }
     return RINK[mode];
 }
+function designSizeFor(modeValue = rinkMode, rotationValue = rinkRotation) {
+    const mode = RINK[modeValue] ? modeValue : 'full';
+    if (mode !== 'full' && normalizeRinkRotation(rotationValue) % 180) {
+        return { w: RINK[mode].h, h: RINK[mode].w };
+    }
+    return RINK[mode];
+}
 function designCenter() { const d = designSize(); return { x: d.w / 2, y: d.h / 2 }; }
 
 function setBackground(cb) {
@@ -6039,7 +6046,7 @@ function setAllAnimationTogether() {
 function makeTrainingRecordFromField(base = {}) {
     const createdAt = base.createdAt || new Date().toISOString();
     const title = base.title || `Тренировка ${trainingDateLabel(createdAt)}`;
-    const screen = captureBoardWithFooter('jpeg', 2, 0.93, { title, createdAt });
+    const screen = captureBoardWithFooter('jpeg', 1, 0.86, { title, createdAt });
     return Object.assign({}, base, {
         title,
         createdAt,
@@ -8484,6 +8491,56 @@ async function cleanSavedTrainingScreen(record, format = 'jpeg', quality = 0.92)
         height: out.height
     };
 }
+function fabricImageFromUrl(url) {
+    return new Promise((resolve, reject) => {
+        fabric.Image.fromURL(url, img => {
+            if (img) resolve(img);
+            else reject(new Error('Не удалось подготовить фон площадки'));
+        });
+    });
+}
+function loadStaticCanvasJson(staticCanvas, json) {
+    return new Promise((resolve, reject) => {
+        try {
+            staticCanvas.loadFromJSON(json, () => {
+                staticCanvas.renderAll();
+                resolve();
+            });
+        } catch (err) {
+            reject(err);
+        }
+    });
+}
+async function renderTrainingRecordShot(record, format = 'jpeg', quality = 0.98, baseMultiplier = 4) {
+    if (!record?.canvas) return cleanSavedTrainingScreen(record, format, quality);
+    const mode = RINK[record.rinkMode] ? record.rinkMode : 'full';
+    const rotation = mode !== 'full' ? normalizeRinkRotation(record.rinkRotation) : 0;
+    const d = designSizeFor(mode, rotation);
+    const el = document.createElement('canvas');
+    const staticCanvas = new fabric.StaticCanvas(el, {
+        renderOnAddRemove: false,
+        enableRetinaScaling: false
+    });
+    staticCanvas.setDimensions({ width: d.w, height: d.h });
+    try {
+        const bgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(rinkSVG(mode, rotation));
+        const bg = await fabricImageFromUrl(bgUrl);
+        await loadStaticCanvasJson(staticCanvas, record.canvas);
+        staticCanvas.setBackgroundImage(bg, staticCanvas.renderAll.bind(staticCanvas));
+        staticCanvas.discardActiveObject?.();
+        staticCanvas.renderAll();
+        const outCanvas = typeof staticCanvas.toCanvasElement === 'function'
+            ? staticCanvas.toCanvasElement(baseMultiplier)
+            : staticCanvas.lowerCanvasEl;
+        return {
+            dataUrl: outCanvas.toDataURL(`image/${format}`, quality),
+            width: outCanvas.width,
+            height: outCanvas.height
+        };
+    } finally {
+        staticCanvas.dispose?.();
+    }
+}
 async function addBoardPdfTitle(shot, title = '') {
     if (!shot?.dataUrl) return shot;
     const label = String(title || 'Тренировка').trim() || 'Тренировка';
@@ -8509,7 +8566,7 @@ async function addBoardPdfTitle(shot, title = '') {
     ctx.fillText(label, out.width / 2, headerH / 2 + 1);
     ctx.drawImage(img, 0, headerH, shot.width, shot.height);
     return {
-        dataUrl: out.toDataURL('image/jpeg', 0.94),
+        dataUrl: out.toDataURL('image/jpeg', 0.98),
         width: out.width,
         height: out.height
     };
@@ -8839,7 +8896,7 @@ function textJsonBlob(value) {
 }
 function currentBoardBackupRecord(createdAt) {
     const title = currentExportMeta().title || activeTrainingTitle || 'Текущая доска';
-    const screen = captureBoardWithFooter('jpeg', 2, 0.93, { title, createdAt });
+    const screen = captureBoardWithFooter('jpeg', 1, 0.82, { title, createdAt });
     return {
         title,
         createdAt,
@@ -8997,9 +9054,9 @@ document.getElementById('btnSavePng').addEventListener('click', () => {
 });
 document.getElementById('btnSavePdf').addEventListener('click', async () => {
     try {
-        const baseMultiplier = 3;
+        const baseMultiplier = 4;
         const meta = currentExportMeta();
-        const shot = await addBoardPdfTitle(captureBoardWithFooter('jpeg', baseMultiplier, 0.96, meta), meta.title || activeTrainingTitle || 'Тренировка');
+        const shot = await addBoardPdfTitle(captureBoardWithFooter('jpeg', baseMultiplier, 0.98, meta), meta.title || activeTrainingTitle || 'Тренировка');
         downloadBlob(
             `${safeFileStamp(activeTrainingTitle || 'drill')}.pdf`,
             buildPdfFromJpeg(shot.dataUrl, shot.width, shot.height)
@@ -13630,7 +13687,7 @@ function saveTrainingEdit() {
     const input = document.getElementById('trainingNameInput');
     const createdAt = new Date().toISOString();
     const title = input.value.trim() || 'Тренировка';
-    const screen = captureBoardWithFooter('jpeg', 2, 0.93, { title, createdAt });
+    const screen = captureBoardWithFooter('jpeg', 1, 0.86, { title, createdAt });
     const record = {
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         title,
@@ -13706,9 +13763,15 @@ async function downloadTrainingScreen(record) {
     }
 }
 async function downloadTrainingPdf(record) {
-    if (!record || !record.screen) return;
+    if (!record || (!record.screen && !record.canvas)) return;
     try {
-        const cleanShot = await cleanSavedTrainingScreen(record, 'jpeg', 0.96);
+        let cleanShot;
+        try {
+            cleanShot = await renderTrainingRecordShot(record, 'jpeg', 0.98, 4);
+        } catch (renderErr) {
+            console.warn('High-res PDF render failed, using saved preview', renderErr);
+            cleanShot = await cleanSavedTrainingScreen(record, 'jpeg', 0.96);
+        }
         const shot = await addBoardPdfTitle(cleanShot, record.title || 'Тренировка');
         if (!shot) return;
         downloadBlob(
