@@ -4308,9 +4308,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.44" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.45" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.44</span>
+            <span class="version-tooltip">v0.9.45</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -8334,6 +8334,36 @@ async function cleanSavedTrainingScreen(record, format = 'jpeg', quality = 0.92)
         height: out.height
     };
 }
+async function addBoardPdfTitle(shot, title = '') {
+    if (!shot?.dataUrl) return shot;
+    const label = String(title || 'Тренировка').trim() || 'Тренировка';
+    const img = await loadExportImage(shot.dataUrl);
+    const headerH = Math.max(58, Math.min(112, Math.round(shot.width * 0.075)));
+    const padX = Math.max(32, Math.round(shot.width * 0.035));
+    const out = document.createElement('canvas');
+    out.width = shot.width;
+    out.height = shot.height + headerH;
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.fillStyle = '#c1121f';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    let size = Math.max(30, Math.min(78, Math.round(headerH * 0.56)));
+    const maxW = out.width - padX * 2;
+    do {
+        ctx.font = `900 ${size}px Arial Black, Impact, Arial, sans-serif`;
+        if (ctx.measureText(label).width <= maxW || size <= 18) break;
+        size -= 2;
+    } while (size > 18);
+    ctx.fillText(label, out.width / 2, headerH / 2 + 1);
+    ctx.drawImage(img, 0, headerH, shot.width, shot.height);
+    return {
+        dataUrl: out.toDataURL('image/jpeg', 0.94),
+        width: out.width,
+        height: out.height
+    };
+}
 function stringToBytes(str) {
     const out = new Uint8Array(str.length);
     for (let i = 0; i < str.length; i++) out[i] = str.charCodeAt(i) & 255;
@@ -8815,10 +8845,11 @@ document.getElementById('btnSavePng').addEventListener('click', () => {
     const shot = captureBoardWithFooter('png', 2, 0.95, currentExportMeta());
     download(`${safeFileStamp(activeTrainingTitle || 'drill')}.png`, shot.dataUrl);
 });
-document.getElementById('btnSavePdf').addEventListener('click', () => {
+document.getElementById('btnSavePdf').addEventListener('click', async () => {
     try {
         const baseMultiplier = 2;
-        const shot = captureBoardWithFooter('jpeg', baseMultiplier, 0.94, currentExportMeta());
+        const meta = currentExportMeta();
+        const shot = await addBoardPdfTitle(captureBoardWithFooter('jpeg', baseMultiplier, 0.94, meta), meta.title || activeTrainingTitle || 'Тренировка');
         downloadBlob(
             `${safeFileStamp(activeTrainingTitle || 'drill')}.pdf`,
             buildPdfFromJpeg(shot.dataUrl, shot.width, shot.height)
@@ -13527,7 +13558,8 @@ async function downloadTrainingScreen(record) {
 async function downloadTrainingPdf(record) {
     if (!record || !record.screen) return;
     try {
-        const shot = await cleanSavedTrainingScreen(record, 'jpeg', 0.94);
+        const cleanShot = await cleanSavedTrainingScreen(record, 'jpeg', 0.94);
+        const shot = await addBoardPdfTitle(cleanShot, record.title || 'Тренировка');
         if (!shot) return;
         downloadBlob(
             `${safeFileStamp(record.title || 'training')}.pdf`,
