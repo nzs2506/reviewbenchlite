@@ -580,6 +580,14 @@
         border-color: #3b82f6;
         box-shadow: 0 0 0 2px rgba(59,130,246,.18);
     }
+    .animation-step-action {
+        width: auto;
+        min-width: 42px;
+        padding: 0 8px;
+        font-size: 10px;
+        font-weight: 850;
+        color: #c7d2fe;
+    }
     .custom-icon {
         width: 24px;
         height: 24px;
@@ -4091,6 +4099,9 @@
         .btn-animation { min-width: 104px; padding: 0 10px; font-size: 11.5px; }
         .animation-scrubber { width: 124px; height: 34px; padding: 0 7px; }
         .animation-scrubber input { width: 70px; }
+        .animation-step-toggle { min-width: 46px; padding: 0 7px; }
+        .animation-step-field { width: 50px; height: 34px; }
+        .animation-step-action { min-width: 36px; padding: 0 6px; font-size: 9px; }
         .training-start-block { margin-right: 16px; padding-right: 16px; }
         .custom-icon { width: 22px; height: 22px; }
         .color-swatch { width: 22px; height: 22px; }
@@ -4158,6 +4169,9 @@
         .animation-scrubber { width: 96px; height: 30px; padding: 0 5px; gap: 5px; }
         .animation-scrubber input { width: 54px; }
         .animation-time { min-width: 28px; font-size: 9px; }
+        .animation-step-toggle { min-width: 34px; height: 30px; padding: 0 6px; font-size: 9px; }
+        .animation-step-field { width: 38px; height: 30px; font-size: 9px; }
+        .animation-step-action { min-width: 28px; height: 30px; padding: 0 5px; font-size: 8.5px; }
         .training-start-block { margin-right: 10px; padding-right: 10px; }
         .training-editor { top: calc(50% + 78px); width: min(420px, calc(100% - 24px)); grid-template-columns: 1fr; }
         .custom-icon { width: 20px; height: 20px; }
@@ -4337,9 +4351,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.46" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.47" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.46</span>
+            <span class="version-tooltip">v0.9.47</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4823,6 +4837,8 @@
                 <button class="tool-btn animation-step-toggle" id="btnAnimationSteps" type="button" title="Ручные шаги анимации">Шаги</button>
                 <input class="animation-step-field" id="animationStepInput" type="number" min="1" max="99" step="1" value="1" title="Номер шага для выделенной линии">
                 <input class="animation-step-field" id="animationOffsetInput" type="number" min="0" max="95" step="5" value="0" title="Старт внутри шага, %">
+                <button class="tool-btn animation-step-action" id="btnAnimationTogether" type="button" title="Выбранные линии в один шаг">Вместе</button>
+                <button class="tool-btn animation-step-action" id="btnAnimationAllTogether" type="button" title="Все линии в один шаг">Все</button>
             </div>
         </div>
 
@@ -5979,6 +5995,9 @@ function animationConfigTargets() {
     const all = canvas.getObjects().filter(obj => isMovementLine(obj) || isPuckActionLine(obj));
     return all.length ? [all[all.length - 1]] : [];
 }
+function allAnimationConfigTargets() {
+    return canvas.getObjects().filter(obj => isMovementLine(obj) || isPuckActionLine(obj));
+}
 function syncAnimationStepControlsFromSelection() {
     const stepInput = document.getElementById('animationStepInput');
     const offsetInput = document.getElementById('animationOffsetInput');
@@ -5988,11 +6007,11 @@ function syncAnimationStepControlsFromSelection() {
     stepInput.value = String(animationManualStepValue({ sourceLine: first }, 1));
     offsetInput.value = String(animationManualOffsetValue({ sourceLine: first }));
 }
-function applyAnimationStepControls() {
-    const targets = animationConfigTargets();
+function applyAnimationStepControls(targets = animationConfigTargets(), forceOffset = null) {
     if (!targets.length) return;
     const step = Math.max(1, Math.min(99, Math.round(Number(document.getElementById('animationStepInput')?.value) || 1)));
-    const offset = Math.max(0, Math.min(95, Math.round(Number(document.getElementById('animationOffsetInput')?.value) || 0)));
+    const rawOffset = forceOffset === null ? Number(document.getElementById('animationOffsetInput')?.value) : Number(forceOffset);
+    const offset = Math.max(0, Math.min(95, Math.round(rawOffset || 0)));
     targets.forEach(obj => {
         obj.animStep = step;
         obj.animOffset = offset;
@@ -6003,10 +6022,24 @@ function applyAnimationStepControls() {
     canvas.requestRenderAll();
     scheduleSnapshot();
 }
+function setSelectedAnimationTogether() {
+    manualAnimationStepsEnabled = true;
+    document.getElementById('btnAnimationSteps')?.classList.add('active');
+    applyAnimationStepControls(animationConfigTargets());
+}
+function setAllAnimationTogether() {
+    const targets = allAnimationConfigTargets();
+    if (!targets.length) return;
+    manualAnimationStepsEnabled = true;
+    document.getElementById('btnAnimationSteps')?.classList.add('active');
+    document.getElementById('animationStepInput').value = '1';
+    document.getElementById('animationOffsetInput').value = '0';
+    applyAnimationStepControls(targets, 0);
+}
 function makeTrainingRecordFromField(base = {}) {
     const createdAt = base.createdAt || new Date().toISOString();
     const title = base.title || `Тренировка ${trainingDateLabel(createdAt)}`;
-    const screen = captureBoardWithFooter('jpeg', 1, 0.86, { title, createdAt });
+    const screen = captureBoardWithFooter('jpeg', 2, 0.93, { title, createdAt });
     return Object.assign({}, base, {
         title,
         createdAt,
@@ -8351,7 +8384,10 @@ function captureBoardCanvas(baseMultiplier = 2) {
     const raw = document.createElement('canvas');
     raw.width = Math.round(canvas.lowerCanvasEl.width * mult);
     raw.height = Math.round(canvas.lowerCanvasEl.height * mult);
-    raw.getContext('2d').drawImage(canvas.lowerCanvasEl, 0, 0, raw.width, raw.height);
+    const ctx = raw.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(canvas.lowerCanvasEl, 0, 0, raw.width, raw.height);
     return raw;
 }
 function exportDateLabel(iso = new Date().toISOString()) {
@@ -8803,7 +8839,7 @@ function textJsonBlob(value) {
 }
 function currentBoardBackupRecord(createdAt) {
     const title = currentExportMeta().title || activeTrainingTitle || 'Текущая доска';
-    const screen = captureBoardWithFooter('jpeg', 1, 0.86, { title, createdAt });
+    const screen = captureBoardWithFooter('jpeg', 2, 0.93, { title, createdAt });
     return {
         title,
         createdAt,
@@ -8956,14 +8992,14 @@ async function handleDropboxBackupClick() {
     }
 }
 document.getElementById('btnSavePng').addEventListener('click', () => {
-    const shot = captureBoardWithFooter('png', 2, 0.95, currentExportMeta());
+    const shot = captureBoardWithFooter('png', 3, 0.98, currentExportMeta());
     download(`${safeFileStamp(activeTrainingTitle || 'drill')}.png`, shot.dataUrl);
 });
 document.getElementById('btnSavePdf').addEventListener('click', async () => {
     try {
-        const baseMultiplier = 2;
+        const baseMultiplier = 3;
         const meta = currentExportMeta();
-        const shot = await addBoardPdfTitle(captureBoardWithFooter('jpeg', baseMultiplier, 0.94, meta), meta.title || activeTrainingTitle || 'Тренировка');
+        const shot = await addBoardPdfTitle(captureBoardWithFooter('jpeg', baseMultiplier, 0.96, meta), meta.title || activeTrainingTitle || 'Тренировка');
         downloadBlob(
             `${safeFileStamp(activeTrainingTitle || 'drill')}.pdf`,
             buildPdfFromJpeg(shot.dataUrl, shot.width, shot.height)
@@ -13594,7 +13630,7 @@ function saveTrainingEdit() {
     const input = document.getElementById('trainingNameInput');
     const createdAt = new Date().toISOString();
     const title = input.value.trim() || 'Тренировка';
-    const screen = captureBoardWithFooter('jpeg', 1, 0.86, { title, createdAt });
+    const screen = captureBoardWithFooter('jpeg', 2, 0.93, { title, createdAt });
     const record = {
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         title,
@@ -13672,7 +13708,7 @@ async function downloadTrainingScreen(record) {
 async function downloadTrainingPdf(record) {
     if (!record || !record.screen) return;
     try {
-        const cleanShot = await cleanSavedTrainingScreen(record, 'jpeg', 0.94);
+        const cleanShot = await cleanSavedTrainingScreen(record, 'jpeg', 0.96);
         const shot = await addBoardPdfTitle(cleanShot, record.title || 'Тренировка');
         if (!shot) return;
         downloadBlob(
@@ -14257,6 +14293,8 @@ document.getElementById('btnAnimationSteps').addEventListener('click', e => {
         }
     });
 });
+document.getElementById('btnAnimationTogether').addEventListener('click', setSelectedAnimationTogether);
+document.getElementById('btnAnimationAllTogether').addEventListener('click', setAllAnimationTogether);
 document.getElementById('animationScrubber').addEventListener('input', e => {
     const renderScrub = () => {
         const timeline = ensureAnimationTimeline();
