@@ -551,6 +551,35 @@
         text-align: right;
         font-variant-numeric: tabular-nums;
     }
+    .animation-step-toggle {
+        width: auto;
+        min-width: 54px;
+        padding: 0 9px;
+        font-size: 11px;
+        font-weight: 850;
+    }
+    .animation-step-toggle.active {
+        color: #fff;
+        border-color: #60a5fa;
+        background: rgba(37,99,235,.72);
+        box-shadow: 0 0 0 2px rgba(37,99,235,.18);
+    }
+    .animation-step-field {
+        width: 58px;
+        height: 34px;
+        border: 1px solid #262a32;
+        border-radius: 8px;
+        background: #151922;
+        color: #dbeafe;
+        font-size: 11px;
+        font-weight: 850;
+        text-align: center;
+        outline: none;
+    }
+    .animation-step-field:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59,130,246,.18);
+    }
     .custom-icon {
         width: 24px;
         height: 24px;
@@ -4308,9 +4337,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.45" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.46" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.45</span>
+            <span class="version-tooltip">v0.9.46</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4791,6 +4820,9 @@
                     <input id="animationScrubber" type="range" min="0" max="1000" value="0" step="1" aria-label="Прокрутка анимации">
                     <span class="animation-time" id="animationTimeLabel">0:00</span>
                 </label>
+                <button class="tool-btn animation-step-toggle" id="btnAnimationSteps" type="button" title="Ручные шаги анимации">Шаги</button>
+                <input class="animation-step-field" id="animationStepInput" type="number" min="1" max="99" step="1" value="1" title="Номер шага для выделенной линии">
+                <input class="animation-step-field" id="animationOffsetInput" type="number" min="0" max="95" step="5" value="0" title="Старт внутри шага, %">
             </div>
         </div>
 
@@ -5331,7 +5363,7 @@ function rinkSVG(mode, rotation = 0) {
 
 // ================= ИНИЦИАЛИЗАЦИЯ =================
 const canvas = new fabric.Canvas('rink-canvas', { isDrawingMode: false, selection: true, preserveObjectStacking: true });
-const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase', 'lineColor', 'textBoxBorder', 'jerseyColor', 'opponentColor', 'shapeColor', 'markerColor', 'markerId'];
+const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase', 'animStep', 'animOffset', 'lineColor', 'textBoxBorder', 'jerseyColor', 'opponentColor', 'shapeColor', 'markerColor', 'markerId'];
 
 let currentMode = 'select';
 let currentLineType = null;
@@ -5406,6 +5438,7 @@ let animationRunToken = 0;
 let animationDelayTimer = null;
 let animationDelayResolver = null;
 let currentAnimationTimeline = null;
+let manualAnimationStepsEnabled = false;
 let dropboxBackupTimer = null;
 let dropboxBackupInProgress = false;
 let collectionEditing = null;
@@ -5906,12 +5939,16 @@ function rebuildLineObject(line) {
     if (!pts || pts.length < 2) return null;
     const type = lineObjectType(line);
     const color = lineObjectColor(line);
+    const animStep = line.animStep;
+    const animOffset = line.animOffset;
     const objects = canvas.getObjects();
     const index = objects.indexOf(line);
     const wasActive = canvas.getActiveObject() === line;
     canvas.remove(line);
     const rebuilt = addStyledLine(pts, type, color);
     if (!rebuilt) return null;
+    if (Number.isFinite(Number(animStep))) rebuilt.animStep = Number(animStep);
+    if (Number.isFinite(Number(animOffset))) rebuilt.animOffset = Number(animOffset);
     if (index >= 0) canvas.moveTo(rebuilt, index);
     applyModeToObject(rebuilt);
     if (wasActive) canvas.setActiveObject(rebuilt);
@@ -5928,6 +5965,43 @@ function applyLineLabelMode() {
     suspendHistory = prevSuspend;
     snapshotNow();
     canvas.requestRenderAll();
+}
+function animationConfigTargets() {
+    const active = canvas.getActiveObject();
+    let objects = [];
+    if (active?.type === 'activeSelection' && Array.isArray(active._objects)) {
+        objects = active._objects;
+    } else if (active) {
+        objects = [active];
+    }
+    const lines = objects.filter(obj => isMovementLine(obj) || isPuckActionLine(obj));
+    if (lines.length) return lines;
+    const all = canvas.getObjects().filter(obj => isMovementLine(obj) || isPuckActionLine(obj));
+    return all.length ? [all[all.length - 1]] : [];
+}
+function syncAnimationStepControlsFromSelection() {
+    const stepInput = document.getElementById('animationStepInput');
+    const offsetInput = document.getElementById('animationOffsetInput');
+    if (!stepInput || !offsetInput) return;
+    const targets = animationConfigTargets();
+    const first = targets[0];
+    stepInput.value = String(animationManualStepValue({ sourceLine: first }, 1));
+    offsetInput.value = String(animationManualOffsetValue({ sourceLine: first }));
+}
+function applyAnimationStepControls() {
+    const targets = animationConfigTargets();
+    if (!targets.length) return;
+    const step = Math.max(1, Math.min(99, Math.round(Number(document.getElementById('animationStepInput')?.value) || 1)));
+    const offset = Math.max(0, Math.min(95, Math.round(Number(document.getElementById('animationOffsetInput')?.value) || 0)));
+    targets.forEach(obj => {
+        obj.animStep = step;
+        obj.animOffset = offset;
+        obj.dirty = true;
+        obj.setCoords();
+    });
+    currentAnimationTimeline = null;
+    canvas.requestRenderAll();
+    scheduleSnapshot();
 }
 function makeTrainingRecordFromField(base = {}) {
     const createdAt = base.createdAt || new Date().toISOString();
@@ -6831,16 +6905,16 @@ function collectAnimationPlan() {
                     const pickup = puckPickupOnPath(movementPts, pucks, usedPucks);
                     const split = pickup ? splitPathAtPickup(movementPts, pickup) : null;
                     if (pickup && split?.before?.length > 1 && split?.after?.length > 1) {
-                        steps.push({ kind: 'movement', player: entry.player, puck: null, pts: split.before });
+                        steps.push({ kind: 'movement', player: entry.player, puck: null, pts: split.before, sourceLine: movement.line });
                         usedPucks.add(pickup.puck);
                         puck = pickup.puck;
                         playerPucks.set(entry.player, puck);
-                        steps.push({ kind: 'movement', player: entry.player, puck, pts: split.after });
+                        steps.push({ kind: 'movement', player: entry.player, puck, pts: split.after, sourceLine: movement.line });
                     } else {
-                        steps.push({ kind: 'movement', player: entry.player, puck: null, pts: movementPts });
+                        steps.push({ kind: 'movement', player: entry.player, puck: null, pts: movementPts, sourceLine: movement.line });
                     }
                 } else {
-                    steps.push({ kind: 'movement', player: entry.player, puck, pts: movementPts });
+                    steps.push({ kind: 'movement', player: entry.player, puck, pts: movementPts, sourceLine: movement.line });
                 }
                 actionPoint = movementPts[movementPts.length - 1];
             }
@@ -6849,7 +6923,7 @@ function collectAnimationPlan() {
                 const action = nearestPuckActionLine(actionPoint, actionLines, usedActionLines);
                 if (action) {
                     usedActionLines.add(action.line);
-                    steps.push({ kind: 'puck-action', puck, pts: action.pts, actionType: action.type });
+                    steps.push({ kind: 'puck-action', puck, pts: action.pts, actionType: action.type, sourceLine: action.line });
 
                     if (action.type === 'pass' || action.type === 'puckmove') {
                         const receiver = passReceiverNearPoint(action.pts[action.pts.length - 1], entries, processed, entry.player);
@@ -6883,7 +6957,7 @@ function collectAnimationPlan() {
             const action = nearestPuckActionLine(point, freePuckRollLines, usedActionLines);
             if (!action) break;
             usedActionLines.add(action.line);
-            steps.push({ kind: 'puck-action', puck, pts: action.pts, actionType: 'puckmove' });
+            steps.push({ kind: 'puck-action', puck, pts: action.pts, actionType: 'puckmove', sourceLine: action.line });
             point = action.pts[action.pts.length - 1];
         }
     });
@@ -6981,15 +7055,49 @@ function setAnimationScrubberValue(timeline, ms) {
     if (label) label.textContent = formatAnimationTime(ms);
 }
 
+function animationManualStepValue(step, fallback) {
+    const raw = Number(step?.sourceLine?.animStep);
+    return Number.isFinite(raw) && raw > 0 ? Math.max(1, Math.round(raw)) : fallback;
+}
+
+function animationManualOffsetValue(step) {
+    const raw = Number(step?.sourceLine?.animOffset);
+    return Number.isFinite(raw) ? Math.max(0, Math.min(95, raw)) : 0;
+}
+
 function buildAnimationTimeline(steps) {
     const prepared = steps.map(step => ({
         ...step,
         duration: animationStepDuration(step),
-        gapAfter: 140
+        gapAfter: 140,
+        startAt: 0
     }));
-    const totalDuration = prepared.reduce((sum, step, index) => {
-        return sum + step.duration + (index < prepared.length - 1 ? step.gapAfter : 0);
-    }, 0);
+    let totalDuration = 0;
+    if (manualAnimationStepsEnabled) {
+        const groups = new Map();
+        prepared.forEach((step, index) => {
+            const manualStep = animationManualStepValue(step, index + 1);
+            step.manualStep = manualStep;
+            step.manualOffset = animationManualOffsetValue(step);
+            if (!groups.has(manualStep)) groups.set(manualStep, []);
+            groups.get(manualStep).push(step);
+        });
+        let cursor = 0;
+        Array.from(groups.keys()).sort((a, b) => a - b).forEach(groupKey => {
+            const groupSteps = groups.get(groupKey);
+            const groupBase = Math.max(...groupSteps.map(step => step.duration), 1);
+            groupSteps.forEach(step => {
+                step.startAt = cursor + groupBase * (step.manualOffset / 100);
+            });
+            cursor = Math.max(...groupSteps.map(step => step.startAt + step.duration)) + 240;
+        });
+        totalDuration = Math.max(0, cursor - 240);
+    } else {
+        totalDuration = prepared.reduce((sum, step, index) => {
+            step.startAt = sum;
+            return sum + step.duration + (index < prepared.length - 1 ? step.gapAfter : 0);
+        }, 0);
+    }
     return {
         steps: prepared,
         totalDuration,
@@ -7021,14 +7129,13 @@ function applyPuckActionStepAt(step, ratio) {
 function renderAnimationTimelineAt(timeline, ms) {
     if (!timeline) return;
     restoreAnimationOriginals(timeline.originals);
-    let timeLeft = Math.max(0, Math.min(timeline.totalDuration, ms));
+    const elapsed = Math.max(0, Math.min(timeline.totalDuration, ms));
     timeline.steps.forEach(step => {
-        if (timeLeft <= 0) return;
-        const ratio = Math.min(1, timeLeft / step.duration);
+        const localTime = elapsed - (step.startAt || 0);
+        if (localTime <= 0) return;
+        const ratio = Math.min(1, localTime / step.duration);
         if (step.kind === 'puck-action') applyPuckActionStepAt(step, ratio);
         else applyMovementStepAt(step, ratio);
-        timeLeft -= step.duration;
-        if (timeLeft > 0) timeLeft -= step.gapAfter;
     });
     restoreCanvasStacking(timeline.stackingOrder);
     canvas.requestRenderAll();
@@ -7613,13 +7720,20 @@ canvas.on('selection:created', updatePlayerHalo);
 canvas.on('selection:updated', updatePlayerHalo);
 canvas.on('selection:created', syncTextControlsFromSelection);
 canvas.on('selection:updated', syncTextControlsFromSelection);
+canvas.on('selection:created', syncAnimationStepControlsFromSelection);
+canvas.on('selection:updated', syncAnimationStepControlsFromSelection);
 canvas.on('selection:cleared', () => {
     hidePlayerHalo();
     syncTextControlsFromSelection();
+    syncAnimationStepControlsFromSelection();
 });
 canvas.on('object:moving', updatePlayerHalo);
 canvas.on('object:rotating', updatePlayerHalo);
-canvas.on('object:modified', updatePlayerHalo);
+canvas.on('object:modified', () => {
+    currentAnimationTimeline = null;
+    updatePlayerHalo();
+    syncAnimationStepControlsFromSelection();
+});
 
 function addComponent(id, x, y, keepMode = false) {
     const factory = COMPONENTS[id];
@@ -14125,6 +14239,24 @@ function toggleTrainingSort() {
 }
 document.getElementById('btnStartTraining').addEventListener('click', beginTrainingEdit);
 document.getElementById('btnPlayAnimation').addEventListener('click', playDrillAnimation);
+document.getElementById('btnAnimationSteps').addEventListener('click', e => {
+    manualAnimationStepsEnabled = !manualAnimationStepsEnabled;
+    e.currentTarget.classList.toggle('active', manualAnimationStepsEnabled);
+    e.currentTarget.title = manualAnimationStepsEnabled
+        ? 'Ручные шаги включены: одинаковый шаг идет одновременно'
+        : 'Ручные шаги выключены: автоцепочка';
+    currentAnimationTimeline = null;
+    syncAnimationStepControlsFromSelection();
+});
+['animationStepInput', 'animationOffsetInput'].forEach(id => {
+    document.getElementById(id).addEventListener('change', applyAnimationStepControls);
+    document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            applyAnimationStepControls();
+        }
+    });
+});
 document.getElementById('animationScrubber').addEventListener('input', e => {
     const renderScrub = () => {
         const timeline = ensureAnimationTimeline();
