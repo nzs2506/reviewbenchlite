@@ -4351,9 +4351,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.49" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.50" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.49</span>
+            <span class="version-tooltip">v0.9.50</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -7447,7 +7447,6 @@ function isTextObject(obj) {
 function decorateTextBlock(obj) {
     if (!obj || obj.customType !== 'text-block') return;
     obj.__textBlockDecorated = false;
-    if (Object.prototype.hasOwnProperty.call(obj, 'textBoxBorder')) delete obj.textBoxBorder;
 }
 
 function createTextBlock(text = 'Текст') {
