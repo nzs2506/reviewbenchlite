@@ -4351,9 +4351,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.48" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.49" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.48</span>
+            <span class="version-tooltip">v0.9.49</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5379,7 +5379,7 @@ function rinkSVG(mode, rotation = 0) {
 
 // ================= ИНИЦИАЛИЗАЦИЯ =================
 const canvas = new fabric.Canvas('rink-canvas', { isDrawingMode: false, selection: true, preserveObjectStacking: true });
-const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase', 'animStep', 'animOffset', 'lineColor', 'textBoxBorder', 'jerseyColor', 'opponentColor', 'shapeColor', 'markerColor', 'markerId'];
+const EXTRA_PROPS = ['customType', 'selectable', 'evented', 'animPts', 'animType', 'animBase', 'animStep', 'animOffset', 'lineColor', 'jerseyColor', 'opponentColor', 'shapeColor', 'markerColor', 'markerId'];
 
 let currentMode = 'select';
 let currentLineType = null;
@@ -6284,7 +6284,6 @@ function recolorSelectedText(color) {
     if (!targets.length) return false;
     targets.forEach(obj => {
         obj.set({ fill: color });
-        if (obj.customType === 'text-block') obj.textBoxBorder = color;
         obj.dirty = true;
         obj.setCoords();
     });
@@ -7446,31 +7445,9 @@ function isTextObject(obj) {
 }
 
 function decorateTextBlock(obj) {
-    if (!obj || obj.customType !== 'text-block' || obj.__textBlockDecorated) return;
-    obj.__textBlockDecorated = true;
-    obj.textBoxBorder = obj.textBoxBorder || '#2563eb';
-    const baseRender = obj._render.bind(obj);
-    obj._render = function(ctx) {
-        const width = this.width + 16;
-        const height = this.height + 12;
-        const x = -width / 2;
-        const y = -height / 2;
-        ctx.save();
-        ctx.fillStyle = 'rgba(255,255,255,.88)';
-        ctx.strokeStyle = this.textBoxBorder || '#2563eb';
-        ctx.lineWidth = 1.7;
-        if (ctx.roundRect) {
-            ctx.beginPath();
-            ctx.roundRect(x, y, width, height, 4);
-            ctx.fill();
-            ctx.stroke();
-        } else {
-            ctx.fillRect(x, y, width, height);
-            ctx.strokeRect(x, y, width, height);
-        }
-        ctx.restore();
-        baseRender(ctx);
-    };
+    if (!obj || obj.customType !== 'text-block') return;
+    obj.__textBlockDecorated = false;
+    if (Object.prototype.hasOwnProperty.call(obj, 'textBoxBorder')) delete obj.textBoxBorder;
 }
 
 function createTextBlock(text = 'Текст') {
@@ -7487,7 +7464,6 @@ function createTextBlock(text = 'Текст') {
         padding: 8,
         textAlign: 'center',
         customType: 'text-block',
-        textBoxBorder: currentColor,
         borderColor: '#93c5fd',
         cornerColor: '#60a5fa',
         cornerStyle: 'rect'
