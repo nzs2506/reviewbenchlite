@@ -4351,9 +4351,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.50" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.51" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.50</span>
+            <span class="version-tooltip">v0.9.51</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4909,7 +4909,7 @@
                         <button class="menu-action" id="btnAddText" type="button"><i class="fa-solid fa-font"></i><span>Текст</span></button>
                         <div class="text-size-row" aria-label="Размер текста">
                             <button class="text-size-btn" id="btnTextSmaller" type="button" title="Уменьшить текст">A-</button>
-                            <input class="text-size-value" id="textSizeInput" type="number" min="8" max="80" step="1" value="22" title="Размер текста">
+                            <input class="text-size-value" id="textSizeInput" type="number" min="8" max="80" step="1" value="28" title="Размер текста">
                             <button class="text-size-btn" id="btnTextLarger" type="button" title="Увеличить текст">A+</button>
                         </div>
                         <button class="menu-action" id="btnAddImage" type="button"><i class="fa-regular fa-image"></i><span>Картинка</span></button>
@@ -5385,7 +5385,7 @@ let currentMode = 'select';
 let currentLineType = null;
 let currentComponent = null;
 let currentColor = '#0056b3';
-let currentTextSize = 22;
+let currentTextSize = 28;
 let currentJerseyColor = '#2563eb';
 let currentOpponentColor = '#c0392b';
 let currentShapeColor = '#2563eb';
@@ -5554,6 +5554,7 @@ function setBackground(cb) {
 
 function fitCanvas() {
     const wrap = document.querySelector('.canvas-wrapper');
+    if (!wrap || wrap.clientWidth < 40 || wrap.clientHeight < 40) return false;
     const d = designSize();
     const wrapStyle = getComputedStyle(wrap);
     const padX = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight);
@@ -5573,6 +5574,24 @@ function fitCanvas() {
         ? halfRadii[normalizeRinkRotation(rinkRotation)]
         : (rinkMode === 'neutral' ? '8px' : r);
     canvas.renderAll();
+    return true;
+}
+
+function warmupCanvasLayout() {
+    [0, 50, 160, 360, 800, 1400].forEach(delay => {
+        setTimeout(() => {
+            if (!canvas.backgroundImage) {
+                setBackground(() => {
+                    fitCanvas();
+                    normalizeObjectStacking();
+                    canvas.requestRenderAll();
+                });
+                return;
+            }
+            fitCanvas();
+            canvas.requestRenderAll();
+        }, delay);
+    });
 }
 
 function shouldRotateWithRink(obj) {
@@ -6243,7 +6262,7 @@ document.getElementById('colorPicker').addEventListener('input', e => setColor(e
 const TEXT_SIZE_MIN = 8;
 const TEXT_SIZE_MAX = 80;
 function clampTextSize(value) {
-    return Math.max(TEXT_SIZE_MIN, Math.min(TEXT_SIZE_MAX, Math.round(Number(value) || currentTextSize || 22)));
+    return Math.max(TEXT_SIZE_MIN, Math.min(TEXT_SIZE_MAX, Math.round(Number(value) || currentTextSize || 28)));
 }
 function selectedTextObjects() {
     const active = canvas.getActiveObject();
@@ -7451,7 +7470,7 @@ function decorateTextBlock(obj) {
 
 function createTextBlock(text = 'Текст') {
     const obj = new fabric.Textbox(text, {
-        width: 210,
+        width: 260,
         minWidth: 64,
         splitByGrapheme: true,
         originX: 'center',
@@ -8259,7 +8278,7 @@ document.getElementById('btnAddText').addEventListener('click', () => {
     closeToolMenus();
     const p = dropPos();
     const text = createTextBlock('Текст');
-    text.set({ left: p.x, top: p.y });
+    text.set({ left: p.x, top: p.y - 36 });
     addToBoard(text);
 });
 function hexA(hex, a) {
@@ -14766,32 +14785,44 @@ document.getElementById('goalieSeasonSelect').addEventListener('change', e => {
 document.getElementById('btnRinkRotate').addEventListener('click', rotateHalfRink);
 
 // ================= СТАРТ =================
-loadTrainingRecords();
-loadTrainingBlocks();
-loadPlannedTrainings();
-loadRosterRemovedKeys();
-loadRosterPlayers();
-loadMatchSheet();
-loadMatchSheetArchive();
-applyMatchSheetPlayerColWidth(storedMatchSheetPlayerColWidth());
-loadGoalieMatches();
-syncRosterGoaliesFromMatches();
-handleDropboxOAuthReturn().finally(updateDropboxBackupButton);
-initBenchAuth();
-document.getElementById('goalieMatchDate').value = todayInputValue();
-renderTrainingList();
-renderGoaliePage();
-initNumberPicker();
-initJerseyPicker();
-initRolePicker();
-initSidePanelToggle();
-setBackground(() => {
-    fitCanvas();
-    normalizeObjectStacking();
-    updateRinkControls();
-    suspendHistory = false;
-    snapshotNow();
-});
+let appBooted = false;
+function bootBenchReviewApp() {
+    if (appBooted) return;
+    appBooted = true;
+    loadTrainingRecords();
+    loadTrainingBlocks();
+    loadPlannedTrainings();
+    loadRosterRemovedKeys();
+    loadRosterPlayers();
+    loadMatchSheet();
+    loadMatchSheetArchive();
+    applyMatchSheetPlayerColWidth(storedMatchSheetPlayerColWidth());
+    loadGoalieMatches();
+    syncRosterGoaliesFromMatches();
+    handleDropboxOAuthReturn().finally(updateDropboxBackupButton);
+    initBenchAuth();
+    document.getElementById('goalieMatchDate').value = todayInputValue();
+    renderTrainingList();
+    renderGoaliePage();
+    initNumberPicker();
+    initJerseyPicker();
+    initRolePicker();
+    initSidePanelToggle();
+    setBackground(() => {
+        fitCanvas();
+        normalizeObjectStacking();
+        updateRinkControls();
+        suspendHistory = false;
+        snapshotNow();
+        warmupCanvasLayout();
+    });
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootBenchReviewApp, { once: true });
+} else {
+    bootBenchReviewApp();
+}
+window.addEventListener('load', warmupCanvasLayout, { once: true });
 
 window.board = { canvas, addStyledLine, addComponent, setMode, undo, redo, get history() { return { len: stateHistory.length, idx: historyIndex }; } };
 </script>
