@@ -4353,9 +4353,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.54" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.55" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.54</span>
+            <span class="version-tooltip">v0.9.55</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5416,6 +5416,9 @@ const DROPBOX_BACKUP_LOG_STORAGE_KEY = 'benchreview-lite.dropbox.backups.v1';
 const DROPBOX_DAILY_BACKUP_STORAGE_KEY = 'benchreview-lite.dropbox.daily-last.v1';
 window.BENCHREVIEW_DROPBOX_APP_KEY = window.BENCHREVIEW_DROPBOX_APP_KEY || 'lgey122v75qit4a';
 const DROPBOX_BACKUP_PREFIX = 'latest';
+const DROPBOX_BACKUP_ROOT = '/latest';
+const DROPBOX_BACKUP_RECORD_DIR = `${DROPBOX_BACKUP_ROOT}/records`;
+const DROPBOX_BACKUP_SCREEN_DIR = `${DROPBOX_BACKUP_ROOT}/screens`;
 const DROPBOX_DAILY_BACKUP_MS = 24 * 60 * 60 * 1000;
 const BENCHREVIEW_DB_NAME = 'benchreview-lite.storage';
 const BENCHREVIEW_DB_VERSION = 1;
@@ -8761,6 +8764,18 @@ function dropboxStamp(value = new Date()) {
     const pad = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
 }
+function dropboxJoin(...parts) {
+    const clean = parts
+        .map(part => String(part || '').trim().replace(/^\/+|\/+$/g, ''))
+        .filter(Boolean);
+    return `/${clean.join('/')}`;
+}
+function dropboxFormatFailures(failures = []) {
+    return failures
+        .slice(0, 4)
+        .map(item => `${item.path}: ${item.error}`)
+        .join('\n');
+}
 function base64UrlFromBytes(bytes) {
     let binary = '';
     bytes.forEach(byte => { binary += String.fromCharCode(byte); });
@@ -8888,8 +8903,13 @@ async function dropboxCreateFolder(accessToken, path) {
     if (response.ok) return;
     const data = await response.json().catch(() => ({}));
     const summary = String(data.error_summary || '');
-    if (summary.includes('path/conflict/folder') || summary.includes('path/conflict')) return;
+    if (summary.includes('path/conflict/folder')) return;
     throw new Error(dropboxErrorMessage(data, `Не удалось создать папку Dropbox (${response.status})`));
+}
+async function dropboxEnsureBackupFolders(accessToken) {
+    await dropboxCreateFolder(accessToken, DROPBOX_BACKUP_ROOT);
+    await dropboxCreateFolder(accessToken, DROPBOX_BACKUP_RECORD_DIR);
+    await dropboxCreateFolder(accessToken, DROPBOX_BACKUP_SCREEN_DIR);
 }
 async function dropboxUpload(accessToken, path, body, mode = 'overwrite') {
     const uploadBody = body instanceof Blob ? body : new Blob([body]);
@@ -8923,9 +8943,21 @@ async function dropboxUpload(accessToken, path, body, mode = 'overwrite') {
         });
         if (retry.ok) return retry.json().catch(() => ({}));
         const retryData = await dropboxReadErrorData(retry);
-        throw new Error(dropboxErrorMessage(retryData, `Dropbox upload failed (${retry.status})`));
+        throw new Error(`${path}: ${dropboxErrorMessage(retryData, `Dropbox upload failed (${retry.status})`)}`);
     }
-    throw new Error(dropboxErrorMessage(data, `Dropbox upload failed (${response.status})`));
+    throw new Error(`${path}: ${dropboxErrorMessage(data, `Dropbox upload failed (${response.status})`)}`);
+}
+async function dropboxUploadTracked(accessToken, path, body, stats, mode = 'overwrite') {
+    try {
+        await dropboxUpload(accessToken, path, body, mode);
+        stats.uploaded++;
+        return true;
+    } catch (err) {
+        const message = String(err?.message || err || 'unknown error');
+        stats.failed.push({ path, error: message.replace(`${path}: `, '') });
+        console.warn('Dropbox backup file failed', path, err);
+        return false;
+    }
 }
 function textJsonBlob(value) {
     return new Blob([JSON.stringify(value, null, 2)], { type: 'application/json;charset=utf-8' });
@@ -8985,41 +9017,49 @@ function dropboxCompactBackupRecord(record, screenFile = '') {
 }
 async function backupBoardToDropbox(reason = 'manual') {
     const accessToken = await dropboxAccessToken();
+    await dropboxEnsureBackupFolders(accessToken);
     const bundle = buildBoardDropboxBundle();
     const prefix = DROPBOX_BACKUP_PREFIX;
-    const currentScreenPath = bundle.currentBoard.screen ? `/${prefix}__screen__000_current-board.jpg` : '';
+    const currentScreenPath = bundle.currentBoard.screen ? dropboxJoin(DROPBOX_BACKUP_SCREEN_DIR, `${prefix}__000_current-board.jpg`) : '';
     const recordItems = bundle.records.map((record, index) => {
         const base = `${String(index + 1).padStart(3, '0')}_${dropboxStamp(record.createdAt)}_${dropboxSafeSegment(record.title)}`;
         const ext = record.screen?.startsWith('data:image/png') ? 'png' : record.screen?.startsWith('data:image/webp') ? 'webp' : 'jpg';
         return {
             record,
             base,
-            jsonPath: `/${prefix}__record__${base}.json`,
-            screenPath: record.screen ? `/${prefix}__screen__${base}.${ext}` : ''
+            jsonPath: dropboxJoin(DROPBOX_BACKUP_RECORD_DIR, `${base}.json`),
+            screenPath: record.screen ? dropboxJoin(DROPBOX_BACKUP_SCREEN_DIR, `${base}.${ext}`) : ''
         };
     });
     const compactBundle = Object.assign({}, bundle, {
         currentBoard: dropboxCompactBackupRecord(bundle.currentBoard, currentScreenPath),
         records: recordItems.map(item => dropboxCompactBackupRecord(item.record, item.screenPath))
     });
-    let uploaded = 0;
-    await dropboxUpload(accessToken, `/${prefix}__benchreview-restore-bundle.json`, textJsonBlob(compactBundle)); uploaded++;
-    await dropboxUpload(accessToken, `/${prefix}__trainings-full.json`, textJsonBlob(compactBundle.records)); uploaded++;
-    await dropboxUpload(accessToken, `/${prefix}__training-page-state.json`, textJsonBlob(bundle.states)); uploaded++;
-    await dropboxUpload(accessToken, `/${prefix}__current-board.json`, textJsonBlob(compactBundle.currentBoard)); uploaded++;
+    const stats = { uploaded: 0, failed: [] };
+    await dropboxUpload(accessToken, dropboxJoin(DROPBOX_BACKUP_ROOT, `${prefix}__benchreview-restore-bundle.json`), textJsonBlob(compactBundle)); stats.uploaded++;
+    await dropboxUpload(accessToken, dropboxJoin(DROPBOX_BACKUP_ROOT, `${prefix}__trainings-full.json`), textJsonBlob(compactBundle.records)); stats.uploaded++;
+    await dropboxUpload(accessToken, dropboxJoin(DROPBOX_BACKUP_ROOT, `${prefix}__training-page-state.json`), textJsonBlob(bundle.states)); stats.uploaded++;
+    await dropboxUpload(accessToken, dropboxJoin(DROPBOX_BACKUP_ROOT, `${prefix}__current-board.json`), textJsonBlob(compactBundle.currentBoard)); stats.uploaded++;
     if (bundle.currentBoard.screen) {
-        await dropboxUpload(accessToken, currentScreenPath, dataUrlToBlob(bundle.currentBoard.screen));
-        uploaded++;
+        await dropboxUploadTracked(accessToken, currentScreenPath, dataUrlToBlob(bundle.currentBoard.screen), stats);
     }
     for (const item of recordItems) {
-        await dropboxUpload(accessToken, item.jsonPath, textJsonBlob(dropboxCompactBackupRecord(item.record, item.screenPath))); uploaded++;
+        await dropboxUploadTracked(accessToken, item.jsonPath, textJsonBlob(dropboxCompactBackupRecord(item.record, item.screenPath)), stats);
         if (item.screenPath) {
-            await dropboxUpload(accessToken, item.screenPath, dataUrlToBlob(item.record.screen));
-            uploaded++;
+            await dropboxUploadTracked(accessToken, item.screenPath, dataUrlToBlob(item.record.screen), stats);
         }
     }
     const log = readDropboxBackupLog();
-    const entry = { createdAt: bundle.createdAt, root: '/Apps/BenchReviewLiteBackup', prefix, reason, trainings: bundle.records.length, uploaded };
+    const entry = {
+        createdAt: bundle.createdAt,
+        root: '/Apps/BenchReviewLiteBackup/latest',
+        prefix,
+        reason,
+        trainings: bundle.records.length,
+        uploaded: stats.uploaded,
+        failed: stats.failed.length,
+        failures: stats.failed.slice(0, 8)
+    };
     localStorage.setItem(DROPBOX_BACKUP_LOG_STORAGE_KEY, JSON.stringify([entry, ...log].slice(0, 20)));
     localStorage.setItem(DROPBOX_DAILY_BACKUP_STORAGE_KEY, String(Date.now()));
     return entry;
@@ -9104,7 +9144,12 @@ async function handleDropboxBackupClick() {
         }
         updateDropboxBackupButton(true);
         const entry = await backupBoardToDropbox('manual');
-        alert(`Резервная копия обновлена в Dropbox: ${entry.trainings} тренировок, ${entry.uploaded} файлов.`);
+        if (entry.failed) {
+            const details = dropboxFormatFailures(entry.failures);
+            alert(`Dropbox-бэкап частично обновлён: ${entry.trainings} тренировок, ${entry.uploaded} файлов загружено, ${entry.failed} не удалось.\n\n${details}`);
+        } else {
+            alert(`Резервная копия обновлена в Dropbox: ${entry.trainings} тренировок, ${entry.uploaded} файлов.\nПапка: ${entry.root}`);
+        }
     } catch (err) {
         if (dropboxIsMissingScope(err)) {
             localStorage.removeItem(DROPBOX_CONNECTION_STORAGE_KEY);
