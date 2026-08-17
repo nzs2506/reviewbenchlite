@@ -3186,6 +3186,8 @@
         text-align: left;
         transition: border-color .15s, background .15s, transform .15s, box-shadow .15s;
         cursor: pointer;
+        content-visibility: auto;
+        contain-intrinsic-size: 96px 1000px;
     }
     .training-row.block-row {
         grid-template-columns: 154px minmax(0, 1fr) 132px auto;
@@ -4351,9 +4353,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.52" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.53" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.52</span>
+            <span class="version-tooltip">v0.9.53</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5411,8 +5413,10 @@ const DROPBOX_CONNECTION_STORAGE_KEY = 'benchreview-lite.dropbox.connection.v1';
 const DROPBOX_PENDING_STORAGE_KEY = 'benchreview-lite.dropbox.pending.v1';
 const DROPBOX_APP_KEY_STORAGE_KEY = 'benchreview-lite.dropbox.app-key.v1';
 const DROPBOX_BACKUP_LOG_STORAGE_KEY = 'benchreview-lite.dropbox.backups.v1';
+const DROPBOX_DAILY_BACKUP_STORAGE_KEY = 'benchreview-lite.dropbox.daily-last.v1';
 window.BENCHREVIEW_DROPBOX_APP_KEY = window.BENCHREVIEW_DROPBOX_APP_KEY || 'lgey122v75qit4a';
 const DROPBOX_BACKUP_PREFIX = 'latest';
+const DROPBOX_DAILY_BACKUP_MS = 24 * 60 * 60 * 1000;
 const BENCHREVIEW_DB_NAME = 'benchreview-lite.storage';
 const BENCHREVIEW_DB_VERSION = 1;
 const BENCHREVIEW_DB_STORE = 'records';
@@ -5455,7 +5459,9 @@ let animationDelayTimer = null;
 let animationDelayResolver = null;
 let currentAnimationTimeline = null;
 let manualAnimationStepsEnabled = false;
+let canvasLayoutObserver = null;
 let dropboxBackupTimer = null;
+let dropboxDailyTimer = null;
 let dropboxBackupInProgress = false;
 let collectionEditing = null;
 let collectionExerciseIds = [];
@@ -5552,17 +5558,25 @@ function setBackground(cb) {
     });
 }
 
+let fitCanvasFrame = 0;
 function fitCanvas() {
     const wrap = document.querySelector('.canvas-wrapper');
-    if (!wrap || wrap.clientWidth < 40 || wrap.clientHeight < 40) return false;
+    if (!wrap || document.body.dataset.view !== 'field') return false;
+    const rect = wrap.getBoundingClientRect();
+    const wrapW = Math.max(wrap.clientWidth || 0, rect.width || 0);
+    const wrapH = Math.max(wrap.clientHeight || 0, rect.height || 0);
+    if (wrapW < 40 || wrapH < 40) return false;
     const d = designSize();
     const wrapStyle = getComputedStyle(wrap);
     const padX = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight);
     const padY = parseFloat(wrapStyle.paddingTop) + parseFloat(wrapStyle.paddingBottom);
     const fitFactor = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rink-fit')) || 1;
-    const s = Math.max(0.2, Math.min((wrap.clientWidth - padX) / d.w, (wrap.clientHeight - padY) / d.h) * fitFactor);
+    const fitW = Math.max(1, wrapW - padX);
+    const fitH = Math.max(1, wrapH - padY);
+    const s = Math.max(0.2, Math.min(fitW / d.w, fitH / d.h) * fitFactor);
     canvas.setDimensions({ width: Math.round(d.w * s), height: Math.round(d.h * s) });
     canvas.setZoom(s);
+    canvas.calcOffset();
     const r = Math.round(90 * s) + 'px';
     const halfRadii = {
         0: `${r} 0 0 ${r}`,
@@ -5577,8 +5591,19 @@ function fitCanvas() {
     return true;
 }
 
+function queueCanvasFit() {
+    if (fitCanvasFrame) cancelAnimationFrame(fitCanvasFrame);
+    fitCanvasFrame = requestAnimationFrame(() => {
+        fitCanvasFrame = requestAnimationFrame(() => {
+            fitCanvasFrame = 0;
+            fitCanvas();
+            canvas.requestRenderAll();
+        });
+    });
+}
+
 function warmupCanvasLayout() {
-    [0, 50, 160, 360, 800, 1400].forEach(delay => {
+    [0, 50, 160, 360, 800, 1400, 2400, 4000].forEach(delay => {
         setTimeout(() => {
             if (!canvas.backgroundImage) {
                 setBackground(() => {
@@ -5591,6 +5616,22 @@ function warmupCanvasLayout() {
             fitCanvas();
             canvas.requestRenderAll();
         }, delay);
+    });
+}
+
+function initCanvasLayoutWatchers() {
+    const wrap = document.querySelector('.canvas-wrapper');
+    if (window.ResizeObserver && wrap) {
+        canvasLayoutObserver = new ResizeObserver(queueCanvasFit);
+        canvasLayoutObserver.observe(wrap);
+        canvasLayoutObserver.observe(document.body);
+        document.querySelector('.side-panel') && canvasLayoutObserver.observe(document.querySelector('.side-panel'));
+        document.querySelector('.bottom-toolbar') && canvasLayoutObserver.observe(document.querySelector('.bottom-toolbar'));
+    }
+    window.addEventListener('orientationchange', warmupCanvasLayout);
+    window.addEventListener('pageshow', warmupCanvasLayout);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) warmupCanvasLayout();
     });
 }
 
@@ -5673,9 +5714,9 @@ function resetHalfRinkRotation() {
     }
 }
 
-window.addEventListener('resize', fitCanvas);
-if (window.visualViewport) window.visualViewport.addEventListener('resize', fitCanvas);
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCanvas);
+window.addEventListener('resize', queueCanvasFit);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', queueCanvasFit);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(warmupCanvasLayout);
 
 function setView(view) {
     if (trainingDraft && view !== 'field') return;
@@ -8666,6 +8707,7 @@ function dropboxReadConnection() {
 function dropboxWriteConnection(connection) {
     localStorage.setItem(DROPBOX_CONNECTION_STORAGE_KEY, JSON.stringify(connection));
     updateDropboxBackupButton();
+    scheduleDropboxDailyBackup();
 }
 function dropboxRedirectUri() {
     return `${window.location.origin}${window.location.pathname}`;
@@ -8941,7 +8983,7 @@ function dropboxCompactBackupRecord(record, screenFile = '') {
     }
     return compact;
 }
-async function backupBoardToDropbox() {
+async function backupBoardToDropbox(reason = 'manual') {
     const accessToken = await dropboxAccessToken();
     const bundle = buildBoardDropboxBundle();
     const prefix = DROPBOX_BACKUP_PREFIX;
@@ -8977,8 +9019,9 @@ async function backupBoardToDropbox() {
         }
     }
     const log = readDropboxBackupLog();
-    const entry = { createdAt: bundle.createdAt, root: '/Apps/BenchReviewLiteBackup', prefix, trainings: bundle.records.length, uploaded };
+    const entry = { createdAt: bundle.createdAt, root: '/Apps/BenchReviewLiteBackup', prefix, reason, trainings: bundle.records.length, uploaded };
     localStorage.setItem(DROPBOX_BACKUP_LOG_STORAGE_KEY, JSON.stringify([entry, ...log].slice(0, 20)));
+    localStorage.setItem(DROPBOX_DAILY_BACKUP_STORAGE_KEY, String(Date.now()));
     return entry;
 }
 function scheduleDropboxBoardBackup(reason = 'change') {
@@ -9000,6 +9043,37 @@ function scheduleDropboxBoardBackup(reason = 'change') {
             updateDropboxBackupButton(false);
         }
     }, 30000);
+}
+function dropboxLastDailyBackupAt() {
+    const fromKey = Number(localStorage.getItem(DROPBOX_DAILY_BACKUP_STORAGE_KEY) || 0);
+    if (Number.isFinite(fromKey) && fromKey > 0) return fromKey;
+    const latest = readDropboxBackupLog()[0];
+    const latestTime = latest ? new Date(latest.createdAt || 0).getTime() : 0;
+    return Number.isFinite(latestTime) ? latestTime : 0;
+}
+async function runDropboxDailyBackupIfDue(force = false) {
+    if (!dropboxReadConnection() || dropboxBackupInProgress) return;
+    const last = dropboxLastDailyBackupAt();
+    if (!force && last && Date.now() - last < DROPBOX_DAILY_BACKUP_MS) return;
+    dropboxBackupInProgress = true;
+    updateDropboxBackupButton(true);
+    try {
+        await backupBoardToDropbox('daily');
+    } catch (err) {
+        console.warn('Dropbox daily backup failed', err);
+        if (dropboxIsMissingScope(err)) {
+            localStorage.removeItem(DROPBOX_CONNECTION_STORAGE_KEY);
+        }
+    } finally {
+        dropboxBackupInProgress = false;
+        updateDropboxBackupButton(false);
+    }
+}
+function scheduleDropboxDailyBackup() {
+    clearInterval(dropboxDailyTimer);
+    if (!dropboxReadConnection()) return;
+    window.setTimeout(() => runDropboxDailyBackupIfDue(false), 15000);
+    dropboxDailyTimer = window.setInterval(() => runDropboxDailyBackupIfDue(false), 60 * 60 * 1000);
 }
 function readDropboxBackupLog() {
     try {
@@ -9029,7 +9103,7 @@ async function handleDropboxBackupClick() {
             return;
         }
         updateDropboxBackupButton(true);
-        const entry = await backupBoardToDropbox();
+        const entry = await backupBoardToDropbox('manual');
         alert(`Резервная копия обновлена в Dropbox: ${entry.trainings} тренировок, ${entry.uploaded} файлов.`);
     } catch (err) {
         if (dropboxIsMissingScope(err)) {
@@ -9114,7 +9188,9 @@ function normalizeTrainingRecords(value) {
         const previous = byId.get(id);
         const prevTime = new Date(previous?.updatedAt || previous?.createdAt || 0).getTime();
         const nextTime = new Date(item.updatedAt || item.createdAt || 0).getTime();
-        if (!previous || nextTime >= prevTime) byId.set(id, item);
+        const previousRichness = (previous?.canvas ? 2 : 0) + (previous?.screen ? 1 : 0);
+        const nextRichness = (item.canvas ? 2 : 0) + (item.screen ? 1 : 0);
+        if (!previous || nextTime > prevTime || (nextTime === prevTime && nextRichness >= previousRichness)) byId.set(id, item);
     });
     return Array.from(byId.values())
         .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
@@ -9125,7 +9201,10 @@ function mergeTrainingRecordLists(...lists) {
 function readLocalTrainingRecords() {
     try {
         const raw = localStorage.getItem(TRAINING_STORAGE_KEY);
-        return normalizeTrainingRecords(raw ? JSON.parse(raw) : []);
+        const full = normalizeTrainingRecords(raw ? JSON.parse(raw) : []);
+        if (full.length) return full;
+        const metaRaw = localStorage.getItem(TRAINING_META_STORAGE_KEY);
+        return normalizeTrainingRecords(metaRaw ? JSON.parse(metaRaw) : []);
     } catch (_) {
         return [];
     }
@@ -9451,6 +9530,10 @@ async function initTrainingRecordStorage() {
     try {
         stored = normalizeTrainingRecords(await benchDbGet(TRAINING_STORAGE_KEY));
     } catch (_) {}
+    if (stored.length || legacy.length) {
+        trainingRecords = mergeTrainingRecordLists(stored, legacy);
+        renderTrainingList();
+    }
     const remote = await fetchRemoteTrainingRecords();
     trainingRecords = mergeTrainingRecordLists(stored, legacy, remote);
     await persistTrainingRecords({ pushRemote: Boolean(remote.length || trainingRecords.length), dropboxBackup: false });
@@ -9601,6 +9684,8 @@ function fillCollectionPreview(el, ids = []) {
     if (record && record.screen) {
         const img = document.createElement('img');
         img.alt = '';
+        img.loading = 'lazy';
+        img.decoding = 'async';
         img.src = record.screen;
         el.appendChild(img);
     } else {
@@ -9638,7 +9723,7 @@ function openPlanPreview(id) {
         card.className = 'plan-preview-card';
         card.dataset.exerciseId = record.id;
         card.innerHTML = `
-            ${record.screen ? `<img alt="" src="${record.screen}">` : '<div class="exercise-thumb placeholder"><i class="fa-regular fa-image"></i></div>'}
+            ${record.screen ? `<img alt="" loading="lazy" decoding="async" src="${record.screen}">` : '<div class="exercise-thumb placeholder"><i class="fa-regular fa-image"></i></div>'}
             <strong></strong>`;
         card.querySelector('strong').textContent = record.title || 'Тренировка';
         exercises.appendChild(card);
@@ -9646,6 +9731,8 @@ function openPlanPreview(id) {
             const img = document.createElement('img');
             img.className = 'plan-full-image';
             img.alt = record.title || 'Упражнение';
+            img.loading = 'lazy';
+            img.decoding = 'async';
             img.src = record.screen;
             full.appendChild(img);
         }
@@ -9683,7 +9770,7 @@ function openCalendarDayPreview(dayKey) {
         card.className = 'plan-preview-card';
         card.dataset.planPreviewId = plan.id;
         card.innerHTML = `
-            ${preview ? `<img alt="" src="${preview.screen}">` : '<div class="exercise-thumb placeholder"><i class="fa-regular fa-image"></i></div>'}
+            ${preview ? `<img alt="" loading="lazy" decoding="async" src="${preview.screen}">` : '<div class="exercise-thumb placeholder"><i class="fa-regular fa-image"></i></div>'}
             <strong></strong>
             <span data-role="meta"></span>`;
         card.querySelector('strong').textContent = `${planTypeLabel(plan.planType)}: ${plan.title || 'План'}`;
@@ -13738,14 +13825,20 @@ async function loadTrainingRecord(id) {
         });
     });
 }
-async function updateTrainingThumb(img, record) {
+function updateTrainingThumb(img, record) {
     if (!img || !record || !record.screen) return;
     img.dataset.thumbId = record.id;
-    img.src = record.screen;
-    try {
-        const shot = await cleanSavedTrainingScreen(record, 'jpeg', 0.82);
-        if (shot && img.dataset.thumbId === record.id) img.src = shot.dataUrl;
-    } catch (_) {}
+    img.alt = record.title || 'Тренировка';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    const applySrc = () => {
+        if (img.dataset.thumbId === record.id && img.src !== record.screen) img.src = record.screen;
+    };
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(applySrc, { timeout: 600 });
+    } else {
+        setTimeout(applySrc, 0);
+    }
 }
 async function downloadTrainingScreen(record) {
     if (!record || !record.screen) return;
@@ -13865,6 +13958,11 @@ function selectedExerciseIds() {
 function todayInputValue() {
     return new Date().toISOString().slice(0, 10);
 }
+function normalizeDateInputValue(value = '') {
+    const raw = typeof value === 'string' ? value.trim() : '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    return '';
+}
 function uniqueExerciseIds(ids = []) {
     const knownIds = new Set(trainingRecords.map(record => record.id));
     const seen = new Set();
@@ -13977,7 +14075,7 @@ function renderScheduleAddList() {
         const row = document.createElement('div');
         row.className = 'exercise-check';
         row.innerHTML = `
-            ${item.screen ? `<img class="exercise-thumb" alt="" src="${item.screen}">` : '<div class="exercise-thumb placeholder"><i class="fa-solid fa-layer-group"></i></div>'}
+            ${item.screen ? `<img class="exercise-thumb" alt="" loading="lazy" decoding="async" src="${item.screen}">` : '<div class="exercise-thumb placeholder"><i class="fa-solid fa-layer-group"></i></div>'}
             <span>
                 <strong></strong>
                 <span data-role="meta"></span>
@@ -13991,8 +14089,9 @@ function renderScheduleAddList() {
 }
 function openScheduleModal(dateOverride = '') {
     const ids = selectedExerciseIds();
-    if (!ids.length && !dateOverride) return;
-    scheduleDateOverride = dateOverride || '';
+    const cleanDate = normalizeDateInputValue(dateOverride);
+    if (!ids.length && !cleanDate) return;
+    scheduleDateOverride = cleanDate;
     scheduleExerciseIds = uniqueExerciseIds(ids);
     scheduleSource = 'saved';
     const overlay = document.getElementById('scheduleOverlay');
@@ -14009,7 +14108,7 @@ function openScheduleModal(dateOverride = '') {
     document.getElementById('schedulePlanTitle').select();
 }
 function openScheduleModalForDate(dateValue) {
-    openScheduleModal(dateValue);
+    openScheduleModal(normalizeDateInputValue(dateValue));
 }
 function closeScheduleModal() {
     document.getElementById('scheduleOverlay').hidden = true;
@@ -14020,7 +14119,7 @@ function saveScheduleModal() {
     const ids = uniqueExerciseIds(scheduleExerciseIds);
     if (!ids.length && !scheduleDateOverride) return;
     const title = document.getElementById('schedulePlanTitle').value.trim() || 'Ледовая тренировка';
-    const scheduledDate = document.getElementById('schedulePlanDate').value || scheduleDateOverride || todayInputValue();
+    const scheduledDate = normalizeDateInputValue(document.getElementById('schedulePlanDate').value) || scheduleDateOverride || todayInputValue();
     plannedTrainings.unshift({
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         title,
@@ -14126,7 +14225,7 @@ function exerciseMetaText(record) {
 }
 function exerciseThumbMarkup(record) {
     return record && record.screen
-        ? `<img class="exercise-thumb" alt="" src="${record.screen}">`
+        ? `<img class="exercise-thumb" alt="" loading="lazy" decoding="async" src="${record.screen}">`
         : '<div class="exercise-thumb placeholder"><i class="fa-regular fa-image"></i></div>';
 }
 function renderCollectionExerciseList() {
@@ -14376,7 +14475,7 @@ document.getElementById('animationScrubber').addEventListener('input', e => {
 document.getElementById('btnSaveTraining').addEventListener('click', saveTrainingEdit);
 document.getElementById('btnCancelTraining').addEventListener('click', cancelTrainingEdit);
 document.getElementById('btnNewExercise').addEventListener('click', startNewExercise);
-document.getElementById('btnScheduleSelected').addEventListener('click', openScheduleModal);
+document.getElementById('btnScheduleSelected').addEventListener('click', () => openScheduleModal());
 document.getElementById('btnCreateBlock').addEventListener('click', createTrainingBlock);
 document.getElementById('btnAddSelectedToBlock').addEventListener('click', addSelectedTrainingsToBlock);
 document.getElementById('btnDeleteSelectedTrainings').addEventListener('click', deleteSelectedTrainingRecords);
@@ -14446,7 +14545,7 @@ document.getElementById('planPreviewExercises').addEventListener('click', e => {
         document.getElementById('planPreviewExercisesTitle').textContent = 'Упражнение';
         document.getElementById('planPreviewFullTitle').hidden = true;
         document.getElementById('btnPlanPreviewEdit').hidden = true;
-        document.getElementById('planPreviewExercises').innerHTML = record.screen ? `<img class="plan-full-image" alt="" src="${record.screen}">` : '';
+        document.getElementById('planPreviewExercises').innerHTML = record.screen ? `<img class="plan-full-image" alt="" loading="lazy" decoding="async" src="${record.screen}">` : '';
         document.getElementById('planPreviewFull').innerHTML = '';
     }
 });
@@ -14799,7 +14898,10 @@ function bootBenchReviewApp() {
     applyMatchSheetPlayerColWidth(storedMatchSheetPlayerColWidth());
     loadGoalieMatches();
     syncRosterGoaliesFromMatches();
-    handleDropboxOAuthReturn().finally(updateDropboxBackupButton);
+    handleDropboxOAuthReturn().finally(() => {
+        updateDropboxBackupButton();
+        scheduleDropboxDailyBackup();
+    });
     initBenchAuth();
     document.getElementById('goalieMatchDate').value = todayInputValue();
     renderTrainingList();
@@ -14808,6 +14910,7 @@ function bootBenchReviewApp() {
     initJerseyPicker();
     initRolePicker();
     initSidePanelToggle();
+    initCanvasLayoutWatchers();
     setBackground(() => {
         fitCanvas();
         normalizeObjectStacking();
