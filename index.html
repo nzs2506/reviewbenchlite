@@ -9786,6 +9786,7 @@ async function initCloudStateStorage() {
     cloudStateHydrating = true;
     const states = await fetchRemoteCloudState();
     applyRemoteCloudState(states);
+    syncAdmiralMatchesToCalendar({ persist: false });
     persistTrainingBlocks({ pushRemote: false, dropboxBackup: false });
     persistPlannedTrainings({ pushRemote: false, dropboxBackup: false });
     persistGoalieMatches({ pushRemote: false });
@@ -10725,10 +10726,10 @@ function upsertAdmiralMatchCalendarPlan(match) {
     else plannedTrainings.push(plan);
 }
 
-function syncAdmiralMatchesToCalendar() {
+function syncAdmiralMatchesToCalendar(options = {}) {
     admiralMatches.forEach(upsertAdmiralMatchCalendarPlan);
     plannedTrainings.sort((a, b) => new Date(a.scheduledDate || a.createdAt || 0) - new Date(b.scheduledDate || b.createdAt || 0));
-    persistPlannedTrainings();
+    if (options.persist !== false) persistPlannedTrainings();
     if (document.body.dataset.view === 'calendar') renderCalendar();
     if (trainingMode === 'planned') renderTrainingList();
     const status = document.getElementById('matchesSourceStatus');
