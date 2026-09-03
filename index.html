@@ -4359,9 +4359,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.57" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.58" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.57</span>
+            <span class="version-tooltip">v0.9.58</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -10444,9 +10444,25 @@ function matchSheetSkaters() {
 }
 
 function syncMatchSheetRosterPresence() {
-    const allIds = new Set(allMatchSheetSkaters().map(player => player.id));
-    matchSheetState.excludedPlayerIds = [...matchSheetExcludedSet()].filter(id => allIds.has(id));
-    matchSheetSelectedPlayerIds = new Set([...matchSheetSelectedPlayerIds].filter(id => allIds.has(id) && !matchSheetExcludedSet().has(id)));
+    const skaters = allMatchSheetSkaters();
+    const skaterIds = new Set(skaters.map(player => player.id));
+    const excludedIds = new Set([...matchSheetExcludedSet()].filter(id => skaterIds.has(id)));
+    const activeIds = new Set(skaters.filter(player => !excludedIds.has(player.id)).map(player => player.id));
+    const referencedIds = new Set([
+        ...Object.keys(matchSheetState.players || {}),
+        ...matchSheetState.events.flatMap(event => matchSheetEventPlayerIds(event))
+    ]);
+    referencedIds.forEach(id => {
+        if (!activeIds.has(id)) removePlayerFromMatchSheetEvents(id);
+    });
+    matchSheetState.excludedPlayerIds = [...excludedIds];
+    const orderedIds = (matchSheetState.order || []).filter(id => activeIds.has(id));
+    skaters.forEach(player => {
+        if (!activeIds.has(player.id) || orderedIds.includes(player.id)) return;
+        orderedIds.push(player.id);
+    });
+    matchSheetState.order = orderedIds;
+    matchSheetSelectedPlayerIds = new Set([...matchSheetSelectedPlayerIds].filter(id => activeIds.has(id)));
 }
 
 function removePlayerFromMatchSheetEvents(id) {
@@ -11185,6 +11201,7 @@ function addMatchSheetRosterPlayer() {
     }
     addOrUpdateRosterCandidate({ number: number.value, name: cleanName, role: role.value });
     persistRosterPlayers();
+    persistMatchSheet();
     number.value = '';
     name.value = '';
     renderStatsRoster();
@@ -11202,6 +11219,7 @@ function updateMatchSheetRosterPlayer(input) {
     else updateStatsPlayerField(player, field, input.value);
     reconcileRosterReferences();
     persistRosterPlayers();
+    persistMatchSheet();
     renderGoalieRosterSelects();
     renderMatchSheet();
 }
@@ -11465,6 +11483,7 @@ function reconcileRosterReferences() {
     [...liveSessionStats.keys()].forEach(id => {
         if (!validIds.has(id)) liveSessionStats.delete(id);
     });
+    syncMatchSheetRosterPresence();
     syncLiveMatchSelection();
 }
 
@@ -12323,13 +12342,16 @@ function addStatsPlayer(role) {
     const name = cleanStatName(nameInput?.value) || `Новый ${rosterRoleLabel(role).toLowerCase()}`;
     const number = String(numberInput?.value || '').trim();
     rosterPlayers.push(defaultRosterPlayer(role, name, number));
+    reconcileRosterReferences();
     persistRosterPlayers();
+    persistMatchSheet();
     if (numberInput) numberInput.value = '';
     if (nameInput) nameInput.value = '';
     renderStatsRoster();
     renderGoalieRosterSelects();
     if (statsPage === 'lineup') renderRosterManager();
     if (statsPage === 'live') renderLiveStats();
+    if (statsPage === 'sheet') renderMatchSheet();
 }
 
 async function removeStatsPlayer(id) {
@@ -12339,20 +12361,14 @@ async function removeStatsPlayer(id) {
     if (!confirmed) return;
     rosterPlayers = rosterPlayers.filter(item => item.id !== id);
     markRosterPlayerRemoved(player);
-    delete matchSheetState.players[id];
-    matchSheetState.events = matchSheetState.events.map(event => {
-        const ids = Array.isArray(event.playerIds) && event.playerIds.length ? event.playerIds : [event.playerId];
-        const remainingIds = ids.filter(item => item !== id);
-        if (!remainingIds.length) return null;
-        if (remainingIds.length === ids.length) return event;
-        return { ...event, playerId: remainingIds[0], playerIds: remainingIds };
-    }).filter(Boolean);
+    removePlayerFromMatchSheetEvents(id);
     reconcileRosterReferences();
     persistRosterPlayers();
     persistMatchSheet();
     renderStatsRoster();
     renderGoalieRosterSelects();
     if (statsPage === 'live') renderLiveStats();
+    if (statsPage === 'sheet') renderMatchSheet();
 }
 
 function detectedLineupRole(text) {
@@ -12721,6 +12737,7 @@ function importLineupCandidates() {
     });
     if (!imported) return;
     persistRosterPlayers();
+    persistMatchSheet();
     lineupCandidates.forEach(item => { if (item.selected) item.selected = false; });
     renderLineupCandidates();
     renderRosterManager();
@@ -12772,9 +12789,11 @@ async function importRosterFromFile(file) {
     rosterPlayers.forEach(player => clearRosterPlayerRemoved(player.role, player.name));
     reconcileRosterReferences();
     persistRosterPlayers();
+    persistMatchSheet();
     renderRosterManager();
     renderStatsRoster();
     renderGoalieRosterSelects();
+    if (statsPage === 'sheet') renderMatchSheet();
     setLineupProgress(`Состав загружен из файла: ${rosterPlayers.length}`, 1, true);
 }
 
@@ -12797,6 +12816,7 @@ function addManualLineupPlayer() {
         birthDate: birthDate.value
     });
     persistRosterPlayers();
+    persistMatchSheet();
     number.value = '';
     name.value = '';
     leadership.value = '';
@@ -12817,9 +12837,11 @@ function updateLineupPlayer(input) {
     else updateStatsPlayerField(player, field, input.value);
     reconcileRosterReferences();
     persistRosterPlayers();
+    persistMatchSheet();
     renderGoalieRosterSelects();
     renderStatsRoster();
     if (field === 'role') renderRosterManager();
+    if (statsPage === 'sheet') renderMatchSheet();
 }
 
 function loadLineupScript(src, globalName) {
