@@ -199,6 +199,12 @@ async function listTrainings(env, team) {
   return records.sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0));
 }
 
+async function getTraining(env, team, id) {
+  const cleanId = String(id || '').trim();
+  if (!cleanId) return null;
+  return await env.BENCHREVIEW_KV.get(recordKey(team, cleanId), 'json');
+}
+
 async function putTrainings(request, env, team) {
   const body = await request.json().catch(() => ({}));
   const incoming = Array.isArray(body.records) ? body.records.slice(0, MAX_RECORDS_PER_WRITE) : [];
@@ -272,6 +278,14 @@ export default {
 
     if (url.pathname === '/api/session') return json({ ok: true, user: session.user });
     if (url.pathname === '/api/trainings' && request.method === 'GET') {
+      const id = String(url.searchParams.get('id') || '').trim();
+      if (id) {
+        const record = await getTraining(env, team, id);
+        return record ? json({ ok: true, record }) : json({ ok: false, error: 'not found' }, 404);
+      }
+      if (url.searchParams.get('summary') === '1') {
+        return json({ ok: true, records: await readIndex(env, team), summary: true });
+      }
       return json({ ok: true, records: await listTrainings(env, team) });
     }
     if (url.pathname === '/api/trainings' && (request.method === 'PUT' || request.method === 'POST')) {

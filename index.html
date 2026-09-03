@@ -4359,9 +4359,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.56" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.57" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.56</span>
+            <span class="version-tooltip">v0.9.57</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -9241,7 +9241,9 @@ function normalizeTrainingRecords(value) {
         const nextTime = new Date(item.updatedAt || item.createdAt || 0).getTime();
         const previousRichness = (previous?.canvas ? 2 : 0) + (previous?.screen ? 1 : 0);
         const nextRichness = (item.canvas ? 2 : 0) + (item.screen ? 1 : 0);
-        if (!previous || nextTime > prevTime || (nextTime === prevTime && nextRichness >= previousRichness)) byId.set(id, item);
+        const nextIsSummary = item.__summary || nextRichness === 0;
+        if (previous && previousRichness > nextRichness && nextIsSummary) return;
+        if (!previous || nextRichness > previousRichness || nextTime > prevTime || (nextTime === prevTime && nextRichness >= previousRichness)) byId.set(id, item);
     });
     return Array.from(byId.values())
         .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
@@ -9434,15 +9436,40 @@ async function fetchRemoteTrainingRecords() {
         return [];
     }
 }
+async function fetchRemoteTrainingSummaries() {
+    const url = trainingSyncApiUrl('/api/trainings?team=default&summary=1');
+    if (!url || !benchAuthToken) return [];
+    try {
+        const response = await authFetch(url, { method: 'GET', mode: 'cors' });
+        if (!response.ok) return [];
+        const data = await response.json();
+        return normalizeTrainingRecords((data.records || []).map(record => ({ ...record, __summary: true })));
+    } catch (_) {
+        return [];
+    }
+}
+async function fetchRemoteTrainingRecord(id) {
+    const url = trainingSyncApiUrl(`/api/trainings?team=default&id=${encodeURIComponent(id)}`);
+    if (!url || !benchAuthToken || !id) return null;
+    try {
+        const response = await authFetch(url, { method: 'GET', mode: 'cors' });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.record ? normalizeTrainingRecords([data.record])[0] : null;
+    } catch (_) {
+        return null;
+    }
+}
 async function pushRemoteTrainingRecords() {
     const url = trainingSyncApiUrl('/api/trainings?team=default');
-    if (!url || !benchAuthToken || !trainingRecords.length) return;
+    const richRecords = normalizeTrainingRecords(trainingRecords).filter(record => record.canvas || record.screen);
+    if (!url || !benchAuthToken || !richRecords.length) return;
     try {
         await authFetch(url, {
             method: 'PUT',
             mode: 'cors',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ records: normalizeTrainingRecords(trainingRecords) })
+            body: JSON.stringify({ records: richRecords })
         });
     } catch (_) {}
 }
@@ -9585,10 +9612,17 @@ async function initTrainingRecordStorage() {
         trainingRecords = mergeTrainingRecordLists(stored, legacy);
         renderTrainingList();
     }
-    const remote = await fetchRemoteTrainingRecords();
-    trainingRecords = mergeTrainingRecordLists(stored, legacy, remote);
-    await persistTrainingRecords({ pushRemote: Boolean(remote.length || trainingRecords.length), dropboxBackup: false });
-    renderTrainingList();
+    const remoteSummary = await fetchRemoteTrainingSummaries();
+    if (remoteSummary.length) {
+        trainingRecords = mergeTrainingRecordLists(stored, legacy, remoteSummary);
+        renderTrainingList();
+    }
+    fetchRemoteTrainingRecords().then(async remote => {
+        if (!remote.length) return;
+        trainingRecords = mergeTrainingRecordLists(trainingRecords, remote);
+        await persistTrainingRecords({ pushRemote: false, dropboxBackup: false });
+        renderTrainingList();
+    });
 }
 async function persistTrainingRecords(options = {}) {
     trainingRecords = normalizeTrainingRecords(trainingRecords);
@@ -13844,8 +13878,18 @@ function saveTrainingEdit() {
     endTrainingEdit();
     setView('trainings');
 }
+async function ensureFullTrainingRecord(id) {
+    const current = trainingRecords.find(item => item.id === id);
+    if (current && (current.canvas || current.screen)) return current;
+    const remote = await fetchRemoteTrainingRecord(id);
+    if (!remote) return current || null;
+    trainingRecords = mergeTrainingRecordLists(trainingRecords, [remote]);
+    await persistTrainingRecords({ pushRemote: false, dropboxBackup: false });
+    renderTrainingList();
+    return trainingRecords.find(item => item.id === id) || remote;
+}
 async function loadTrainingRecord(id) {
-    const record = trainingRecords.find(item => item.id === id);
+    const record = await ensureFullTrainingRecord(id);
     if (!record || !record.canvas || trainingDraft) return;
     if (activeTrainingId === record.id) {
         setView('field');
@@ -13892,6 +13936,7 @@ function updateTrainingThumb(img, record) {
     }
 }
 async function downloadTrainingScreen(record) {
+    if (record?.id) record = await ensureFullTrainingRecord(record.id);
     if (!record || !record.screen) return;
     try {
         const shot = await cleanSavedTrainingScreen(record, 'png', 0.95);
@@ -13901,6 +13946,7 @@ async function downloadTrainingScreen(record) {
     }
 }
 async function downloadTrainingPdf(record) {
+    if (record?.id) record = await ensureFullTrainingRecord(record.id);
     if (!record || (!record.screen && !record.canvas)) return;
     try {
         let cleanShot;
@@ -13920,8 +13966,8 @@ async function downloadTrainingPdf(record) {
         alert('Не удалось сохранить PDF: ' + err.message);
     }
 }
-function duplicateTrainingRecord(id) {
-    const record = trainingRecords.find(item => item.id === id);
+async function duplicateTrainingRecord(id) {
+    const record = await ensureFullTrainingRecord(id);
     if (!record) return;
     const createdAt = new Date().toISOString();
     trainingRecords.unshift(Object.assign({}, record, {
@@ -13997,7 +14043,7 @@ async function handleTrainingAction(id, action) {
         return;
     }
     if (action === 'open') await loadTrainingRecord(id);
-    if (action === 'duplicate') duplicateTrainingRecord(id);
+    if (action === 'duplicate') await duplicateTrainingRecord(id);
     if (action === 'screen') downloadTrainingPdf(record);
     if (action === 'pdf') downloadTrainingPdf(record);
     if (action === 'delete') await deleteTrainingRecord(id);
