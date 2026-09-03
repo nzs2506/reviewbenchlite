@@ -4499,9 +4499,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.59" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.60" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.59</span>
+            <span class="version-tooltip">v0.9.60</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4753,6 +4753,7 @@
                     <button class="stats-tab active" type="button" data-stats-page="roster">Статистика</button>
                     <button class="stats-tab" type="button" data-stats-page="lineup">Состав</button>
                     <button class="stats-tab" type="button" data-stats-page="sheet">Матчевый лист</button>
+                    <button class="stats-tab" type="button" data-stats-page="matches">Матчи</button>
                 </div>
             </div>
 
@@ -15179,7 +15180,10 @@ document.querySelectorAll('[data-training-mode]').forEach(btn => {
     btn.addEventListener('click', () => setTrainingMode(btn.dataset.trainingMode));
 });
 document.querySelectorAll('[data-stats-page]').forEach(btn => {
-    btn.addEventListener('click', () => setStatsPage(btn.dataset.statsPage));
+    btn.addEventListener('click', () => {
+        if (btn.dataset.statsPage === 'matches') setView('matches');
+        else setStatsPage(btn.dataset.statsPage);
+    });
 });
 document.querySelectorAll('[data-match-period]').forEach(btn => {
     btn.addEventListener('click', () => {
