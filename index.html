@@ -1491,13 +1491,18 @@
         display: grid;
         gap: 18px;
     }
-    .stats-head,
-    .matches-head {
+    .stats-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 14px;
         flex-wrap: wrap;
+    }
+    .matches-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: center;
+        gap: 14px;
     }
     .stats-title {
         margin: 0;
@@ -1520,9 +1525,11 @@
     .matches-actions {
         display: flex;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: center;
         gap: 8px;
         flex-wrap: wrap;
+        grid-column: 2;
+        grid-row: 1;
     }
     .matches-action {
         height: 34px;
@@ -1553,6 +1560,16 @@
         font-weight: 800;
     }
     .matches-tabs { justify-self: start; }
+    @media (max-width: 720px) {
+        .matches-head {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .matches-actions {
+            width: 100%;
+            order: 2;
+        }
+    }
     .stats-tabs {
         display: inline-flex;
         align-items: center;
