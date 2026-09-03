@@ -275,6 +275,7 @@
     .field-return[hidden] { display: none; }
     body[data-view="field"] .trainings-view,
     body[data-view="field"] .calendar-view,
+    body[data-view="field"] .matches-view,
     body[data-view="field"] .goalie-view,
     body[data-view="field"] .stats-view { display: none; }
     body[data-view="trainings"] {
@@ -286,6 +287,7 @@
     body[data-view="trainings"] .side-panel,
     body[data-view="trainings"] .side-toggle,
     body[data-view="trainings"] .calendar-view,
+    body[data-view="trainings"] .matches-view,
     body[data-view="trainings"] .goalie-view,
     body[data-view="trainings"] .stats-view {
         display: none;
@@ -299,8 +301,23 @@
     body[data-view="calendar"] .side-panel,
     body[data-view="calendar"] .side-toggle,
     body[data-view="calendar"] .trainings-view,
+    body[data-view="calendar"] .matches-view,
     body[data-view="calendar"] .goalie-view,
     body[data-view="calendar"] .stats-view {
+        display: none;
+    }
+    body[data-view="matches"] {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+    body[data-view="matches"] .canvas-wrapper,
+    body[data-view="matches"] .bottom-toolbar,
+    body[data-view="matches"] .side-panel,
+    body[data-view="matches"] .side-toggle,
+    body[data-view="matches"] .trainings-view,
+    body[data-view="matches"] .calendar-view,
+    body[data-view="matches"] .goalie-view,
+    body[data-view="matches"] .stats-view {
         display: none;
     }
     body[data-view="goalie"] {
@@ -313,6 +330,7 @@
     body[data-view="goalie"] .side-toggle,
     body[data-view="goalie"] .trainings-view,
     body[data-view="goalie"] .calendar-view,
+    body[data-view="goalie"] .matches-view,
     body[data-view="goalie"] .stats-view {
         display: none;
     }
@@ -326,6 +344,7 @@
     body[data-view="stats"] .side-toggle,
     body[data-view="stats"] .trainings-view,
     body[data-view="stats"] .calendar-view,
+    body[data-view="stats"] .matches-view,
     body[data-view="stats"] .goalie-view {
         display: none;
     }
@@ -1455,7 +1474,8 @@
         border-color: #dc2626;
         color: #b91c1c;
     }
-    .stats-view {
+    .stats-view,
+    .matches-view {
         grid-column: 1 / -1;
         grid-row: 2;
         min-height: 0;
@@ -1464,13 +1484,15 @@
         color: #eef4ff;
         padding: 24px 34px 42px;
     }
-    .stats-shell {
+    .stats-shell,
+    .matches-shell {
         width: min(1480px, 100%);
         margin: 0 auto;
         display: grid;
         gap: 18px;
     }
-    .stats-head {
+    .stats-head,
+    .matches-head {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -1485,6 +1507,50 @@
         text-transform: uppercase;
         letter-spacing: .03em;
         text-shadow: 0 4px 0 rgba(37,99,235,.35);
+    }
+    .matches-title {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1;
+        font-weight: 1000;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        text-shadow: 0 4px 0 rgba(37,99,235,.35);
+    }
+    .matches-actions {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .matches-action {
+        height: 34px;
+        border: 1px solid #303642;
+        border-radius: 8px;
+        background: #171a20;
+        color: #c8cfda;
+        padding: 0 13px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        font-size: 11px;
+        font-weight: 900;
+        cursor: pointer;
+    }
+    .matches-action.primary {
+        border-color: #2563eb;
+        background: #2563eb;
+        color: #fff;
+    }
+    .matches-action:hover:not(:disabled) { border-color: #60a5fa; color: #fff; }
+    .matches-action.primary:hover:not(:disabled) { background: #1d4ed8; }
+    .matches-action:disabled { opacity: .45; cursor: default; }
+    .matches-source-status {
+        color: #8f96a3;
+        font-size: 11px;
+        font-weight: 800;
     }
     .stats-tabs {
         display: inline-flex;
@@ -2863,6 +2929,80 @@
     }
     .match-archive-detail[hidden] { display: none; }
     .match-archive-detail .match-sheet-table { font-size: 10px; }
+    .matches-grid {
+        display: grid;
+        gap: 12px;
+    }
+    .matches-empty {
+        border: 1px dashed #303642;
+        border-radius: 12px;
+        background: #151820;
+        color: #8f96a3;
+        padding: 18px;
+        font-size: 13px;
+        font-weight: 900;
+    }
+    .khl-match-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 10px;
+    }
+    .khl-match-card {
+        border: 1px solid #262a32;
+        border-radius: 12px;
+        background: #171a20;
+        padding: 12px;
+        display: grid;
+        gap: 10px;
+    }
+    .khl-match-main {
+        display: grid;
+        gap: 5px;
+        min-width: 0;
+    }
+    .khl-match-date {
+        color: #8f96a3;
+        font-size: 10px;
+        font-weight: 1000;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+    .khl-match-title {
+        color: #f5f8ff;
+        font-size: 14px;
+        font-weight: 1000;
+        line-height: 1.2;
+    }
+    .khl-match-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        color: #8992a1;
+        font-size: 11px;
+        font-weight: 800;
+    }
+    .khl-match-chip {
+        border: 1px solid #303642;
+        border-radius: 999px;
+        padding: 3px 8px;
+        background: #111419;
+        color: #aeb7c5;
+    }
+    .khl-match-chip.final {
+        border-color: rgba(34,197,94,.35);
+        color: #bbf7d0;
+        background: rgba(34,197,94,.08);
+    }
+    .khl-match-tools {
+        display: flex;
+        justify-content: flex-end;
+        gap: 7px;
+    }
+    .khl-match-tools .matches-action {
+        height: 30px;
+        font-size: 10px;
+    }
     .match-event-dialog { width: min(620px, calc(100vw - 48px)); }
     .match-event-grid {
         display: grid;
@@ -4359,15 +4499,16 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.58" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.59" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.58</span>
+            <span class="version-tooltip">v0.9.59</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
             <button type="button" id="btnNavTrainings" data-view-target="trainings">Тренировки</button>
             <button type="button" class="current" id="btnNavField" data-view-target="field">Поле</button>
             <button type="button" id="btnNavCalendar" data-view-target="calendar">Календарь</button>
+            <button type="button" id="btnNavMatches" data-view-target="matches">Матчи</button>
             <button type="button" id="btnNavGoalie" data-view-target="goalie">Вратарь</button>
             <button type="button" id="btnNavStats" data-view-target="stats">Статистика</button>
         </nav>
@@ -4459,6 +4600,35 @@
                 <div class="calendar-weekday">Вс</div>
             </div>
             <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+    </main>
+
+    <main class="matches-view" id="matchesView">
+        <div class="matches-shell">
+            <div class="matches-head">
+                <div>
+                    <h2 class="matches-title">Матчи</h2>
+                    <div class="matches-source-status" id="matchesSourceStatus">Адмирал Владивосток · сезон 2026/27</div>
+                </div>
+                <div class="matches-actions">
+                    <button class="matches-action primary" id="btnFetchAdmiralMatches" type="button"><i class="fa-solid fa-rotate"></i> Обновить KHL</button>
+                    <button class="matches-action" id="btnSyncAdmiralCalendar" type="button"><i class="fa-regular fa-calendar-plus"></i> В календарь</button>
+                </div>
+            </div>
+            <section class="stats-block match-archive-block">
+                <div class="stats-block-head">
+                    <h3 class="stats-block-title">Сохраненные матчевые листы</h3>
+                    <span class="match-archive-count" id="matchArchiveCount">0 матчей</span>
+                </div>
+                <div class="match-archive-list" id="matchArchiveList"></div>
+            </section>
+            <section class="stats-block">
+                <div class="stats-block-head">
+                    <h3 class="stats-block-title">Календарь KHL</h3>
+                    <span class="match-archive-count" id="admiralMatchesCount">0 матчей</span>
+                </div>
+                <div class="khl-match-list" id="admiralMatchesList"></div>
+            </section>
         </div>
     </main>
 
@@ -4650,14 +4820,6 @@
                     <div class="stats-summary-card"><span>Матчей вратарей</span><strong id="statsGoalieGames">0</strong></div>
                     <div class="stats-summary-card"><span>Общий %ОБ</span><strong id="statsTeamSv">100.0</strong></div>
                 </div>
-
-                <section class="stats-block match-archive-block">
-                    <div class="stats-block-head">
-                        <h3 class="stats-block-title">Статистика по матчам</h3>
-                        <span class="match-archive-count" id="matchArchiveCount">0 матчей</span>
-                    </div>
-                    <div class="match-archive-list" id="matchArchiveList"></div>
-                </section>
 
                 <section class="stats-block" data-stats-role="goalie">
                     <div class="stats-block-head">
@@ -5431,7 +5593,7 @@ const BENCHREVIEW_DB_VERSION = 1;
 const BENCHREVIEW_DB_STORE = 'records';
 const DEFAULT_SYNC_API_URL = 'https://benchreview-lite-api.nzs2593.workers.dev';
 const CLOUD_TEAM_ID = 'default';
-const CLOUD_STATE_KEYS = ['blocks', 'planned', 'goalieMatches', 'roster', 'rosterRemoved', 'matchSheet', 'matchArchive'];
+const CLOUD_STATE_KEYS = ['blocks', 'planned', 'goalieMatches', 'roster', 'rosterRemoved', 'matchSheet', 'matchArchive', 'matches'];
 const CLOUD_PUSH_DEBOUNCE_MS = 700;
 const AUTH_STORAGE_KEY = 'benchreview-lite.auth.v1';
 const BLOCK_STORAGE_KEY = 'benchreview-lite.blocks.v1';
@@ -5443,6 +5605,10 @@ const ROSTER_REMOVED_KEY = 'benchreview-lite.roster.removed.v1';
 const MATCH_SHEET_STORAGE_KEY = 'benchreview-lite.match-sheet.v1';
 const MATCH_ARCHIVE_STORAGE_KEY = 'benchreview-lite.match-sheet-archive.v1';
 const MATCH_SHEET_SCHEMA_VERSION = 2;
+const MATCHES_STORAGE_KEY = 'benchreview-lite.matches.v1';
+const ADMIRAL_KHL_TEAM_ID = '61';
+const ADMIRAL_KHL_SEASON_ID = '407';
+const KHL_PROXY_BASE = 'https://khl.shayy.workers.dev?url=';
 const SIDE_PANEL_STORAGE_KEY = 'benchreview-lite.side-panel-collapsed.v1';
 let trainingDraft = null;
 let trainingRecords = [];
@@ -5486,6 +5652,7 @@ let matchSheetPeriod = 1;
 let matchSheetSelectedPlayerIds = new Set();
 let matchSheetState = { version: MATCH_SHEET_SCHEMA_VERSION, archiveId: '', opponent: '', date: '', players: {}, events: [], order: [], excludedPlayerIds: [], sortDirection: 'manual' };
 let matchSheetArchive = [];
+let admiralMatches = [];
 let matchSheetArchiveExpandedId = '';
 let matchEventEditingId = '';
 let matchSheetNativeFullscreen = false;
@@ -5737,6 +5904,8 @@ function setView(view) {
         renderTrainingList();
     } else if (view === 'calendar') {
         renderCalendar();
+    } else if (view === 'matches') {
+        renderMatchesPage();
     } else if (view === 'goalie') {
         renderGoaliePage();
     } else if (view === 'stats') {
@@ -5749,6 +5918,7 @@ function setView(view) {
 document.getElementById('btnNavTrainings').addEventListener('click', () => setView('trainings'));
 document.getElementById('btnNavCalendar').addEventListener('click', () => setView('calendar'));
 document.getElementById('btnNavField').addEventListener('click', openFieldHome);
+document.getElementById('btnNavMatches').addEventListener('click', () => setView('matches'));
 document.getElementById('btnNavGoalie').addEventListener('click', () => setView('goalie'));
 document.getElementById('btnNavStats').addEventListener('click', () => setView('stats'));
 document.getElementById('appTitle').addEventListener('click', openBlankFieldFromTitle);
@@ -9008,7 +9178,8 @@ function buildBoardDropboxBundle() {
             roster: rosterPlayers,
             rosterRemoved: rosterRemovedKeys,
             matchSheet: matchSheetState,
-            matchArchive: matchSheetArchive
+            matchArchive: matchSheetArchive,
+            matches: admiralMatches
         }
     };
 }
@@ -9527,6 +9698,7 @@ function cloudStateValue(key) {
     if (key === 'rosterRemoved') return rosterRemovedKeys;
     if (key === 'matchSheet') return matchSheetState;
     if (key === 'matchArchive') return matchSheetArchive;
+    if (key === 'matches') return admiralMatches;
     return null;
 }
 async function fetchRemoteCloudState() {
@@ -9573,6 +9745,7 @@ function applyRemoteCloudState(states) {
     rosterPlayers = normalizeCloudRoster([...(Array.isArray(remote('roster')) ? remote('roster') : []), ...rosterPlayers]);
     rosterRemovedKeys = [...new Set([...(Array.isArray(remote('rosterRemoved')) ? remote('rosterRemoved') : []), ...rosterRemovedKeys].map(String).filter(Boolean))].slice(-500);
     matchSheetArchive = mergeCloudLists(matchSheetArchive, remote('matchArchive')).map(normalizeMatchArchiveRecord);
+    admiralMatches = mergeCloudLists(admiralMatches, remote('matches')).map(normalizeAdmiralMatch).filter(Boolean).sort(admiralMatchSort);
     const remoteSheet = remote('matchSheet');
     if (!meaningfulMatchSheetState(matchSheetState) && meaningfulMatchSheetState(remoteSheet)) {
         const normalized = normalizeMatchArchiveRecord({ sheet: remoteSheet }).sheet;
@@ -9590,6 +9763,7 @@ async function initCloudStateStorage() {
     persistRosterPlayers({ pushRemote: false });
     persistMatchSheet({ pushRemote: false });
     persistMatchSheetArchive({ pushRemote: false });
+    persistAdmiralMatches({ pushRemote: false });
     syncRosterGoaliesFromMatches();
     cloudStateHydrating = false;
     cloudStateReady = true;
@@ -9598,6 +9772,7 @@ async function initCloudStateStorage() {
     renderCalendar();
     renderGoaliePage();
     renderStatsPage();
+    renderMatchesPage();
 }
 function loadTrainingRecords() {
     trainingRecords = readLocalTrainingRecords();
@@ -9735,6 +9910,7 @@ function planDateParts(dateValue) {
     };
 }
 function planTypeLabel(type) {
+    if (type === 'match') return 'Матч';
     return type === 'warmup' ? 'Предигровая разминка' : 'Тренировка';
 }
 function planDistanceLabel(dateValue) {
@@ -10314,6 +10490,322 @@ function persistMatchSheetArchive(options = {}) {
         localStorage.setItem(MATCH_ARCHIVE_STORAGE_KEY, JSON.stringify(Array.isArray(matchSheetArchive) ? matchSheetArchive : []));
     } catch (_) {}
     if (options.pushRemote !== false) scheduleCloudStatePush('matchArchive');
+}
+
+function admiralMatchSort(a, b) {
+    return Date.parse(a.startsAt || a.date || 0) - Date.parse(b.startsAt || b.date || 0);
+}
+
+function normalizeAdmiralMatch(value) {
+    if (!value || typeof value !== 'object') return null;
+    const gameId = String(value.gameId || value.game_id || value.id || '').trim();
+    if (!gameId) return null;
+    const homeTeamId = String(value.homeTeamId || value.home_team || '').trim();
+    const awayTeamId = String(value.awayTeamId || value.visiting_team || value.away_team || '').trim();
+    const homeName = String(value.homeName || value.home_team_name || '').trim();
+    const awayName = String(value.awayName || value.visiting_team_name || value.away_team_name || '').trim();
+    const homeCity = String(value.homeCity || value.home_team_city || '').trim();
+    const awayCity = String(value.awayCity || value.visiting_team_city || '').trim();
+    const startsAt = String(value.startsAt || value.date_time_played || value.GameDateISO8601 || '').trim();
+    const date = String(value.date || value.date_played || (startsAt ? startsAt.slice(0, 10) : '') || todayInputValue()).slice(0, 10);
+    const final = value.final === true || value.final === '1' || /final|окон|заверш/i.test(String(value.status || value.game_status || ''));
+    const isHome = homeTeamId === ADMIRAL_KHL_TEAM_ID || /адмирал/i.test(homeName);
+    const opponentName = isHome ? awayName : homeName;
+    const opponentCity = isHome ? awayCity : homeCity;
+    const homeGoals = Math.max(0, Math.round(safeStatNumber(value.homeGoals ?? value.home_goal_count)));
+    const awayGoals = Math.max(0, Math.round(safeStatNumber(value.awayGoals ?? value.visiting_goal_count ?? value.away_goal_count)));
+    return {
+        id: `khl-${gameId}`,
+        source: 'khl',
+        league: 'khl',
+        seasonId: String(value.seasonId || value.season_id || ADMIRAL_KHL_SEASON_ID),
+        gameId,
+        date,
+        startsAt,
+        homeTeamId,
+        awayTeamId,
+        homeName,
+        awayName,
+        homeCity,
+        awayCity,
+        opponent: opponentName || 'Соперник',
+        opponentCity,
+        venue: String(value.venue || value.venue_name || '').trim(),
+        isHome,
+        homeGoals,
+        awayGoals,
+        final,
+        status: String(value.status || value.game_status || (final ? 'Final' : '')).trim(),
+        statsImportedAt: value.statsImportedAt || '',
+        createdAt: String(value.createdAt || new Date().toISOString()),
+        updatedAt: String(value.updatedAt || new Date().toISOString())
+    };
+}
+
+function loadAdmiralMatches() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(MATCHES_STORAGE_KEY) || '[]');
+        admiralMatches = Array.isArray(parsed) ? parsed.map(normalizeAdmiralMatch).filter(Boolean).sort(admiralMatchSort) : [];
+    } catch (_) {
+        admiralMatches = [];
+    }
+}
+
+function persistAdmiralMatches(options = {}) {
+    admiralMatches = Array.isArray(admiralMatches) ? admiralMatches.map(normalizeAdmiralMatch).filter(Boolean).sort(admiralMatchSort) : [];
+    try {
+        localStorage.setItem(MATCHES_STORAGE_KEY, JSON.stringify(admiralMatches));
+    } catch (_) {}
+    if (options.pushRemote !== false) scheduleCloudStatePush('matches');
+}
+
+function khlProxyUrl(params) {
+    const source = new URL('https://lscluster.hockeytech.com/feed/');
+    Object.entries({
+        feed: 'modulekit',
+        view: 'schedule',
+        key: 'khl',
+        client_code: 'khl',
+        lang: 'ru',
+        fmt: 'json',
+        season_id: ADMIRAL_KHL_SEASON_ID,
+        team_id: ADMIRAL_KHL_TEAM_ID,
+        ...params
+    }).forEach(([key, value]) => source.searchParams.set(key, value));
+    return `${KHL_PROXY_BASE}${encodeURIComponent(source.toString())}`;
+}
+
+async function fetchAdmiralMatchesFromSource() {
+    const cloudUrl = cloudStateUrl(`/api/khl/admiral/matches?season=${ADMIRAL_KHL_SEASON_ID}`);
+    if (cloudUrl && benchAuthToken) {
+        try {
+            const response = await authFetch(cloudUrl, { method: 'GET', mode: 'cors' });
+            if (response.ok) {
+                const data = await response.json();
+                if (Array.isArray(data.matches)) return data.matches;
+            }
+        } catch (_) {}
+    }
+    try {
+        const response = await fetch(khlProxyUrl(), { method: 'GET', mode: 'cors' });
+        if (!response.ok) throw new Error(`KHL API ${response.status}`);
+        const data = await response.json();
+        return data?.SiteKit?.Schedule || [];
+    } catch (err) {
+        throw new Error('нужно обновить Cloudflare Worker для загрузки KHL');
+    }
+}
+
+function mergeAdmiralMatches(incoming) {
+    const byId = new Map(admiralMatches.map(match => [match.id, match]));
+    incoming.map(normalizeAdmiralMatch).filter(Boolean).forEach(match => {
+        const previous = byId.get(match.id);
+        byId.set(match.id, { ...previous, ...match, createdAt: previous?.createdAt || match.createdAt, updatedAt: new Date().toISOString() });
+    });
+    admiralMatches = [...byId.values()].sort(admiralMatchSort);
+}
+
+function admiralMatchTitle(match) {
+    const admiral = 'Адмирал';
+    return match.isHome ? `${admiral} - ${match.opponent}` : `${match.opponent} - ${admiral}`;
+}
+
+function admiralMatchDateLabel(match) {
+    const d = match.startsAt ? new Date(match.startsAt) : new Date(`${match.date}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return trainingDateLabel(match.date);
+    return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function admiralMatchTimeLabel(match) {
+    if (!match.startsAt) return '';
+    const d = new Date(match.startsAt);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Moscow' });
+}
+
+function renderAdmiralMatches() {
+    const list = document.getElementById('admiralMatchesList');
+    const count = document.getElementById('admiralMatchesCount');
+    if (!list || !count) return;
+    count.textContent = `${admiralMatches.length} матчей`;
+    list.innerHTML = '';
+    if (!admiralMatches.length) {
+        list.innerHTML = '<div class="matches-empty">Матчей пока нет</div>';
+        return;
+    }
+    admiralMatches.forEach(match => {
+        const card = document.createElement('article');
+        card.className = 'khl-match-card';
+        const result = match.final ? `${match.homeGoals}:${match.awayGoals}` : 'не сыгран';
+        card.innerHTML = `
+            <div class="khl-match-main">
+                <div class="khl-match-date"></div>
+                <div class="khl-match-title"></div>
+                <div class="khl-match-meta">
+                    <span class="khl-match-chip" data-role="where"></span>
+                    <span class="khl-match-chip" data-role="status"></span>
+                    <span data-role="venue"></span>
+                </div>
+            </div>
+            <div class="khl-match-tools">
+                <button class="matches-action" type="button" data-khl-match-calendar="">В календарь</button>
+                <button class="matches-action primary" type="button" data-khl-match-stats="">Добавить статистику</button>
+            </div>`;
+        card.querySelector('.khl-match-date').textContent = `${admiralMatchDateLabel(match)}${admiralMatchTimeLabel(match) ? ` · ${admiralMatchTimeLabel(match)}` : ''}`;
+        card.querySelector('.khl-match-title').textContent = admiralMatchTitle(match);
+        card.querySelector('[data-role="where"]').textContent = match.isHome ? 'Дома' : 'В гостях';
+        const status = card.querySelector('[data-role="status"]');
+        status.textContent = match.final ? `Счет ${result}` : 'Будущий матч';
+        status.classList.toggle('final', match.final);
+        card.querySelector('[data-role="venue"]').textContent = match.venue || match.opponentCity || '';
+        card.querySelector('[data-khl-match-calendar]').dataset.khlMatchCalendar = match.id;
+        const stats = card.querySelector('[data-khl-match-stats]');
+        stats.dataset.khlMatchStats = match.id;
+        stats.hidden = !match.final;
+        stats.disabled = Boolean(match.statsImportedAt);
+        stats.textContent = match.statsImportedAt ? 'Статистика добавлена' : 'Добавить статистику';
+        list.appendChild(card);
+    });
+}
+
+function renderMatchesPage() {
+    renderMatchArchive();
+    renderAdmiralMatches();
+}
+
+function upsertAdmiralMatchCalendarPlan(match) {
+    const existing = plannedTrainings.find(plan => plan.externalKind === 'khlMatch' && plan.externalId === match.id);
+    const plan = {
+        id: existing?.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        title: admiralMatchTitle(match),
+        planType: 'match',
+        place: match.venue || (match.isHome ? 'Владивосток' : match.opponentCity || 'Лёд'),
+        scheduledDate: match.date,
+        startTime: admiralMatchTimeLabel(match) || '19:30',
+        endTime: '',
+        exerciseIds: [],
+        completed: Boolean(match.final),
+        externalKind: 'khlMatch',
+        externalId: match.id,
+        gameId: match.gameId,
+        createdAt: existing?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+    if (existing) plannedTrainings = plannedTrainings.map(item => item.id === existing.id ? { ...existing, ...plan } : item);
+    else plannedTrainings.push(plan);
+}
+
+function syncAdmiralMatchesToCalendar() {
+    admiralMatches.forEach(upsertAdmiralMatchCalendarPlan);
+    plannedTrainings.sort((a, b) => new Date(a.scheduledDate || a.createdAt || 0) - new Date(b.scheduledDate || b.createdAt || 0));
+    persistPlannedTrainings();
+    if (document.body.dataset.view === 'calendar') renderCalendar();
+    if (trainingMode === 'planned') renderTrainingList();
+    const status = document.getElementById('matchesSourceStatus');
+    if (status) status.textContent = `Адмирал Владивосток · сезон 2026/27 · в календаре ${admiralMatches.length} матчей`;
+}
+
+async function refreshAdmiralMatches() {
+    const status = document.getElementById('matchesSourceStatus');
+    const button = document.getElementById('btnFetchAdmiralMatches');
+    if (status) status.textContent = 'Загружаю календарь KHL...';
+    if (button) button.disabled = true;
+    try {
+        const incoming = await fetchAdmiralMatchesFromSource();
+        mergeAdmiralMatches(incoming);
+        persistAdmiralMatches();
+        syncAdmiralMatchesToCalendar();
+        renderMatchesPage();
+        if (status) status.textContent = `Адмирал Владивосток · сезон 2026/27 · загружено ${admiralMatches.length} матчей`;
+    } catch (err) {
+        if (status) status.textContent = `Не удалось загрузить KHL: ${String(err?.message || err)}`;
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
+async function fetchKhlMatchStats(match) {
+    const cloudUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats`);
+    if (!cloudUrl || !benchAuthToken) throw new Error('нужно войти в облако для загрузки статистики');
+    const response = await authFetch(cloudUrl, { method: 'GET', mode: 'cors' });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) throw new Error(data.error || `KHL API ${response.status}`);
+    return data;
+}
+
+function khlStatsNameKey(value) {
+    return cleanStatName(value).toLowerCase().replace(/ё/g, 'е').replace(/[.,]/g, '');
+}
+
+function findRosterPlayerForKhl(entry) {
+    const role = ['goalie', 'defense', 'forward'].includes(entry?.role) ? entry.role : 'forward';
+    const number = String(entry?.number || '').trim();
+    const name = khlStatsNameKey(entry?.name);
+    const candidates = rosterPlayers.filter(player => player.role === role);
+    if (number) {
+        const byNumber = candidates.find(player => String(player.number || '').trim() === number);
+        if (byNumber) return byNumber;
+    }
+    const exact = candidates.find(player => khlStatsNameKey(player.name) === name);
+    if (exact) return exact;
+    const surname = name.split(' ')[0];
+    return candidates.find(player => khlStatsNameKey(player.name).split(' ')[0] === surname) || null;
+}
+
+function addKhlIceTime(current, minutes) {
+    return formatIceMinutesValue(parseGoalieIceMinutes(current) + Math.max(0, safeStatNumber(minutes)));
+}
+
+async function importKhlMatchStats(matchId) {
+    const match = admiralMatches.find(item => item.id === matchId);
+    if (!match || !match.final) return;
+    if (match.statsImportedAt) {
+        await showConfirm('Статистика этого матча уже добавлена в общий состав.', { title: 'Добавить статистику', okLabel: 'Понятно', cancelLabel: 'Закрыть' });
+        return;
+    }
+    try {
+        const data = await fetchKhlMatchStats(match);
+        let imported = 0;
+        let created = 0;
+        (Array.isArray(data.players) ? data.players : []).forEach(entry => {
+            let player = findRosterPlayerForKhl(entry);
+            if (!player && cleanStatName(entry.name)) {
+                player = defaultRosterPlayer(entry.role, entry.name, entry.number);
+                rosterPlayers.push(player);
+                created += 1;
+            }
+            if (!player) return;
+            if (player.role === 'goalie') {
+                player.goalieGames += Math.max(0, Math.round(safeStatNumber(entry.goalieGames)));
+                player.goaliePim += Math.max(0, Math.round(safeStatNumber(entry.goaliePim)));
+                player.goalieIce = addKhlIceTime(player.goalieIce, entry.goalieIceMinutes);
+            } else {
+                player.games += Math.max(0, Math.round(safeStatNumber(entry.games)));
+                player.goals += Math.max(0, Math.round(safeStatNumber(entry.goals)));
+                player.assists += Math.max(0, Math.round(safeStatNumber(entry.assists)));
+                player.shots += Math.max(0, Math.round(safeStatNumber(entry.shots)));
+                player.faceoffs += Math.max(0, Math.round(safeStatNumber(entry.faceoffs)));
+                player.faceoffWins += Math.max(0, Math.round(safeStatNumber(entry.faceoffWins)));
+                player.shifts += Math.max(0, Math.round(safeStatNumber(entry.shifts)));
+                player.pim += Math.max(0, Math.round(safeStatNumber(entry.pim)));
+                player.toi = addKhlIceTime(player.toi, entry.toiMinutes);
+            }
+            imported += 1;
+        });
+        match.statsImportedAt = new Date().toISOString();
+        match.updatedAt = new Date().toISOString();
+        persistRosterPlayers();
+        persistAdmiralMatches();
+        renderStatsRoster();
+        renderMatchesPage();
+        await showConfirm(`Добавлена статистика ${imported} игроков${created ? `, новых в составе: ${created}` : ''}.`, {
+            title: 'Статистика добавлена', okLabel: 'Понятно', cancelLabel: 'Закрыть'
+        });
+    } catch (err) {
+        await showConfirm(`Не удалось загрузить статистику: ${String(err?.message || err)}`, {
+            title: 'Ошибка импорта', okLabel: 'Понятно', cancelLabel: 'Закрыть'
+        });
+    }
 }
 
 function matchSheetArchiveRosterSnapshot() {
@@ -12099,7 +12591,7 @@ function renderMatchArchive() {
     count.textContent = `${records.length} ${records.length === 1 ? 'матч' : 'матчей'}`;
     target.innerHTML = '';
     if (!records.length) {
-        target.innerHTML = '<div class="stats-empty">Сохраните первый матч на странице «Матчевый лист» — здесь появится его статистика и полный лист.</div>';
+        target.innerHTML = '<div class="matches-empty">Матчей пока нет</div>';
         return;
     }
     records.forEach(record => {
@@ -14875,6 +15367,10 @@ document.getElementById('statsRosterPanel').addEventListener('keydown', e => {
     if (addName) addStatsPlayer(addName.dataset.statsAddName);
 });
 document.getElementById('statsRosterPanel').addEventListener('click', async e => {
+    const remove = e.target.closest('[data-stats-remove]');
+    if (remove) await removeStatsPlayer(remove.dataset.statsRemove);
+});
+document.getElementById('matchesView').addEventListener('click', async e => {
     const toggle = e.target.closest('[data-match-archive-toggle]');
     if (toggle) {
         matchSheetArchiveExpandedId = matchSheetArchiveExpandedId === toggle.dataset.matchArchiveToggle ? '' : toggle.dataset.matchArchiveToggle;
@@ -14897,9 +15393,23 @@ document.getElementById('statsRosterPanel').addEventListener('click', async e =>
         await deleteArchivedMatchSheet(archiveRemove.dataset.matchArchiveDelete);
         return;
     }
-    const remove = e.target.closest('[data-stats-remove]');
-    if (remove) await removeStatsPlayer(remove.dataset.statsRemove);
+    const calendar = e.target.closest('[data-khl-match-calendar]');
+    if (calendar) {
+        const match = admiralMatches.find(item => item.id === calendar.dataset.khlMatchCalendar);
+        if (match) {
+            upsertAdmiralMatchCalendarPlan(match);
+            persistPlannedTrainings();
+            renderMatchesPage();
+        }
+        return;
+    }
+    const stats = e.target.closest('[data-khl-match-stats]');
+    if (stats) {
+        await importKhlMatchStats(stats.dataset.khlMatchStats);
+    }
 });
+document.getElementById('btnFetchAdmiralMatches').addEventListener('click', refreshAdmiralMatches);
+document.getElementById('btnSyncAdmiralCalendar').addEventListener('click', syncAdmiralMatchesToCalendar);
 document.getElementById('btnBackToTrainings').addEventListener('click', () => setView('trainings'));
 document.getElementById('btnCalendarPrev').addEventListener('click', () => {
     calendarCursor.setMonth(calendarCursor.getMonth() - 1);
@@ -15014,6 +15524,7 @@ function bootBenchReviewApp() {
     loadRosterPlayers();
     loadMatchSheet();
     loadMatchSheetArchive();
+    loadAdmiralMatches();
     applyMatchSheetPlayerColWidth(storedMatchSheetPlayerColWidth());
     loadGoalieMatches();
     syncRosterGoaliesFromMatches();

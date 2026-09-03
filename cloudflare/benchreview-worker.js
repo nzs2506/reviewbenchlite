@@ -16,8 +16,13 @@ const STATE_KEYS = [
   'roster',
   'rosterRemoved',
   'matchSheet',
-  'matchArchive'
+  'matchArchive',
+  'matches'
 ];
+const ADMIRAL_KHL_TEAM_ID = '61';
+const ADMIRAL_KHL_SEASON_ID = '407';
+const KHL_PROXY_BASE = 'https://khl.shayy.workers.dev?url=';
+const KHL_MOBILE_BASE = 'https://khl.api.webcaster.pro/api/khl_mobile';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
@@ -109,6 +114,148 @@ function stateKey(team, key) {
 function cleanStateKey(value) {
   const key = String(value || '').trim();
   return STATE_KEYS.includes(key) ? key : '';
+}
+
+function khlProxyUrl(params = {}) {
+  const source = new URL('https://lscluster.hockeytech.com/feed/');
+  Object.entries({
+    feed: 'modulekit',
+    view: 'schedule',
+    key: 'khl',
+    client_code: 'khl',
+    lang: 'ru',
+    fmt: 'json',
+    season_id: ADMIRAL_KHL_SEASON_ID,
+    team_id: ADMIRAL_KHL_TEAM_ID,
+    ...params
+  }).forEach(([key, value]) => source.searchParams.set(key, value));
+  return `${KHL_PROXY_BASE}${encodeURIComponent(source.toString())}`;
+}
+
+function normalizeKhlAdmiralMatch(value) {
+  const gameId = String(value?.gameId || value?.game_id || value?.id || '').trim();
+  if (!gameId) return null;
+  const homeTeamId = String(value.homeTeamId || value.home_team || '').trim();
+  const awayTeamId = String(value.awayTeamId || value.visiting_team || value.away_team || '').trim();
+  const homeName = String(value.homeName || value.home_team_name || '').trim();
+  const awayName = String(value.awayName || value.visiting_team_name || value.away_team_name || '').trim();
+  const homeCity = String(value.homeCity || value.home_team_city || '').trim();
+  const awayCity = String(value.awayCity || value.visiting_team_city || '').trim();
+  const startsAt = String(value.startsAt || value.date_time_played || value.GameDateISO8601 || '').trim();
+  const final = value.final === true || value.final === '1' || /final|окон|заверш/i.test(String(value.status || value.game_status || ''));
+  const isHome = homeTeamId === ADMIRAL_KHL_TEAM_ID || /адмирал/i.test(homeName);
+  return {
+    id: `khl-${gameId}`,
+    source: 'khl',
+    league: 'khl',
+    seasonId: String(value.seasonId || value.season_id || ADMIRAL_KHL_SEASON_ID),
+    gameId,
+    date: String(value.date || value.date_played || (startsAt ? startsAt.slice(0, 10) : '')).slice(0, 10),
+    startsAt,
+    homeTeamId,
+    awayTeamId,
+    homeName,
+    awayName,
+    homeCity,
+    awayCity,
+    opponent: isHome ? awayName : homeName,
+    opponentCity: isHome ? awayCity : homeCity,
+    venue: String(value.venue || value.venue_name || '').trim(),
+    isHome,
+    homeGoals: Number(value.homeGoals ?? value.home_goal_count ?? 0) || 0,
+    awayGoals: Number(value.awayGoals ?? value.visiting_goal_count ?? value.away_goal_count ?? 0) || 0,
+    final,
+    status: String(value.status || value.game_status || '').trim(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+async function listKhlAdmiralMatches(env, seasonId) {
+  const cacheKey = `khl:admiral:${seasonId || ADMIRAL_KHL_SEASON_ID}:matches`;
+  const cached = await env.BENCHREVIEW_KV.get(cacheKey, 'json');
+  if (cached?.matches?.length && Date.now() - Date.parse(cached.updatedAt || 0) < 6 * 60 * 60 * 1000) {
+    return cached;
+  }
+  const response = await fetch(khlProxyUrl({ season_id: seasonId || ADMIRAL_KHL_SEASON_ID }));
+  if (!response.ok) throw new Error(`KHL API ${response.status}`);
+  const data = await response.json();
+  const matches = (data?.SiteKit?.Schedule || []).map(normalizeKhlAdmiralMatch).filter(Boolean);
+  const payload = { ok: true, seasonId: seasonId || ADMIRAL_KHL_SEASON_ID, teamId: ADMIRAL_KHL_TEAM_ID, updatedAt: new Date().toISOString(), matches };
+  await env.BENCHREVIEW_KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: 6 * 60 * 60 });
+  return payload;
+}
+
+function matchStatMap(player) {
+  return Object.fromEntries((Array.isArray(player?.match_stats) ? player.match_stats : [])
+    .map(item => [String(item?.id || ''), Number(item?.val || 0) || 0]));
+}
+
+function normalizeKhlMatchPlayer(player, teamId, goals, penalties) {
+  const stats = matchStatMap(player);
+  const number = String(player?.shirt_number || '').trim();
+  const name = String(player?.name || '').trim();
+  const findByIdentity = item => String(item?.shirt_number || '').trim() === number
+    || String(item?.name || '').trim().toLowerCase() === name.toLowerCase();
+  const goalsForPlayer = goals.filter(goal => findByIdentity(goal.author)).length;
+  const assistsForPlayer = goals.reduce((sum, goal) => sum + (Array.isArray(goal.assistants)
+    ? goal.assistants.filter(findByIdentity).length
+    : 0), 0);
+  const pim = penalties
+    .filter(item => findByIdentity(item.violator))
+    .reduce((sum, item) => sum + (Number(item.penalty_time) || 0), 0);
+  const role = player?.role_key === 'goaltender' ? 'goalie' : player?.role_key === 'defensemen' ? 'defense' : 'forward';
+  const hasIceTime = stats.toi > 0;
+  return {
+    id: String(player?.id || ''),
+    name,
+    number,
+    role,
+    teamId: String(teamId),
+    games: hasIceTime ? 1 : 0,
+    goals: Math.max(goalsForPlayer, Math.round(stats.goals || 0)),
+    assists: assistsForPlayer,
+    shots: Math.round(stats.shots || 0),
+    faceoffs: Math.round(stats.fo || 0),
+    faceoffWins: Math.round(stats.fow || 0),
+    shifts: Math.round(stats.si || 0),
+    pim,
+    toiMinutes: Math.max(0, Number(stats.toi || 0) || 0),
+    goalieGames: role === 'goalie' && hasIceTime ? 1 : 0,
+    goaliePim: role === 'goalie' ? pim : 0,
+    goalieIceMinutes: role === 'goalie' ? Math.max(0, Number(stats.toi || 0) || 0) : 0
+  };
+}
+
+async function getKhlAdmiralMatchStats(env, gameId) {
+  const cleanGameId = String(gameId || '').trim();
+  if (!/^\d+$/.test(cleanGameId)) throw new Error('invalid game id');
+  const cacheKey = `khl:admiral:${ADMIRAL_KHL_SEASON_ID}:match:${cleanGameId}:stats`;
+  const cached = await env.BENCHREVIEW_KV.get(cacheKey, 'json');
+  if (cached?.players?.length && Date.now() - Date.parse(cached.updatedAt || 0) < 24 * 60 * 60 * 1000) return cached;
+  const response = await fetch(`${KHL_MOBILE_BASE}/event_v2.json?id=${encodeURIComponent(cleanGameId)}&locale=ru`);
+  if (!response.ok) throw new Error(`KHL match API ${response.status}`);
+  const data = await response.json();
+  const event = data?.event;
+  if (!event || String(event.stage_id || '') !== ADMIRAL_KHL_SEASON_ID) throw new Error('match is outside the 2026/27 season');
+  const teams = [event.team_a, event.team_b].filter(Boolean);
+  const admiral = teams.find(team => String(team.id) === ADMIRAL_KHL_TEAM_ID);
+  if (!admiral) throw new Error('Admiral team was not found in the match');
+  const goals = Array.isArray(event.goals) ? event.goals.filter(goal => String(goal?.author?.team_id || '') === ADMIRAL_KHL_TEAM_ID) : [];
+  const penalties = Array.isArray(event.violations) ? event.violations.filter(item => String(item?.violator?.team_id || '') === ADMIRAL_KHL_TEAM_ID) : [];
+  const players = (Array.isArray(admiral.players) ? admiral.players : [])
+    .map(player => normalizeKhlMatchPlayer(player, admiral.id, goals, penalties))
+    .filter(player => player.games || player.goals || player.assists || player.shots || player.faceoffs || player.shifts || player.pim || player.goalieGames);
+  const payload = {
+    ok: true,
+    gameId: cleanGameId,
+    seasonId: ADMIRAL_KHL_SEASON_ID,
+    teamId: ADMIRAL_KHL_TEAM_ID,
+    final: event.game_state_key === 'finished',
+    updatedAt: new Date().toISOString(),
+    players
+  };
+  await env.BENCHREVIEW_KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: 24 * 60 * 60 });
+  return payload;
 }
 
 function publicRecordMeta(record) {
@@ -277,6 +424,21 @@ export default {
     const team = cleanTeam(url.searchParams.get('team'));
 
     if (url.pathname === '/api/session') return json({ ok: true, user: session.user });
+    if (url.pathname === '/api/khl/admiral/matches' && request.method === 'GET') {
+      try {
+        return json(await listKhlAdmiralMatches(env, url.searchParams.get('season') || ADMIRAL_KHL_SEASON_ID));
+      } catch (err) {
+        return json({ ok: false, error: String(err?.message || err) }, 502);
+      }
+    }
+    if (url.pathname.startsWith('/api/khl/admiral/matches/') && url.pathname.endsWith('/stats') && request.method === 'GET') {
+      try {
+        const gameId = url.pathname.split('/').filter(Boolean).at(-2);
+        return json(await getKhlAdmiralMatchStats(env, gameId));
+      } catch (err) {
+        return json({ ok: false, error: String(err?.message || err) }, 502);
+      }
+    }
     if (url.pathname === '/api/trainings' && request.method === 'GET') {
       const id = String(url.searchParams.get('id') || '').trim();
       if (id) {
