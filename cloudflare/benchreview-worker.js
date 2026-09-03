@@ -150,7 +150,7 @@ function normalizeKhlAdmiralMatch(value) {
     league: 'khl',
     seasonId: String(value.seasonId || value.season_id || ADMIRAL_KHL_SEASON_ID),
     gameId,
-    date: String(value.date || value.date_played || (startsAt ? startsAt.slice(0, 10) : '')).slice(0, 10),
+    date: String(startsAt ? startsAt.slice(0, 10) : (value.date_played || value.date || '')).slice(0, 10),
     startsAt,
     homeTeamId,
     awayTeamId,
@@ -171,7 +171,7 @@ function normalizeKhlAdmiralMatch(value) {
 }
 
 async function listKhlAdmiralMatches(env, seasonId) {
-  const cacheKey = `khl:admiral:${seasonId || ADMIRAL_KHL_SEASON_ID}:matches`;
+  const cacheKey = `khl:admiral:v2:${seasonId || ADMIRAL_KHL_SEASON_ID}:matches`;
   const cached = await env.BENCHREVIEW_KV.get(cacheKey, 'json');
   if (cached?.matches?.length && Date.now() - Date.parse(cached.updatedAt || 0) < 6 * 60 * 60 * 1000) {
     return cached;

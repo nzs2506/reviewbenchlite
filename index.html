@@ -10538,7 +10538,7 @@ function normalizeAdmiralMatch(value) {
     const homeCity = String(value.homeCity || value.home_team_city || '').trim();
     const awayCity = String(value.awayCity || value.visiting_team_city || '').trim();
     const startsAt = String(value.startsAt || value.date_time_played || value.GameDateISO8601 || '').trim();
-    const date = String(value.date || value.date_played || (startsAt ? startsAt.slice(0, 10) : '') || todayInputValue()).slice(0, 10);
+     const date = String(startsAt ? startsAt.slice(0, 10) : (value.date_played || value.date || todayInputValue())).slice(0, 10);
     const final = value.final === true || value.final === '1' || /final|окон|заверш/i.test(String(value.status || value.game_status || ''));
     const isHome = homeTeamId === ADMIRAL_KHL_TEAM_ID || /адмирал/i.test(homeName);
     const opponentName = isHome ? awayName : homeName;
@@ -10787,9 +10787,65 @@ function addKhlIceTime(current, minutes) {
     return formatIceMinutesValue(parseGoalieIceMinutes(current) + Math.max(0, safeStatNumber(minutes)));
 }
 
+async function openKhlMatchSheet(match) {
+    if (!match) return false;
+    const opponent = String(match.opponent || (match.isHome ? match.awayName : match.homeName) || 'Соперник').trim();
+    const date = String(match.date || (match.startsAt ? match.startsAt.slice(0, 10) : todayInputValue())).slice(0, 10);
+    const currentOpponent = String(matchSheetState.opponent || '').trim();
+    const currentDate = String(matchSheetState.date || '').trim();
+    const hasCurrent = Boolean(matchSheetState.archiveId || currentOpponent || matchSheetState.events.length);
+    const isSameMatch = currentOpponent === opponent && currentDate === date;
+    if (hasCurrent && !isSameMatch) {
+        const decision = await showConfirm(
+            `Текущий матчевый лист будет заменен матчем «${opponent}» от ${date}.`,
+            {
+                title: 'Открыть матч',
+                okLabel: 'Сохранить текущий',
+                extraLabel: 'Сохранить как новую',
+                skipLabel: 'Не сохранять',
+                cancelLabel: 'Отмена'
+            }
+        );
+        if (decision === false) return false;
+        if (decision === true) saveMatchSheetToArchive();
+        if (decision === 'extra') {
+            matchSheetState.archiveId = '';
+            saveMatchSheetToArchive();
+        }
+    }
+    if (!isSameMatch) {
+        const preservedOrder = matchSheetSkaters().map(player => player.id);
+        const preservedSortDirection = matchSheetState.sortDirection;
+        matchSheetState = {
+            version: MATCH_SHEET_SCHEMA_VERSION,
+            archiveId: '',
+            opponent,
+            date,
+            players: {},
+            events: [],
+            order: preservedOrder,
+            excludedPlayerIds: [],
+            sortDirection: preservedSortDirection
+        };
+        matchSheetSelectedPlayerIds.clear();
+        matchSheetPeriod = 1;
+    }
+    persistMatchSheet();
+    setView('stats');
+    setStatsPage('sheet');
+    return true;
+}
+
 async function importKhlMatchStats(matchId) {
     const match = admiralMatches.find(item => item.id === matchId);
-    if (!match || !match.final) return;
+    if (!match) return;
+    if (!await openKhlMatchSheet(match)) return;
+    if (!match.final) {
+        await showConfirm('Статистика появится после завершения матча.', {
+            title: 'Матч еще не завершен', okLabel: 'Понятно', cancelLabel: 'Закрыть'
+        });
+        return;
+    }
     if (match.statsImportedAt) {
         await showConfirm('Статистика этого матча уже добавлена в общий состав.', { title: 'Добавить статистику', okLabel: 'Понятно', cancelLabel: 'Закрыть' });
         return;
@@ -10830,7 +10886,7 @@ async function importKhlMatchStats(matchId) {
         renderStatsRoster();
         renderMatchesPage();
         setView('stats');
-        setStatsPage('roster');
+        setStatsPage('sheet');
         await showConfirm(`Добавлена статистика ${imported} игроков${created ? `, новых в составе: ${created}` : ''}.`, {
             title: 'Статистика добавлена', okLabel: 'Понятно', cancelLabel: 'Закрыть'
         });
