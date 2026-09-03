@@ -1499,10 +1499,11 @@
         flex-wrap: wrap;
     }
     .matches-head {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 14px;
+        flex-wrap: wrap;
     }
     .stats-title {
         margin: 0;
@@ -1528,8 +1529,7 @@
         justify-content: flex-end;
         gap: 8px;
         flex-wrap: wrap;
-        grid-column: 3;
-        grid-row: 1;
+        margin-left: auto;
     }
     .matches-action {
         height: 34px;
