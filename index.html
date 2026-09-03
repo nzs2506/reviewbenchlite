@@ -1562,16 +1562,39 @@
     .matches-tabs { justify-self: end; }
     @media (max-width: 720px) {
         .matches-head {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            align-items: center;
+        }
+        .matches-head > div:first-child {
+            grid-column: 1 / -1;
+            grid-row: 1;
         }
         .matches-actions {
-            width: 100%;
-            order: 2;
-            grid-column: auto;
-            grid-row: auto;
+            width: auto;
+            grid-column: 1;
+            grid-row: 2;
+            justify-content: flex-start;
         }
-        .matches-tabs { justify-self: start; }
+        .matches-tabs {
+            grid-column: 2;
+            grid-row: 2;
+            justify-self: end;
+            min-width: 0;
+        }
+        .stats-tabs { gap: 1px; padding: 2px; }
+        .stats-tab {
+            height: 30px;
+            padding: 0 6px;
+            font-size: 9px;
+            letter-spacing: .02em;
+        }
+        .matches-action {
+            height: 30px;
+            padding: 0 8px;
+            gap: 5px;
+            font-size: 9px;
+        }
     }
     .stats-tabs {
         display: inline-flex;
