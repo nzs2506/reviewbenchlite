@@ -1552,6 +1552,7 @@
         font-size: 11px;
         font-weight: 800;
     }
+    .matches-tabs { justify-self: start; }
     .stats-tabs {
         display: inline-flex;
         align-items: center;
@@ -4615,6 +4616,15 @@
                     <button class="matches-action" id="btnSyncAdmiralCalendar" type="button"><i class="fa-regular fa-calendar-plus"></i> В календарь</button>
                 </div>
             </div>
+            <div class="matches-tabs" aria-label="Разделы статистики">
+                <div class="stats-tabs">
+                    <button class="stats-tab" type="button" data-stats-page="live">Live-stats</button>
+                    <button class="stats-tab" type="button" data-stats-page="roster">Статистика</button>
+                    <button class="stats-tab" type="button" data-stats-page="lineup">Состав</button>
+                    <button class="stats-tab" type="button" data-stats-page="sheet">Матчевый лист</button>
+                    <button class="stats-tab active" type="button" data-stats-page="matches">Матчи</button>
+                </div>
+            </div>
             <section class="stats-block match-archive-block">
                 <div class="stats-block-head">
                     <h3 class="stats-block-title">Сохраненные матчевые листы</h3>
@@ -5907,6 +5917,8 @@ function setView(view) {
         renderCalendar();
     } else if (view === 'matches') {
         renderMatchesPage();
+        document.querySelectorAll('[data-stats-page]').forEach(btn =>
+            btn.classList.toggle('active', btn.dataset.statsPage === 'matches'));
     } else if (view === 'goalie') {
         renderGoaliePage();
     } else if (view === 'stats') {
@@ -12291,7 +12303,9 @@ function setStatsPage(page) {
     statsPage = ['live', 'lineup', 'sheet'].includes(page) ? page : 'roster';
     document.body.dataset.statsPage = statsPage;
     document.querySelectorAll('[data-stats-page]').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.statsPage === statsPage);
+        btn.classList.toggle('active', document.body.dataset.view === 'matches'
+            ? btn.dataset.statsPage === 'matches'
+            : btn.dataset.statsPage === statsPage);
     });
     document.getElementById('statsLivePanel').hidden = statsPage !== 'live';
     document.getElementById('statsRosterPanel').hidden = statsPage !== 'roster';
@@ -15184,7 +15198,10 @@ document.querySelectorAll('[data-training-mode]').forEach(btn => {
 document.querySelectorAll('[data-stats-page]').forEach(btn => {
     btn.addEventListener('click', () => {
         if (btn.dataset.statsPage === 'matches') setView('matches');
-        else setStatsPage(btn.dataset.statsPage);
+        else {
+            setView('stats');
+            setStatsPage(btn.dataset.statsPage);
+        }
     });
 });
 document.querySelectorAll('[data-match-period]').forEach(btn => {
