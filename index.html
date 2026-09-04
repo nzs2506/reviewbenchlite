@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Хоккейная тактическая доска</title>
 <script src="assets/vendor/fabric.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -45,7 +45,8 @@
         display: grid;
         grid-template-columns: minmax(0, 1fr) var(--side-panel-width);
         grid-template-rows: auto minmax(0, 1fr) auto;
-        height: 100vh;
+        height: 100%;
+        height: 100dvh;
         background-color: var(--bg-color);
         color: var(--text-main);
         font-family: var(--ui-font);
@@ -4543,9 +4544,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.61" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.62" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.61</span>
+            <span class="version-tooltip">v0.9.62</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5859,6 +5860,7 @@ function initCanvasLayoutWatchers() {
         document.querySelector('.bottom-toolbar') && canvasLayoutObserver.observe(document.querySelector('.bottom-toolbar'));
     }
     window.addEventListener('orientationchange', warmupCanvasLayout);
+    window.visualViewport?.addEventListener('resize', queueCanvasFit);
     window.addEventListener('pageshow', warmupCanvasLayout);
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) warmupCanvasLayout();
@@ -9600,14 +9602,30 @@ async function validateBenchSession() {
 async function loginBenchReview(username, password) {
     const url = trainingSyncApiUrl('/api/login');
     if (!url) throw new Error('Сервер входа не настроен');
-    const response = await fetch(url, {
+    const request = () => fetch(url, {
         method: 'POST',
         mode: 'cors',
+        cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
     });
+    let response;
+    try {
+        response = await request();
+    } catch (_) {
+        // Safari and mobile networks occasionally fail the first request while
+        // DNS/TLS for the Worker is being established.
+        try {
+            response = await request();
+        } catch (_) {
+            throw new Error('Нет связи с сервером. Проверьте интернет или откройте страницу через другую сеть/VPN.');
+        }
+    }
     const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.token) throw new Error('Неверный логин или пароль');
+    if (!response.ok || !data.token) {
+        if (response.status === 401) throw new Error('Неверный логин или пароль');
+        throw new Error(data.error || `Сервер временно недоступен (${response.status})`);
+    }
     benchAuthToken = data.token;
     try { localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token: benchAuthToken, user: data.user || username })); } catch (_) {}
     hideAuthOverlay();
