@@ -132,6 +132,19 @@ function khlProxyUrl(params = {}) {
   return `${KHL_PROXY_BASE}${encodeURIComponent(source.toString())}`;
 }
 
+function dateInTimeZone(value, timeZone = 'Europe/Moscow') {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  const part = type => parts.find(item => item.type === type)?.value || '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
 function normalizeKhlAdmiralMatch(value) {
   const gameId = String(value?.gameId || value?.game_id || value?.id || '').trim();
   if (!gameId) return null;
@@ -150,7 +163,7 @@ function normalizeKhlAdmiralMatch(value) {
     league: 'khl',
     seasonId: String(value.seasonId || value.season_id || ADMIRAL_KHL_SEASON_ID),
     gameId,
-    date: String(startsAt ? startsAt.slice(0, 10) : (value.date_played || value.date || '')).slice(0, 10),
+    date: String((startsAt && dateInTimeZone(startsAt)) || value.date_played || value.date || '').slice(0, 10),
     startsAt,
     homeTeamId,
     awayTeamId,
@@ -171,7 +184,7 @@ function normalizeKhlAdmiralMatch(value) {
 }
 
 async function listKhlAdmiralMatches(env, seasonId) {
-  const cacheKey = `khl:admiral:v2:${seasonId || ADMIRAL_KHL_SEASON_ID}:matches`;
+  const cacheKey = `khl:admiral:v3:${seasonId || ADMIRAL_KHL_SEASON_ID}:matches`;
   const cached = await env.BENCHREVIEW_KV.get(cacheKey, 'json');
   if (cached?.matches?.length && Date.now() - Date.parse(cached.updatedAt || 0) < 6 * 60 * 60 * 1000) {
     return cached;
