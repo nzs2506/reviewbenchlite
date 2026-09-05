@@ -194,11 +194,10 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        transition: color .2s, transform .2s, font-size .2s;
+        transition: color .2s, transform .2s;
     }
     .mainnav button.current { color: var(--text-main); }
-    .mainnav:hover button { font-size: 13px; }
-    .mainnav button:hover { color: #fff; font-size: 20px; transform: translateY(-1px); }
+    .mainnav button:hover { color: #fff; transform: translateY(-1px); }
     .version-help {
         position: absolute;
         top: 12px;
@@ -1043,6 +1042,15 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+    }
+    .calendar-plan-pill.home-match {
+        background: #f8fafc;
+        color: #172033;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,.75);
+    }
+    .calendar-plan-pill.home-match .calendar-stick-icon::before,
+    .calendar-plan-pill.home-match .calendar-stick-icon::after {
+        background: #334155;
     }
     .calendar-stick-icon {
         position: relative;
@@ -4557,6 +4565,42 @@
     body[data-ui-zoom-step="50"] .animation-step-field,
     body[data-ui-zoom-step="50"] .animation-step-action,
     body[data-ui-zoom-step="50"] .animation-step-toggle { height: 50px; }
+    body[data-ui-zoom-step="50"] .toolbar-group { gap: 8px; }
+    body[data-ui-zoom-step="50"] .bottom-toolbar { column-gap: 6px; }
+    body[data-ui-zoom-step="50"] .vsep { margin: 0 12px; }
+
+    body[data-ui-zoom-step="30"] { --side-panel-width: 260px; }
+    body[data-ui-zoom-step="30"] .side-panel { grid-template-columns: minmax(0, 1fr); padding: 18px 15px 24px; gap: 13px; }
+    body[data-ui-zoom-step="30"] .panel-title { font-size: 14px; }
+    body[data-ui-zoom-step="30"] .comp-item,
+    body[data-ui-zoom-step="30"] .comp-item[data-comp="mNum"],
+    body[data-ui-zoom-step="30"] .comp-item[data-comp="jersey"],
+    body[data-ui-zoom-step="30"] .comp-item[data-comp="stickPuck"] {
+        grid-column: 1; min-height: 108px; flex-direction: column; gap: 9px; padding: 13px 8px;
+    }
+    body[data-ui-zoom-step="30"] .comp-item::after,
+    body[data-ui-zoom-step="30"] .comp-item[data-comp="mNum"]::after,
+    body[data-ui-zoom-step="30"] .comp-item[data-comp="jersey"]::after,
+    body[data-ui-zoom-step="30"] .comp-item[data-comp="stickPuck"]::after {
+        width: 100%; text-align: center; font-size: 16px;
+    }
+    body[data-ui-zoom-step="30"] .comp-item svg { width: 52px; height: 52px; }
+    body[data-ui-zoom-step="30"] .marker-icon { width: 52px; height: 52px; font-size: 18px; }
+    body[data-ui-zoom-step="30"] .asset-icon-img { max-width: 56px; max-height: 56px; }
+    body[data-ui-zoom-step="30"] .bottom-toolbar { min-height: 112px; padding: 12px 22px; column-gap: 10px; }
+    body[data-ui-zoom-step="30"] .toolbar-group { gap: 14px; }
+    body[data-ui-zoom-step="30"] .tool-btn { width: 70px; height: 70px; font-size: 1.7em; }
+    body[data-ui-zoom-step="30"] .tool-btn.btn-primary,
+    body[data-ui-zoom-step="30"] .tool-btn.btn-export { width: auto; min-width: 120px; padding: 0 24px; font-size: 17px; }
+    body[data-ui-zoom-step="30"] .btn-record { min-width: 260px; padding: 0 24px; font-size: 19px; }
+    body[data-ui-zoom-step="30"] .btn-animation { min-width: 170px; padding: 0 20px; font-size: 18px; }
+    body[data-ui-zoom-step="30"] .custom-icon { width: 44px; height: 44px; }
+    body[data-ui-zoom-step="30"] .group-cap { font-size: 14px; }
+    body[data-ui-zoom-step="30"] .vsep { margin: 0 18px; }
+    body[data-ui-zoom-step="30"] .animation-scrubber,
+    body[data-ui-zoom-step="30"] .animation-step-field,
+    body[data-ui-zoom-step="30"] .animation-step-action,
+    body[data-ui-zoom-step="30"] .animation-step-toggle { height: 70px; }
 
     body[data-ui-zoom-step="75"] { --side-panel-width: 156px; }
     body[data-ui-zoom-step="75"] .bottom-toolbar { min-height: 62px; padding: 5px 10px; }
@@ -4591,6 +4635,39 @@
     body[data-ui-zoom-step="100"] .comp-item svg { width: 20px; height: 20px; }
     body[data-ui-zoom-step="100"] .marker-icon { width: 21px; height: 21px; font-size: 8px; }
     body[data-ui-zoom-step="100"] .asset-icon-img { max-width: 22px; max-height: 22px; }
+
+    /* Keep the primary navigation stable while editor controls respond to zoom. */
+    .mainnav { height: 40px; gap: clamp(22px, 3vw, 42px); }
+    .mainnav button,
+    .mainnav:hover button,
+    .mainnav button:hover { height: 40px; font-size: 16px; }
+
+    /* Normalize Safari's native button metrics and Font Awesome glyph boxes. */
+    button, .tool-btn, .btn-export, .btn-primary {
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    .tool-btn, .btn-export, .btn-primary {
+        flex-shrink: 0;
+        line-height: 1;
+        white-space: nowrap;
+    }
+    .tool-btn > i[class*="fa-"],
+    .training-action > i[class*="fa-"],
+    .matches-action > i[class*="fa-"] {
+        display: inline-flex;
+        width: 1.15em;
+        height: 1.15em;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+        flex: 0 0 1.15em;
+    }
+    body[data-browser-engine="safari"] .bottom-toolbar {
+        -webkit-font-smoothing: antialiased;
+        text-rendering: geometricPrecision;
+    }
+    body[data-browser-engine="safari"] .btn-export { gap: 9px; }
 </style>
 </head>
 <body data-view="field">
@@ -4614,9 +4691,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.64" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.66" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.64</span>
+            <span class="version-tooltip">v0.9.66</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5707,6 +5784,7 @@ const DROPBOX_PENDING_STORAGE_KEY = 'benchreview-lite.dropbox.pending.v1';
 const DROPBOX_APP_KEY_STORAGE_KEY = 'benchreview-lite.dropbox.app-key.v1';
 const DROPBOX_BACKUP_LOG_STORAGE_KEY = 'benchreview-lite.dropbox.backups.v1';
 const DROPBOX_DAILY_BACKUP_STORAGE_KEY = 'benchreview-lite.dropbox.daily-last.v1';
+const DROPBOX_LAST_ERROR_STORAGE_KEY = 'benchreview-lite.dropbox.last-error.v1';
 window.BENCHREVIEW_DROPBOX_APP_KEY = window.BENCHREVIEW_DROPBOX_APP_KEY || 'lgey122v75qit4a';
 const DROPBOX_BACKUP_PREFIX = 'latest';
 const DROPBOX_BACKUP_ROOT = '/latest';
@@ -5937,7 +6015,7 @@ function initCanvasLayoutWatchers() {
     });
 }
 
-const UI_ZOOM_STEPS = [50, 67, 75, 80, 90, 100, 110, 125, 150];
+const UI_ZOOM_STEPS = [30, 50, 67, 75, 80, 90, 100, 110, 125, 150];
 function closestUiZoomStep(percent) {
     return UI_ZOOM_STEPS.reduce((best, step) =>
         Math.abs(step - percent) < Math.abs(best - percent) ? step : best, UI_ZOOM_STEPS[0]);
@@ -5949,8 +6027,10 @@ function detectedBrowserZoomPercent() {
 }
 function updateEditorZoomStep() {
     const rawStep = closestUiZoomStep(detectedBrowserZoomPercent());
-    const step = rawStep <= 50 ? 50 : (rawStep <= 67 ? 67 : rawStep <= 75 ? 75 : rawStep <= 80 ? 80 : rawStep <= 90 ? 90 : 100);
+    const step = rawStep <= 30 ? 30 : (rawStep <= 50 ? 50 : (rawStep <= 67 ? 67 : rawStep <= 75 ? 75 : rawStep <= 80 ? 80 : rawStep <= 90 ? 90 : 100));
     document.body.dataset.uiZoomStep = String(step);
+    const ua = navigator.userAgent || '';
+    document.body.dataset.browserEngine = /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg/i.test(ua) ? 'safari' : 'chromium';
     const toolbar = document.querySelector('.bottom-toolbar');
     requestAnimationFrame(() => {
         if (!toolbar) return;
@@ -9404,19 +9484,25 @@ async function backupBoardToDropbox(reason = 'manual') {
     };
     localStorage.setItem(DROPBOX_BACKUP_LOG_STORAGE_KEY, JSON.stringify([entry, ...log].slice(0, 20)));
     localStorage.setItem(DROPBOX_DAILY_BACKUP_STORAGE_KEY, String(Date.now()));
+    localStorage.removeItem(DROPBOX_LAST_ERROR_STORAGE_KEY);
     return entry;
 }
 function scheduleDropboxBoardBackup(reason = 'change') {
     if (!dropboxReadConnection()) return;
     clearTimeout(dropboxBackupTimer);
     dropboxBackupTimer = window.setTimeout(async () => {
-        if (dropboxBackupInProgress || !dropboxReadConnection()) return;
+        if (!dropboxReadConnection()) return;
+        if (dropboxBackupInProgress) {
+            scheduleDropboxBoardBackup(reason);
+            return;
+        }
         dropboxBackupInProgress = true;
         updateDropboxBackupButton(true);
         try {
             await backupBoardToDropbox(reason);
         } catch (err) {
             console.warn('Dropbox backup failed', err);
+            localStorage.setItem(DROPBOX_LAST_ERROR_STORAGE_KEY, String(err?.message || err || 'Dropbox backup failed').slice(0, 700));
             if (dropboxIsMissingScope(err)) {
                 localStorage.removeItem(DROPBOX_CONNECTION_STORAGE_KEY);
             }
@@ -9424,7 +9510,7 @@ function scheduleDropboxBoardBackup(reason = 'change') {
             dropboxBackupInProgress = false;
             updateDropboxBackupButton(false);
         }
-    }, 30000);
+    }, 5000);
 }
 function dropboxLastDailyBackupAt() {
     const fromKey = Number(localStorage.getItem(DROPBOX_DAILY_BACKUP_STORAGE_KEY) || 0);
@@ -9443,6 +9529,7 @@ async function runDropboxDailyBackupIfDue(force = false) {
         await backupBoardToDropbox('daily');
     } catch (err) {
         console.warn('Dropbox daily backup failed', err);
+        localStorage.setItem(DROPBOX_LAST_ERROR_STORAGE_KEY, String(err?.message || err || 'Dropbox backup failed').slice(0, 700));
         if (dropboxIsMissingScope(err)) {
             localStorage.removeItem(DROPBOX_CONNECTION_STORAGE_KEY);
         }
@@ -9469,13 +9556,21 @@ function updateDropboxBackupButton(working = false) {
     const btn = document.getElementById('btnDropboxBackup');
     if (!btn) return;
     const connected = Boolean(dropboxReadConnection());
+    const lastError = connected ? String(localStorage.getItem(DROPBOX_LAST_ERROR_STORAGE_KEY) || '') : '';
+    const lastEntry = readDropboxBackupLog()[0];
     btn.disabled = working;
     btn.innerHTML = working
         ? '<i class="fa-solid fa-spinner fa-spin"></i>Dropbox'
+        : lastError
+            ? '<i class="fa-solid fa-triangle-exclamation"></i>Ошибка Dropbox'
         : connected
             ? '<i class="fa-brands fa-dropbox"></i>Бэкап'
             : '<i class="fa-brands fa-dropbox"></i>Подключить Dropbox';
-    btn.title = connected ? 'Обновить резервную копию в Dropbox' : `Подключить Dropbox. Redirect URI: ${dropboxRedirectUri()}`;
+    btn.title = lastError
+        ? `Последний Dropbox-бэкап завершился ошибкой: ${lastError}`
+        : connected
+            ? `Обновить резервную копию в Dropbox${lastEntry?.createdAt ? ` · последняя: ${new Date(lastEntry.createdAt).toLocaleString('ru-RU')}` : ''}`
+            : `Подключить Dropbox. Redirect URI: ${dropboxRedirectUri()}`;
 }
 async function handleDropboxBackupClick() {
     const btn = document.getElementById('btnDropboxBackup');
@@ -9493,6 +9588,7 @@ async function handleDropboxBackupClick() {
             alert(`Резервная копия обновлена в Dropbox: ${entry.trainings} тренировок, ${entry.uploaded} файлов.\nПапка: ${entry.root}`);
         }
     } catch (err) {
+        localStorage.setItem(DROPBOX_LAST_ERROR_STORAGE_KEY, String(err?.message || err || 'Dropbox backup failed').slice(0, 700));
         if (dropboxIsMissingScope(err)) {
             localStorage.removeItem(DROPBOX_CONNECTION_STORAGE_KEY);
             alert('Dropbox-доступ нужно переподключить: старый токен был выдан без прав на запись файлов. Нажми кнопку Dropbox ещё раз и разреши доступ.');
@@ -9703,7 +9799,7 @@ async function validateBenchSession() {
         const response = await authFetch(url, { method: 'GET', mode: 'cors' });
         return response.ok;
     } catch (_) {
-        return false;
+        return null;
     }
 }
 async function loginBenchReview(username, password) {
@@ -9763,12 +9859,19 @@ async function initBenchAuth() {
             if (submit) submit.disabled = false;
         }
     });
-    if (benchAuthToken && await validateBenchSession()) {
-        hideAuthOverlay();
-        startCloudSync();
-    } else {
-        showAuthOverlay(benchAuthToken ? 'Сессия истекла. Войдите снова.' : '');
+    if (!benchAuthToken) {
+        showAuthOverlay();
+        return;
     }
+    const sessionValid = await validateBenchSession();
+    if (sessionValid === false) {
+        showAuthOverlay('Сессия истекла. Войдите снова.');
+        return;
+    }
+    // A temporary DNS/TLS/network failure must not sign a user out. Continue
+    // locally with the cached token; cloud calls will retry after connectivity returns.
+    hideAuthOverlay();
+    startCloudSync();
 }
 function startCloudSync() {
     if (cloudInitStarted || !benchAuthToken) return;
@@ -9884,14 +9987,14 @@ function cloudStateValue(key) {
 }
 async function fetchRemoteCloudState() {
     const url = cloudStateUrl('/api/state');
-    if (!url || !benchAuthToken) return {};
+    if (!url || !benchAuthToken) return null;
     try {
         const response = await authFetch(url, { method: 'GET', mode: 'cors' });
-        if (!response.ok) return {};
+        if (!response.ok) return null;
         const data = await response.json();
         return data.states || {};
     } catch (_) {
-        return {};
+        return null;
     }
 }
 async function pushCloudStateKey(key) {
@@ -9909,6 +10012,7 @@ async function pushCloudStateKey(key) {
 }
 function scheduleCloudStatePush(key) {
     if (!cloudStateReady || cloudStateHydrating || !CLOUD_STATE_KEYS.includes(key)) return;
+    scheduleDropboxBoardBackup(key);
     window.clearTimeout(cloudStateTimers.get(key));
     cloudStateTimers.set(key, window.setTimeout(() => {
         cloudStateTimers.delete(key);
@@ -9936,6 +10040,13 @@ function applyRemoteCloudState(states) {
 async function initCloudStateStorage() {
     cloudStateHydrating = true;
     const states = await fetchRemoteCloudState();
+    if (!states) {
+        cloudStateHydrating = false;
+        window.setTimeout(() => {
+            if (benchAuthToken && !cloudStateReady) initCloudStateStorage();
+        }, 5000);
+        return;
+    }
     applyRemoteCloudState(states);
     syncAdmiralMatchesToCalendar({ persist: false });
     persistTrainingBlocks({ pushRemote: false, dropboxBackup: false });
@@ -9950,6 +10061,7 @@ async function initCloudStateStorage() {
     cloudStateHydrating = false;
     cloudStateReady = true;
     await pushAllCloudState();
+    scheduleDropboxBoardBackup('cloud-state-sync');
     renderTrainingList();
     renderCalendar();
     renderGoaliePage();
@@ -9978,6 +10090,7 @@ async function initTrainingRecordStorage() {
         if (!remote.length) return;
         trainingRecords = mergeTrainingRecordLists(trainingRecords, remote);
         await persistTrainingRecords({ pushRemote: false, dropboxBackup: false });
+        scheduleDropboxBoardBackup('cloud-trainings-sync');
         renderTrainingList();
     });
 }
@@ -10231,6 +10344,13 @@ function plansByDateKey() {
     });
     return map;
 }
+function calendarPlanIsHomeMatch(plan) {
+    if (plan?.externalKind !== 'khlMatch') return false;
+    const match = admiralMatches.find(item => item.id === plan.externalId || item.gameId === plan.gameId);
+    if (match) return Boolean(match.isHome);
+    if (typeof plan.isHomeMatch === 'boolean') return plan.isHomeMatch;
+    return /владивосток|фетисов/i.test(`${plan.matchLocation || ''} ${plan.place || ''}`);
+}
 function renderCalendar() {
     const grid = document.getElementById('calendarGrid');
     const title = document.getElementById('calendarTitle');
@@ -10272,6 +10392,7 @@ function renderCalendar() {
             const label = plans.length > 1 ? `${plans.length} события` : `${planTypeLabel(first.planType)}: ${first.title || 'План'}`;
             const pill = document.createElement('div');
             pill.className = 'calendar-plan-pill';
+            pill.classList.toggle('home-match', calendarPlanIsHomeMatch(first));
             pill.innerHTML = '<span class="calendar-stick-icon"></span><span></span>';
             pill.querySelector('span:last-child').textContent = label;
             cell.appendChild(pill);
@@ -10704,7 +10825,8 @@ function normalizeAdmiralMatch(value) {
     const startsAt = String(value.startsAt || value.date_time_played || value.GameDateISO8601 || '').trim();
     const date = String((startsAt && dateInTimeZone(startsAt)) || value.date_played || value.date || todayInputValue()).slice(0, 10);
     const final = value.final === true || value.final === '1' || /final|окон|заверш/i.test(String(value.status || value.game_status || ''));
-    const isHome = homeTeamId === ADMIRAL_KHL_TEAM_ID || /адмирал/i.test(homeName);
+    const venue = String(value.venue || value.venue_name || '').trim();
+    const isHome = /владивосток|фетисов/i.test(`${venue} ${homeCity}`);
     const opponentName = isHome ? awayName : homeName;
     const opponentCity = isHome ? awayCity : homeCity;
     const homeGoals = Math.max(0, Math.round(safeStatNumber(value.homeGoals ?? value.home_goal_count)));
@@ -10725,7 +10847,7 @@ function normalizeAdmiralMatch(value) {
         awayCity,
         opponent: opponentName || 'Соперник',
         opponentCity,
-        venue: String(value.venue || value.venue_name || '').trim(),
+        venue,
         isHome,
         homeGoals,
         awayGoals,
@@ -10883,6 +11005,8 @@ function upsertAdmiralMatchCalendarPlan(match) {
         externalKind: 'khlMatch',
         externalId: match.id,
         gameId: match.gameId,
+        isHomeMatch: Boolean(match.isHome),
+        matchLocation: match.isHome ? 'Владивосток' : (match.homeCity || match.venue || ''),
         createdAt: existing?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
