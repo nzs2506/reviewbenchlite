@@ -2977,6 +2977,27 @@
     .match-archive-block { margin-top: 14px; }
     .match-archive-count { color: #7f8a9a; font-size: 10px; font-weight: 900; }
     .match-archive-list { display: grid; gap: 9px; }
+    .match-archive-selection {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 0 0 10px;
+        padding: 10px 12px;
+        border: 1px solid #2b3039;
+        border-radius: 9px;
+        background: #14171c;
+    }
+    .match-archive-selection-copy { color: #c8cfda; font-size: 11px; font-weight: 800; }
+    .match-archive-selection-actions { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .match-archive-check { width: 17px; height: 17px; accent-color: #2563eb; cursor: pointer; flex: 0 0 auto; }
+    .match-archive-card.selected { border-color: #2563eb; box-shadow: inset 3px 0 #2563eb; }
+    .match-aggregate { margin: 0 0 12px; border: 1px solid #24579a; border-radius: 9px; overflow: hidden; background: #111923; }
+    .match-aggregate[hidden] { display: none; }
+    .match-aggregate-head { padding: 10px 12px; color: #dbeafe; font-size: 11px; font-weight: 900; }
+    .match-aggregate-table-wrap { overflow: auto; border-top: 1px solid #24579a; }
+    .match-aggregate .match-sheet-table { font-size: 10px; }
     .match-archive-card {
         border: 1px solid #2b3039;
         border-radius: 9px;
@@ -4772,9 +4793,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.70" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.74" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.70</span>
+            <span class="version-tooltip">v0.9.74</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4902,6 +4923,14 @@
                     <h3 class="stats-block-title">Сохраненные матчевые листы</h3>
                     <span class="match-archive-count" id="matchArchiveCount">0 матчей</span>
                 </div>
+                <div class="match-archive-selection" id="matchArchiveSelection" hidden>
+                    <span class="match-archive-selection-copy" id="matchArchiveSelectionCopy"></span>
+                    <div class="match-archive-selection-actions">
+                        <button class="match-archive-action" type="button" id="btnMatchArchiveSelectAll">Выбрать все</button>
+                        <button class="match-archive-action" type="button" id="btnMatchArchiveSelectNone">Снять выбор</button>
+                    </div>
+                </div>
+                <div class="match-aggregate" id="matchAggregate" hidden></div>
                 <div class="match-archive-list" id="matchArchiveList"></div>
             </section>
             <section class="stats-block">
@@ -5904,6 +5933,9 @@ const KHL_PROXY_BASE = 'https://khl.shayy.workers.dev?url=';
 const KHL_MOBILE_BASE = 'https://khl.api.webcaster.pro/api/khl_mobile';
 const ADMIRAL_ROSTER_SUPPLEMENTS = [
     { number: '87', name: 'Амирбеков Джелал-Ад-Дин', role: 'goalie', birthDate: '2002-09-24' },
+    { number: '1', name: 'Бояркин Никита', role: 'goalie' },
+    { number: '16', name: 'Ващенко Григорий', role: 'defense' },
+    { number: '94', name: 'Ефремов Никита', role: 'defense' },
     { number: '23', name: 'Кудашов Артём', role: 'defense', birthDate: '2005-01-10' },
     { number: '44', name: 'Жуков Кирилл', role: 'defense', birthDate: '2004-08-23' },
     { number: '55', name: 'Крощинский Федор', role: 'defense', birthDate: '2002-03-27' },
@@ -5959,6 +5991,7 @@ let matchSheetState = { version: MATCH_SHEET_SCHEMA_VERSION, archiveId: '', oppo
 let matchSheetArchive = [];
 let admiralMatches = [];
 let matchSheetArchiveExpandedId = '';
+let selectedMatchArchiveIds = new Set();
 let matchEventEditingId = '';
 let matchSheetNativeFullscreen = false;
 let matchSheetPointerDrag = null;
@@ -10749,8 +10782,10 @@ function loadRosterPlayers() {
         stored = parseStoredRoster(localStorage.getItem(ROSTER_STORAGE_KEY));
         backup = parseStoredRoster(localStorage.getItem(ROSTER_BACKUP_KEY));
     } catch (_) {}
-    rosterPlayers = stored ? stored : backup?.length ? backup : archivedRosterFallback();
-    if (!stored && rosterPlayers.length) persistRosterPlayers();
+    const source = stored ? stored : backup?.length ? backup : archivedRosterFallback();
+    rosterPlayers = normalizeCloudRoster(source);
+    const sourceCount = Array.isArray(source) ? source.length : 0;
+    if ((!stored || rosterPlayers.length !== sourceCount) && rosterPlayers.length) persistRosterPlayers({ pushRemote: false });
 }
 
 function persistRosterPlayers(options = {}) {
@@ -11146,7 +11181,7 @@ function renderAdmiralMatches() {
             </div>
             <div class="khl-match-tools">
                 <button class="matches-action" type="button" data-khl-match-calendar="">В календарь</button>
-                <button class="matches-action primary" type="button" data-khl-match-stats="">Добавить статистику</button>
+                <button class="matches-action primary" type="button" data-khl-match-stats="">Статистика</button>
             </div>`;
         card.querySelector('.khl-match-date').textContent = `${admiralMatchDateLabel(match)}${admiralMatchTimeLabel(match) ? ` · ${admiralMatchTimeLabel(match)}` : ''}`;
         card.querySelector('.khl-match-title').textContent = admiralMatchTitle(match);
@@ -11158,9 +11193,8 @@ function renderAdmiralMatches() {
         card.querySelector('[data-khl-match-calendar]').dataset.khlMatchCalendar = match.id;
         const stats = card.querySelector('[data-khl-match-stats]');
         stats.dataset.khlMatchStats = match.id;
-        stats.hidden = !match.final;
         stats.disabled = false;
-        stats.textContent = match.statsImportedAt ? 'Открыть лист' : 'Добавить статистику';
+        stats.textContent = 'Статистика';
         list.appendChild(card);
     });
 }
@@ -11318,9 +11352,7 @@ async function importKhlMatchStats(matchId) {
     if (!match) return;
     if (!await openKhlMatchSheet(match)) return;
     if (!match.final) {
-        await showConfirm('Статистика появится после завершения матча.', {
-            title: 'Матч еще не завершен', okLabel: 'Понятно', cancelLabel: 'Закрыть'
-        });
+        // Будущий матч открывается пустым: дату и соперника уже записала openKhlMatchSheet.
         return;
     }
     const addToSeasonTotals = !match.statsImportedAt;
@@ -13237,13 +13269,83 @@ function renderArchivedMatchTable(record, target) {
     target.appendChild(table);
 }
 
+function matchArchivePlayerKey(player) {
+    const role = String(player?.role || 'forward');
+    const number = String(player?.number || '').trim();
+    return number
+        ? `${role}|#${number}`
+        : `${role}|${khlStatsNameKey(player?.name || '')}`;
+}
+
+function renderMatchArchiveAggregate(records) {
+    const target = document.getElementById('matchAggregate');
+    if (!target) return;
+    const selected = records.filter(record => selectedMatchArchiveIds.has(record.id));
+    target.hidden = !selected.length;
+    target.innerHTML = '';
+    if (!selected.length) return;
+    const rows = new Map();
+    selected.forEach(record => archivedMatchPlayers(record).forEach(player => {
+        const key = matchArchivePlayerKey(player);
+        const state = normalizeMatchSheetPlayer(record.sheet?.players?.[player.id]);
+        const current = rows.get(key) || {
+            player,
+            games: 0, plus: 0, minus: 0, powerPlay: 0, shortHanded: 0,
+            penaltyTotal: 0, opponentPenaltyTotal: 0, goalsTotal: 0, assists: 0,
+            shotsTotal: 0, faceoffsTotal: 0, mmPoints: 0
+        };
+        current.games += safeStatNumber(state.games);
+        current.plus += safeStatNumber(state.plus);
+        current.minus += safeStatNumber(state.minus);
+        current.powerPlay += safeStatNumber(state.powerPlay);
+        current.shortHanded += safeStatNumber(state.shortHanded);
+        current.penaltyTotal += safeStatNumber(matchSheetTotalValue(state, 'penaltyTotal'));
+        current.opponentPenaltyTotal += safeStatNumber(state.opponentPenaltyTotal);
+        current.goalsTotal += safeStatNumber(matchSheetTotalValue(state, 'goalsTotal'));
+        current.assists += safeStatNumber(state.assists);
+        current.shotsTotal += safeStatNumber(matchSheetTotalValue(state, 'shotsTotal'));
+        current.faceoffsTotal += safeStatNumber(state.faceoffsTotal);
+        current.mmPoints += safeStatNumber(state.mmPoints);
+        rows.set(key, current);
+    }));
+    const head = document.createElement('div');
+    head.className = 'match-aggregate-head';
+    head.textContent = `Статистика за выбранные матчи: ${selected.length} ${selected.length === 1 ? 'матч' : 'матча'}`;
+    const wrap = document.createElement('div');
+    wrap.className = 'match-aggregate-table-wrap';
+    const table = document.createElement('table');
+    table.className = 'match-sheet-table';
+    matchSheetHeader(table);
+    const tbody = document.createElement('tbody');
+    [...rows.values()].sort((a, b) => rosterSort(a.player, b.player)).forEach(total => {
+        const row = document.createElement('tr');
+        appendCell(row, `${total.player.number ? `№${total.player.number} ` : ''}${total.player.name || rosterRoleLabel(total.player.role)}`, 'match-sheet-player-cell');
+        [total.games, total.plus, total.minus, total.powerPlay, total.shortHanded,
+            total.penaltyTotal, total.opponentPenaltyTotal, total.goalsTotal, total.assists,
+            total.shotsTotal, total.faceoffsTotal, total.mmPoints
+        ].forEach(value => appendCell(row, String(value), 'match-sheet-value'));
+        tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    target.append(head, wrap);
+}
+
 function renderMatchArchive() {
     const target = document.getElementById('matchArchiveList');
     const count = document.getElementById('matchArchiveCount');
     if (!target || !count) return;
     const records = matchSheetArchive.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    selectedMatchArchiveIds = new Set([...selectedMatchArchiveIds].filter(id => records.some(record => record.id === id)));
     count.textContent = `${records.length} ${records.length === 1 ? 'матч' : 'матчей'}`;
     target.innerHTML = '';
+    const selection = document.getElementById('matchArchiveSelection');
+    const selectionCopy = document.getElementById('matchArchiveSelectionCopy');
+    if (selection) selection.hidden = !records.length;
+    if (selectionCopy) selectionCopy.textContent = selectedMatchArchiveIds.size
+        ? `Выбрано матчей: ${selectedMatchArchiveIds.size}. Сводка считает только их.`
+        : 'Отметьте матчи, чтобы получить общую статистику за выбранный отрезок.';
+    renderMatchArchiveAggregate(records);
     if (!records.length) {
         target.innerHTML = '<div class="matches-empty">Матчей пока нет</div>';
         return;
@@ -13251,6 +13353,7 @@ function renderMatchArchive() {
     records.forEach(record => {
         const card = document.createElement('article');
         card.className = 'match-archive-card';
+        card.classList.toggle('selected', selectedMatchArchiveIds.has(record.id));
         const head = document.createElement('div');
         head.className = 'match-archive-card-head';
         const copy = document.createElement('div');
@@ -13266,6 +13369,13 @@ function renderMatchArchive() {
         copy.append(title, meta);
         const actions = document.createElement('div');
         actions.className = 'match-archive-card-actions';
+        const check = document.createElement('input');
+        check.type = 'checkbox';
+        check.className = 'match-archive-check';
+        check.checked = selectedMatchArchiveIds.has(record.id);
+        check.title = 'Включить матч в общую статистику';
+        check.setAttribute('aria-label', `Включить матч ${record.opponent || 'Соперник'} в общую статистику`);
+        check.dataset.matchArchiveSelect = record.id;
         const toggle = document.createElement('button');
         toggle.type = 'button';
         toggle.className = 'match-archive-action';
@@ -13289,7 +13399,7 @@ function renderMatchArchive() {
         remove.title = 'Удалить матч';
         remove.dataset.matchArchiveDelete = record.id;
         remove.innerHTML = '<i class="fa-regular fa-trash-can"></i>';
-        actions.append(toggle, open, pdf, remove);
+        actions.append(check, toggle, open, pdf, remove);
         head.append(copy, actions);
         const detail = document.createElement('div');
         detail.className = 'match-archive-detail';
@@ -16215,6 +16325,21 @@ document.getElementById('matchesView').addEventListener('click', async e => {
     if (stats) {
         await importKhlMatchStats(stats.dataset.khlMatchStats);
     }
+});
+document.getElementById('matchesView').addEventListener('change', e => {
+    const select = e.target.closest('[data-match-archive-select]');
+    if (!select) return;
+    if (select.checked) selectedMatchArchiveIds.add(select.dataset.matchArchiveSelect);
+    else selectedMatchArchiveIds.delete(select.dataset.matchArchiveSelect);
+    renderMatchArchive();
+});
+document.getElementById('btnMatchArchiveSelectAll').addEventListener('click', () => {
+    selectedMatchArchiveIds = new Set(matchSheetArchive.map(record => record.id));
+    renderMatchArchive();
+});
+document.getElementById('btnMatchArchiveSelectNone').addEventListener('click', () => {
+    selectedMatchArchiveIds.clear();
+    renderMatchArchive();
 });
 document.getElementById('btnFetchAdmiralMatches').addEventListener('click', refreshAdmiralMatches);
 document.getElementById('btnSyncAdmiralCalendar').addEventListener('click', syncAdmiralMatchesToCalendar);
