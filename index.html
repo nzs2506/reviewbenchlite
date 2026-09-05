@@ -487,8 +487,9 @@
     .btn-save { color: #34d399; }
     .btn-primary {
         width: auto;
-        padding: 0 14px;
-        gap: 7px;
+        min-width: 82px;
+        padding: 0 16px;
+        gap: 9px;
         color: #fff;
         background: #2563eb;
         border-color: #2563eb;
@@ -498,8 +499,9 @@
     .btn-primary:hover { background: #3b82f6; }
     .btn-export {
         width: auto;
-        padding: 0 13px;
-        gap: 7px;
+        min-width: 82px;
+        padding: 0 16px;
+        gap: 9px;
         color: #e4e4e7;
         border-color: #34383f;
         font-size: 13px;
@@ -513,9 +515,9 @@
     }
     .btn-record {
         width: auto;
-        min-width: 176px;
-        padding: 0 16px;
-        gap: 8px;
+        min-width: 214px;
+        padding: 0 20px;
+        gap: 10px;
         color: #fff;
         border-color: rgba(96,165,250,.45);
         background: rgba(37,99,235,.2);
@@ -534,9 +536,9 @@
     }
     .btn-animation {
         width: auto;
-        min-width: 118px;
-        padding: 0 13px;
-        gap: 7px;
+        min-width: 136px;
+        padding: 0 16px;
+        gap: 9px;
         color: #d7fbe8;
         border-color: rgba(34,197,94,.42);
         background: rgba(22,163,74,.16);
@@ -4555,10 +4557,10 @@
     body[data-ui-zoom-step="50"] .bottom-toolbar { min-height: 82px; padding: 9px 16px; }
     body[data-ui-zoom-step="50"] .tool-btn { width: 50px; height: 50px; font-size: 1.28em; }
     body[data-ui-zoom-step="50"] .tool-btn.btn-primary,
-    body[data-ui-zoom-step="50"] .tool-btn.btn-export { width: auto; min-width: 88px; padding: 0 17px; }
+    body[data-ui-zoom-step="50"] .tool-btn.btn-export { width: max-content; min-width: 112px; padding: 0 22px; }
     body[data-ui-zoom-step="50"] .tool-btn.btn-share { width: 50px; min-width: 0; padding: 0; }
-    body[data-ui-zoom-step="50"] .btn-record { min-width: 196px; padding: 0 18px; font-size: 14px; }
-    body[data-ui-zoom-step="50"] .btn-animation { min-width: 124px; padding: 0 14px; font-size: 13px; }
+    body[data-ui-zoom-step="50"] .btn-record { width: max-content; min-width: 236px; padding: 0 24px; font-size: 14px; }
+    body[data-ui-zoom-step="50"] .btn-animation { width: max-content; min-width: 152px; padding: 0 20px; font-size: 13px; }
     body[data-ui-zoom-step="50"] .custom-icon { width: 31px; height: 31px; }
     body[data-ui-zoom-step="50"] .group-cap { font-size: 10px; }
     body[data-ui-zoom-step="50"] .animation-scrubber,
@@ -4591,9 +4593,9 @@
     body[data-ui-zoom-step="30"] .toolbar-group { gap: 14px; }
     body[data-ui-zoom-step="30"] .tool-btn { width: 70px; height: 70px; font-size: 1.7em; }
     body[data-ui-zoom-step="30"] .tool-btn.btn-primary,
-    body[data-ui-zoom-step="30"] .tool-btn.btn-export { width: auto; min-width: 120px; padding: 0 24px; font-size: 17px; }
-    body[data-ui-zoom-step="30"] .btn-record { min-width: 260px; padding: 0 24px; font-size: 19px; }
-    body[data-ui-zoom-step="30"] .btn-animation { min-width: 170px; padding: 0 20px; font-size: 18px; }
+    body[data-ui-zoom-step="30"] .tool-btn.btn-export { width: max-content; min-width: 150px; padding: 0 30px; font-size: 17px; }
+    body[data-ui-zoom-step="30"] .btn-record { width: max-content; min-width: 316px; padding: 0 32px; font-size: 19px; }
+    body[data-ui-zoom-step="30"] .btn-animation { width: max-content; min-width: 214px; padding: 0 28px; font-size: 18px; }
     body[data-ui-zoom-step="30"] .custom-icon { width: 44px; height: 44px; }
     body[data-ui-zoom-step="30"] .group-cap { font-size: 14px; }
     body[data-ui-zoom-step="30"] .vsep { margin: 0 18px; }
@@ -4651,7 +4653,12 @@
         flex-shrink: 0;
         line-height: 1;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: clip;
     }
+    .btn-record, .btn-animation,
+    .tool-btn.btn-primary, .tool-btn.btn-export { width: max-content; }
+    .tool-btn > span, .btn-export > span, .btn-primary > span { min-width: 0; }
     .tool-btn > i[class*="fa-"],
     .training-action > i[class*="fa-"],
     .matches-action > i[class*="fa-"] {
@@ -4691,9 +4698,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.66" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.67" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.66</span>
+            <span class="version-tooltip">v0.9.67</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
