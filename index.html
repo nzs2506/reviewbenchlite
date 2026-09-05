@@ -4521,6 +4521,76 @@
     .live-player-name,
     .live-match-counts,
     .live-match-choice span { font-weight: 700; letter-spacing: .02em; }
+    /* Browser-zoom steps for the field editor. JS maps Retina page zoom here. */
+    body[data-ui-zoom-step] .bottom-toolbar { justify-content: center; }
+    body[data-ui-zoom-step].toolbar-overflow .bottom-toolbar { justify-content: flex-start; }
+
+    body[data-ui-zoom-step="50"] { --side-panel-width: 196px; }
+    body[data-ui-zoom-step="50"] .side-panel { grid-template-columns: minmax(0, 1fr); padding: 14px 12px 20px; gap: 10px; }
+    body[data-ui-zoom-step="50"] .panel-title { font-size: 11px; }
+    body[data-ui-zoom-step="50"] .comp-item,
+    body[data-ui-zoom-step="50"] .comp-item[data-comp="mNum"],
+    body[data-ui-zoom-step="50"] .comp-item[data-comp="jersey"],
+    body[data-ui-zoom-step="50"] .comp-item[data-comp="stickPuck"] {
+        grid-column: 1; min-height: 82px; flex-direction: column; gap: 7px; padding: 10px 6px;
+    }
+    body[data-ui-zoom-step="50"] .comp-item::after,
+    body[data-ui-zoom-step="50"] .comp-item[data-comp="mNum"]::after,
+    body[data-ui-zoom-step="50"] .comp-item[data-comp="jersey"]::after,
+    body[data-ui-zoom-step="50"] .comp-item[data-comp="stickPuck"]::after {
+        width: 100%; text-align: center; font-size: 12px;
+    }
+    body[data-ui-zoom-step="50"] .comp-item svg { width: 38px; height: 38px; }
+    body[data-ui-zoom-step="50"] .marker-icon { width: 38px; height: 38px; font-size: 13px; }
+    body[data-ui-zoom-step="50"] .opponent-panel-icon { width: 40px; height: 40px; font-size: 21px; }
+    body[data-ui-zoom-step="50"] .asset-icon-img { max-width: 42px; max-height: 42px; }
+    body[data-ui-zoom-step="50"] .bottom-toolbar { min-height: 82px; padding: 9px 16px; }
+    body[data-ui-zoom-step="50"] .tool-btn { width: 50px; height: 50px; font-size: 1.28em; }
+    body[data-ui-zoom-step="50"] .tool-btn.btn-primary,
+    body[data-ui-zoom-step="50"] .tool-btn.btn-export { width: auto; min-width: 88px; padding: 0 17px; }
+    body[data-ui-zoom-step="50"] .tool-btn.btn-share { width: 50px; min-width: 0; padding: 0; }
+    body[data-ui-zoom-step="50"] .btn-record { min-width: 196px; padding: 0 18px; font-size: 14px; }
+    body[data-ui-zoom-step="50"] .btn-animation { min-width: 124px; padding: 0 14px; font-size: 13px; }
+    body[data-ui-zoom-step="50"] .custom-icon { width: 31px; height: 31px; }
+    body[data-ui-zoom-step="50"] .group-cap { font-size: 10px; }
+    body[data-ui-zoom-step="50"] .animation-scrubber,
+    body[data-ui-zoom-step="50"] .animation-step-field,
+    body[data-ui-zoom-step="50"] .animation-step-action,
+    body[data-ui-zoom-step="50"] .animation-step-toggle { height: 50px; }
+
+    body[data-ui-zoom-step="75"] { --side-panel-width: 156px; }
+    body[data-ui-zoom-step="75"] .bottom-toolbar { min-height: 62px; padding: 5px 10px; }
+    body[data-ui-zoom-step="75"] .tool-btn { width: 35px; height: 35px; }
+    body[data-ui-zoom-step="75"] .comp-item { min-height: 57px; }
+    body[data-ui-zoom-step="75"] .comp-item svg { width: 25px; height: 25px; }
+
+    body[data-ui-zoom-step="80"] { --side-panel-width: 150px; }
+    body[data-ui-zoom-step="80"] .bottom-toolbar { min-height: 59px; padding: 4px 9px; }
+    body[data-ui-zoom-step="80"] .tool-btn { width: 33px; height: 33px; font-size: .96em; }
+    body[data-ui-zoom-step="80"] .comp-item { min-height: 54px; }
+    body[data-ui-zoom-step="80"] .comp-item svg { width: 23px; height: 23px; }
+    body[data-ui-zoom-step="80"] .marker-icon { width: 25px; height: 25px; font-size: 9.5px; }
+
+    body[data-ui-zoom-step="90"] { --side-panel-width: 142px; }
+    body[data-ui-zoom-step="90"] .bottom-toolbar { min-height: 56px; padding: 4px 8px; }
+    body[data-ui-zoom-step="90"] .tool-btn { width: 30px; height: 30px; font-size: .9em; }
+    body[data-ui-zoom-step="90"] .vsep { margin: 0 6px; }
+    body[data-ui-zoom-step="90"] .comp-item { min-height: 50px; padding: 5px 2px; }
+    body[data-ui-zoom-step="90"] .comp-item svg { width: 22px; height: 22px; }
+    body[data-ui-zoom-step="90"] .marker-icon { width: 23px; height: 23px; font-size: 9px; }
+    body[data-ui-zoom-step="90"] .asset-icon-img { max-width: 24px; max-height: 24px; }
+
+    body[data-ui-zoom-step="100"] { --side-panel-width: 134px; }
+    body[data-ui-zoom-step="100"] .bottom-toolbar { min-height: 53px; padding: 3px 7px; }
+    body[data-ui-zoom-step="100"] .tool-btn { width: 28px; height: 28px; font-size: .84em; }
+    body[data-ui-zoom-step="100"] .vsep { margin: 0 4px; }
+    body[data-ui-zoom-step="100"] .group-cap { font-size: 7px; }
+    body[data-ui-zoom-step="100"] .side-panel { padding: 6px 5px 10px; gap: 5px; }
+    body[data-ui-zoom-step="100"] .comp-item { min-height: 47px; padding: 4px 2px; gap: 3px; }
+    body[data-ui-zoom-step="100"] .comp-item::after { font-size: 8px; }
+    body[data-ui-zoom-step="100"] .comp-item svg { width: 20px; height: 20px; }
+    body[data-ui-zoom-step="100"] .marker-icon { width: 21px; height: 21px; font-size: 8px; }
+    body[data-ui-zoom-step="100"] .asset-icon-img { max-width: 22px; max-height: 22px; }
 </style>
 </head>
 <body data-view="field">
@@ -4544,9 +4614,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.63" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.64" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.63</span>
+            <span class="version-tooltip">v0.9.64</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5864,6 +5934,28 @@ function initCanvasLayoutWatchers() {
     window.addEventListener('pageshow', warmupCanvasLayout);
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) warmupCanvasLayout();
+    });
+}
+
+const UI_ZOOM_STEPS = [50, 67, 75, 80, 90, 100, 110, 125, 150];
+function closestUiZoomStep(percent) {
+    return UI_ZOOM_STEPS.reduce((best, step) =>
+        Math.abs(step - percent) < Math.abs(best - percent) ? step : best, UI_ZOOM_STEPS[0]);
+}
+function detectedBrowserZoomPercent() {
+    const isMac = /Mac/.test(navigator.platform || navigator.userAgent || '');
+    const ratio = Number(window.devicePixelRatio) || 1;
+    return Math.round((ratio / (isMac ? 2 : 1)) * 100);
+}
+function updateEditorZoomStep() {
+    const rawStep = closestUiZoomStep(detectedBrowserZoomPercent());
+    const step = rawStep <= 50 ? 50 : (rawStep <= 67 ? 67 : rawStep <= 75 ? 75 : rawStep <= 80 ? 80 : rawStep <= 90 ? 90 : 100);
+    document.body.dataset.uiZoomStep = String(step);
+    const toolbar = document.querySelector('.bottom-toolbar');
+    requestAnimationFrame(() => {
+        if (!toolbar) return;
+        document.body.classList.toggle('toolbar-overflow', toolbar.scrollWidth > toolbar.clientWidth + 2);
+        queueCanvasFit();
     });
 }
 
@@ -15686,6 +15778,7 @@ let appBooted = false;
 function bootBenchReviewApp() {
     if (appBooted) return;
     appBooted = true;
+    updateEditorZoomStep();
     loadTrainingRecords();
     loadTrainingBlocks();
     loadPlannedTrainings();
@@ -15725,6 +15818,8 @@ if (document.readyState === 'loading') {
     bootBenchReviewApp();
 }
 window.addEventListener('load', warmupCanvasLayout, { once: true });
+window.addEventListener('resize', updateEditorZoomStep, { passive: true });
+window.visualViewport?.addEventListener('resize', updateEditorZoomStep, { passive: true });
 
 window.board = { canvas, addStyledLine, addComponent, setMode, undo, redo, get history() { return { len: stateHistory.length, idx: historyIndex }; } };
 </script>
