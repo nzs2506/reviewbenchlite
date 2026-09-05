@@ -2150,6 +2150,23 @@
         border-top: 1px solid #262a32;
         background: #151820;
     }
+    .lineup-roster-action-status {
+        flex: 1 1 100%;
+        min-height: 14px;
+        color: #7f8795;
+        font-size: 9px;
+        font-weight: 800;
+        text-align: right;
+    }
+    .lineup-danger-btn {
+        border-color: rgba(239,68,68,.5);
+        color: #fca5a5;
+    }
+    .lineup-danger-btn:hover {
+        border-color: #ef4444;
+        background: rgba(127,29,29,.24);
+        color: #fecaca;
+    }
     .lineup-import-body {
         padding: 14px;
         display: grid;
@@ -4611,11 +4628,50 @@
     body[data-ui-zoom-step="75"] .comp-item svg { width: 25px; height: 25px; }
 
     body[data-ui-zoom-step="80"] { --side-panel-width: 150px; }
-    body[data-ui-zoom-step="80"] .bottom-toolbar { min-height: 59px; padding: 4px 9px; }
-    body[data-ui-zoom-step="80"] .tool-btn { width: 33px; height: 33px; font-size: .96em; }
+    body[data-ui-zoom-step="80"] .bottom-toolbar { min-height: 54px; padding: 3px 7px; column-gap: 0; }
+    body[data-ui-zoom-step="80"] .tool-group-block { gap: 2px; }
+    body[data-ui-zoom-step="80"] .toolbar-group { gap: 1px; }
+    body[data-ui-zoom-step="80"] .group-cap { font-size: 7px; letter-spacing: .09em; }
+    body[data-ui-zoom-step="80"] .tool-btn { width: 28px; height: 28px; font-size: .84em; border-radius: 7px; }
+    body[data-ui-zoom-step="80"] .custom-icon { width: 20px; height: 20px; }
+    body[data-ui-zoom-step="80"] .vsep { margin: 0 4px; }
+    body[data-ui-zoom-step="80"] .training-start-block { margin-right: 8px; padding-right: 8px; }
+    body[data-ui-zoom-step="80"] .btn-record {
+        min-width: 170px; padding: 0 8px; gap: 6px; font-size: 11.5px;
+    }
+    body[data-ui-zoom-step="80"] .btn-animation {
+        min-width: 108px; padding: 0 8px; gap: 6px; font-size: 10.5px;
+    }
+    body[data-ui-zoom-step="80"] .animation-scrubber {
+        width: 112px; height: 28px; gap: 4px; padding: 0 5px; border-radius: 7px;
+    }
+    body[data-ui-zoom-step="80"] .animation-scrubber input { width: 72px; }
+    body[data-ui-zoom-step="80"] .animation-time { min-width: 25px; font-size: 8px; }
+    body[data-ui-zoom-step="80"] .animation-step-toggle {
+        min-width: 43px; padding: 0 5px; font-size: 9px;
+    }
+    body[data-ui-zoom-step="80"] .animation-step-field {
+        width: 43px; height: 28px; border-radius: 7px; font-size: 9px;
+    }
+    body[data-ui-zoom-step="80"] .animation-step-action {
+        min-width: 34px; padding: 0 5px; font-size: 8.5px;
+    }
+    body[data-ui-zoom-step="80"] .tool-btn.btn-primary,
+    body[data-ui-zoom-step="80"] .tool-btn.btn-export {
+        min-width: 61px; padding: 0 8px; gap: 5px; font-size: 10.5px;
+    }
+    body[data-ui-zoom-step="80"] .btn-export.pdf-spacing { margin-left: 2px; }
     body[data-ui-zoom-step="80"] .comp-item { min-height: 54px; }
     body[data-ui-zoom-step="80"] .comp-item svg { width: 23px; height: 23px; }
     body[data-ui-zoom-step="80"] .marker-icon { width: 25px; height: 25px; font-size: 9.5px; }
+
+    /* The header has its own space, so keep it comfortably readable at 80%. */
+    body[data-ui-zoom-step="80"] .app-header { min-height: 72px; padding: 0 24px; }
+    body[data-ui-zoom-step="80"] .app-title { left: 25px; font-size: 34px; }
+    body[data-ui-zoom-step="80"] .mainnav { height: 46px; gap: clamp(28px, 3.4vw, 48px); }
+    body[data-ui-zoom-step="80"] .mainnav button,
+    body[data-ui-zoom-step="80"] .mainnav:hover button,
+    body[data-ui-zoom-step="80"] .mainnav button:hover { height: 46px; font-size: 19px; }
 
     body[data-ui-zoom-step="90"] { --side-panel-width: 142px; }
     body[data-ui-zoom-step="90"] .bottom-toolbar { min-height: 56px; padding: 4px 8px; }
@@ -4698,9 +4754,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.67" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.69" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.67</span>
+            <span class="version-tooltip">v0.9.69</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5117,8 +5173,11 @@
                         <button class="lineup-primary-btn" id="btnLineupAdd" type="button"><i class="fa-solid fa-plus"></i>Добавить</button>
                     </div>
                     <div class="lineup-roster-actions">
+                        <span class="lineup-roster-action-status" id="rosterActionStatus" aria-live="polite"></span>
+                        <button class="lineup-secondary-btn" id="btnRosterLoadKhl" type="button"><i class="fa-solid fa-cloud-arrow-down"></i>Загрузить с КХЛ</button>
                         <button class="lineup-secondary-btn" id="btnRosterImportFile" type="button"><i class="fa-solid fa-file-arrow-up"></i>Загрузить состав</button>
                         <button class="lineup-primary-btn" id="btnRosterExport" type="button"><i class="fa-solid fa-file-arrow-down"></i>Сохранить состав</button>
+                        <button class="lineup-secondary-btn lineup-danger-btn" id="btnRosterClear" type="button"><i class="fa-regular fa-trash-can"></i>Удалить всех</button>
                         <input id="rosterImportInput" type="file" accept="application/json,.json" hidden>
                     </div>
                 </section>
@@ -5819,6 +5878,7 @@ const MATCHES_STORAGE_KEY = 'benchreview-lite.matches.v1';
 const ADMIRAL_KHL_TEAM_ID = '61';
 const ADMIRAL_KHL_SEASON_ID = '407';
 const KHL_PROXY_BASE = 'https://khl.shayy.workers.dev?url=';
+const KHL_MOBILE_BASE = 'https://khl.api.webcaster.pro/api/khl_mobile';
 const SIDE_PANEL_STORAGE_KEY = 'benchreview-lite.side-panel-collapsed.v1';
 let trainingDraft = null;
 let trainingRecords = [];
@@ -9979,7 +10039,9 @@ function meaningfulMatchSheetState(state) {
     );
 }
 function normalizeCloudRoster(value) {
-    return normalizeCloudList(value).map(normalizeRosterPlayer);
+    return normalizeCloudList(value)
+        .map(normalizeRosterPlayer)
+        .filter(player => !rosterRemovedKeys.includes(rosterIdentityKey(player.role, player.name)));
 }
 function cloudStateValue(key) {
     if (key === 'blocks') return trainingBlocks;
@@ -10034,8 +10096,8 @@ function applyRemoteCloudState(states) {
     trainingBlocks = mergeCloudLists(trainingBlocks, remote('blocks'));
     plannedTrainings = mergeCloudLists(plannedTrainings, remote('planned'), { sort: 'planned' });
     goalieSavedMatches = mergeCloudLists(goalieSavedMatches, remote('goalieMatches'));
-    rosterPlayers = normalizeCloudRoster([...(Array.isArray(remote('roster')) ? remote('roster') : []), ...rosterPlayers]);
     rosterRemovedKeys = [...new Set([...(Array.isArray(remote('rosterRemoved')) ? remote('rosterRemoved') : []), ...rosterRemovedKeys].map(String).filter(Boolean))].slice(-500);
+    rosterPlayers = normalizeCloudRoster([...(Array.isArray(remote('roster')) ? remote('roster') : []), ...rosterPlayers]);
     matchSheetArchive = mergeCloudLists(matchSheetArchive, remote('matchArchive')).map(normalizeMatchArchiveRecord);
     admiralMatches = mergeCloudLists(admiralMatches, remote('matches')).map(normalizeAdmiralMatch).filter(Boolean).sort(admiralMatchSort);
     const remoteSheet = remote('matchSheet');
@@ -13586,10 +13648,12 @@ function addOrUpdateRosterCandidate(candidate) {
     const number = String(candidate.number || '').trim();
     const birthDate = normalizeLineupBirthDate(candidate.birthDate);
     if (!cleanName) return false;
-    let player = rosterPlayers.find(item =>
-        (number && String(item.number || '').trim() === number) ||
-        cleanStatName(item.name).toLowerCase() === cleanName.toLowerCase()
-    );
+    let player = rosterPlayers.find(item => cleanStatName(item.name).toLowerCase() === cleanName.toLowerCase());
+    if (!player && number) {
+        player = rosterPlayers.find(item =>
+            item.role === candidate.role && String(item.number || '').trim() === number
+        );
+    }
     if (player) {
         updateStatsPlayerField(player, 'name', cleanName);
         if (number) updateStatsPlayerField(player, 'number', number);
@@ -13673,6 +13737,114 @@ async function importRosterFromFile(file) {
     renderGoalieRosterSelects();
     if (statsPage === 'sheet') renderMatchSheet();
     setLineupProgress(`Состав загружен из файла: ${rosterPlayers.length}`, 1, true);
+}
+
+function setRosterActionStatus(message, isError = false) {
+    const target = document.getElementById('rosterActionStatus');
+    if (!target) return;
+    target.textContent = String(message || '');
+    target.style.color = isError ? '#fca5a5' : '';
+}
+
+function normalizeKhlRosterPlayer(player) {
+    const name = cleanStatName(player?.name);
+    if (!name) return null;
+    const roleKey = String(player?.role_key || player?.role || '').toLowerCase();
+    const role = /goal|врат/.test(roleKey)
+        ? 'goalie'
+        : /defen|защит/.test(roleKey) ? 'defense' : 'forward';
+    return {
+        number: String(player?.shirt_number ?? player?.number ?? '').trim(),
+        name,
+        role,
+        leadership: '',
+        birthDate: ''
+    };
+}
+
+async function fetchKhlAdmiralRoster() {
+    const source = new URL(`${KHL_MOBILE_BASE}/team_v2.json`);
+    source.searchParams.set('id', ADMIRAL_KHL_TEAM_ID);
+    source.searchParams.set('stage_id', ADMIRAL_KHL_SEASON_ID);
+    source.searchParams.set('locale', 'ru');
+    const response = await fetch(source.toString(), { method: 'GET', mode: 'cors' });
+    if (!response.ok) throw new Error(`KHL API ${response.status}`);
+    const data = await response.json();
+    const list = data?.team?.players || data?.players || [];
+    const players = (Array.isArray(list) ? list : []).map(normalizeKhlRosterPlayer).filter(Boolean);
+    if (!players.length) throw new Error('КХЛ вернула пустой состав');
+    return players;
+}
+
+async function loadRosterFromKhl() {
+    const button = document.getElementById('btnRosterLoadKhl');
+    if (button?.disabled) return;
+    const original = button?.innerHTML || '';
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>Загрузка КХЛ';
+    }
+    setRosterActionStatus('Получаю текущий состав «Адмирала» с КХЛ…');
+    try {
+        const incoming = await fetchKhlAdmiralRoster();
+        let added = 0;
+        let updated = 0;
+        incoming.forEach(candidate => {
+            const number = String(candidate.number || '').trim();
+            const nameKey = khlStatsNameKey(candidate.name);
+            const existing = rosterPlayers.find(player =>
+                (number && String(player.number || '').trim() === number)
+                || khlStatsNameKey(player.name) === nameKey
+            );
+            if (addOrUpdateRosterCandidate(candidate)) {
+                if (existing) updated += 1;
+                else added += 1;
+            }
+        });
+        persistRosterPlayers();
+        persistMatchSheet();
+        renderRosterManager();
+        renderStatsRoster();
+        renderGoalieRosterSelects();
+        if (statsPage === 'live') renderLiveStats();
+        if (statsPage === 'sheet') renderMatchSheet();
+        setRosterActionStatus(`КХЛ: получено ${incoming.length}, добавлено ${added}, обновлено ${updated}`);
+    } catch (error) {
+        setRosterActionStatus(`Не удалось загрузить КХЛ: ${String(error?.message || error)}`, true);
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = original;
+        }
+    }
+}
+
+async function clearAllRosterPlayers() {
+    if (!rosterPlayers.length) {
+        setRosterActionStatus('Состав уже пуст');
+        return;
+    }
+    const count = rosterPlayers.length;
+    const confirmed = await showConfirm(
+        `Удалить весь состав (${count})? Игроки и их общая статистика будут удалены. Сохраненные матчи останутся в архиве.`,
+        { title: 'Удалить весь состав', okLabel: 'Удалить всех' }
+    );
+    if (!confirmed) return;
+    const removedIds = rosterPlayers.map(player => player.id);
+    const removedKeys = rosterPlayers.map(player => rosterIdentityKey(player.role, player.name)).filter(Boolean);
+    rosterRemovedKeys = [...new Set([...rosterRemovedKeys, ...removedKeys])].slice(-500);
+    removedIds.forEach(removePlayerFromMatchSheetEvents);
+    rosterPlayers = [];
+    reconcileRosterReferences();
+    persistRosterRemovedKeys();
+    persistRosterPlayers();
+    persistMatchSheet();
+    renderRosterManager();
+    renderStatsRoster();
+    renderGoalieRosterSelects();
+    if (statsPage === 'live') renderLiveStats();
+    if (statsPage === 'sheet') renderMatchSheet();
+    setRosterActionStatus(`Удалено игроков: ${count}`);
 }
 
 function addManualLineupPlayer() {
@@ -15693,6 +15865,8 @@ document.getElementById('btnLineupParseText').addEventListener('click', parseLin
 document.getElementById('btnLineupImport').addEventListener('click', importLineupCandidates);
 document.getElementById('btnLineupAdd').addEventListener('click', addManualLineupPlayer);
 document.getElementById('btnRosterExport').addEventListener('click', exportRosterToFile);
+document.getElementById('btnRosterLoadKhl').addEventListener('click', loadRosterFromKhl);
+document.getElementById('btnRosterClear').addEventListener('click', clearAllRosterPlayers);
 document.getElementById('btnRosterImportFile').addEventListener('click', () => document.getElementById('rosterImportInput').click());
 document.getElementById('rosterImportInput').addEventListener('change', e => {
     importRosterFromFile(e.target.files?.[0]);
