@@ -4793,9 +4793,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.74" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.75" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.74</span>
+            <span class="version-tooltip">v0.9.75</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5934,17 +5934,34 @@ const KHL_MOBILE_BASE = 'https://khl.api.webcaster.pro/api/khl_mobile';
 const ADMIRAL_ROSTER_SUPPLEMENTS = [
     { number: '87', name: 'Амирбеков Джелал-Ад-Дин', role: 'goalie', birthDate: '2002-09-24' },
     { number: '1', name: 'Бояркин Никита', role: 'goalie' },
+    { number: '35', name: 'Кульбаков Иван', role: 'goalie' },
     { number: '16', name: 'Ващенко Григорий', role: 'defense' },
+    { number: '77', name: 'Грман Марио', role: 'defense' },
     { number: '94', name: 'Ефремов Никита', role: 'defense' },
     { number: '23', name: 'Кудашов Артём', role: 'defense', birthDate: '2005-01-10' },
     { number: '44', name: 'Жуков Кирилл', role: 'defense', birthDate: '2004-08-23' },
     { number: '55', name: 'Крощинский Федор', role: 'defense', birthDate: '2002-03-27' },
+    { number: '28', name: 'Ибрагимов Семён', role: 'defense' },
+    { number: '65', name: 'Лучевников Константин', role: 'defense' },
+    { number: '7', name: 'Морозов Илья Д.', role: 'defense' },
+    { number: '73', name: 'Шулак Либор', role: 'defense' },
     { number: '9', name: 'Цицюра Владислав', role: 'forward', birthDate: '1999-09-26' },
     { number: '15', name: 'Грасс Михаил', role: 'forward', birthDate: '2004-01-15' },
     { number: '19', name: 'Пименов Артём', role: 'forward', birthDate: '1996-05-19' },
     { number: '25', name: 'Олсон Кайл', role: 'forward', birthDate: '1999-03-22' },
     { number: '45', name: 'Мухтаров Дмитрий', role: 'forward', birthDate: '2006-05-04' },
-    { number: '72', name: 'Булавчук Оскар', role: 'forward', birthDate: '2003-11-10' }
+    { number: '72', name: 'Булавчук Оскар', role: 'forward', birthDate: '2003-11-10' },
+    { number: '97', name: 'Волков Александр С.', role: 'forward' },
+    { number: '41', name: 'Дарьин Александр', role: 'forward' },
+    { number: '17', name: 'Завгородний Дмитрий', role: 'forward' },
+    { number: '36', name: 'Камара Энтони', role: 'forward' },
+    { number: '95', name: 'Корбит Егор', role: 'forward' },
+    { number: '93', name: 'Моисеев Данила', role: 'forward' },
+    { number: '71', name: 'Муранов Иван', role: 'forward' },
+    { number: '24', name: 'Мусоров Максим', role: 'forward' },
+    { number: '47', name: 'Усманов Даниэль', role: 'forward' },
+    { number: '21', name: 'Хулапов Данила', role: 'forward' },
+    { number: '11', name: 'Чезганов Егор', role: 'forward' }
 ];
 const SIDE_PANEL_STORAGE_KEY = 'benchreview-lite.side-panel-collapsed.v1';
 let trainingDraft = null;
@@ -5992,6 +6009,7 @@ let matchSheetArchive = [];
 let admiralMatches = [];
 let matchSheetArchiveExpandedId = '';
 let selectedMatchArchiveIds = new Set();
+let matchSheetIsDraft = false;
 let matchEventEditingId = '';
 let matchSheetNativeFullscreen = false;
 let matchSheetPointerDrag = null;
@@ -10783,7 +10801,8 @@ function loadRosterPlayers() {
         backup = parseStoredRoster(localStorage.getItem(ROSTER_BACKUP_KEY));
     } catch (_) {}
     const source = stored ? stored : backup?.length ? backup : archivedRosterFallback();
-    rosterPlayers = normalizeCloudRoster(source);
+    // Официальный состав КХЛ — стартовая база. Удаленных тренером игроков не возвращаем.
+    rosterPlayers = normalizeCloudRoster([...(Array.isArray(source) ? source : []), ...ADMIRAL_ROSTER_SUPPLEMENTS]);
     const sourceCount = Array.isArray(source) ? source.length : 0;
     if ((!stored || rosterPlayers.length !== sourceCount) && rosterPlayers.length) persistRosterPlayers({ pushRemote: false });
 }
@@ -10928,6 +10947,8 @@ function loadMatchSheet() {
 }
 
 function persistMatchSheet(options = {}) {
+    // Лист, открытый из календаря матча, — черновик до явного «Сохранить матч».
+    if (matchSheetIsDraft) return;
     try {
         localStorage.setItem(MATCH_SHEET_STORAGE_KEY, JSON.stringify(matchSheetState));
     } catch (_) {}
@@ -11303,8 +11324,7 @@ async function openKhlMatchSheet(match) {
     const date = String(match.date || (match.startsAt ? match.startsAt.slice(0, 10) : todayInputValue())).slice(0, 10);
     const currentOpponent = String(matchSheetState.opponent || '').trim();
     const currentDate = String(matchSheetState.date || '').trim();
-    const hasCurrent = Boolean(matchSheetState.archiveId || currentOpponent || matchSheetState.date || matchSheetState.events.length
-        || Object.values(matchSheetState.players || {}).some(matchSheetPlayerHasData));
+    const hasCurrent = Boolean(matchSheetState.archiveId);
     const isSameMatch = currentDate === date && matchSheetOpponentKey(currentOpponent) === matchSheetOpponentKey(opponent);
     if (hasCurrent && !isSameMatch) {
         const decision = await showConfirm(
@@ -11324,7 +11344,7 @@ async function openKhlMatchSheet(match) {
             saveMatchSheetToArchive();
         }
     }
-    if (!isSameMatch) {
+    if (!isSameMatch || matchSheetIsDraft) {
         const preservedOrder = matchSheetSkaters().map(player => player.id);
         const preservedSortDirection = matchSheetState.sortDirection;
         matchSheetState = {
@@ -11341,6 +11361,7 @@ async function openKhlMatchSheet(match) {
         matchSheetSelectedPlayerIds.clear();
         matchSheetPeriod = 1;
     }
+    matchSheetIsDraft = true;
     persistMatchSheet();
     setView('stats');
     setStatsPage('sheet');
@@ -11466,6 +11487,7 @@ function saveMatchSheetToArchive() {
     };
     matchSheetSelectedPlayerIds.clear();
     matchSheetPeriod = 1;
+    matchSheetIsDraft = false;
     persistMatchSheet();
     renderMatchSheet();
     const button = document.getElementById('btnMatchSheetSave');
@@ -11494,6 +11516,7 @@ async function openArchivedMatchSheet(id) {
     persistRosterPlayers();
     matchSheetState = normalizeMatchArchiveRecord(record).sheet;
     matchSheetState.archiveId = record.id;
+    matchSheetIsDraft = false;
     matchSheetSelectedPlayerIds.clear();
     matchSheetPeriod = 1;
     persistMatchSheet();
