@@ -2673,8 +2673,9 @@
     .match-sheet-header-actions { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
     .match-sheet-table .match-sheet-header-actions .match-sheet-action {
         min-width: 0; width: 100%; min-height: 36px; padding: 5px;
-        font-size: 10px; grid-template-columns: 18px minmax(0, 1fr); gap: 4px;
-        white-space: normal; overflow-wrap: anywhere; text-transform: none;
+        display: flex; flex-direction: column; justify-content: center;
+        font-size: 10px; gap: 3px; line-height: 1.2; text-align: center;
+        white-space: normal; overflow-wrap: normal; text-transform: none;
     }
     .match-sheet-header-actions .match-sheet-action i { width: 18px; height: 18px; }
     .match-sheet-table thead th { vertical-align: bottom; }
@@ -11954,7 +11955,13 @@ function matchSheetHeader(table, options = {}) {
                 actions.className = 'match-sheet-header-actions';
                 events.forEach(type => {
                     const template = document.querySelector(`#matchSheetActions [data-match-event="${type}"]`);
-                    if (template) actions.appendChild(template.cloneNode(true));
+                    if (template) {
+                        const button = template.cloneNode(true);
+                        button.title = template.textContent.trim();
+                        const shortLabel = { faceoffWin: 'Выиграно', faceoffLoss: 'Проиграно', opponentPenalty: 'Штраф соперника' }[type];
+                        if (shortLabel) button.querySelector('span').textContent = shortLabel;
+                        actions.appendChild(button);
+                    }
                 });
                 th.appendChild(actions);
             }
