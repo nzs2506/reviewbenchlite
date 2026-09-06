@@ -4813,9 +4813,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.78" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.79" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.78</span>
+            <span class="version-tooltip">v0.9.79</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -4966,6 +4966,7 @@
                         <button class="match-archive-action" type="button" id="btnKhlMatchSelectNone">Снять выбор</button>
                         <button class="matches-action primary" type="button" id="btnKhlMatchCalculate">Посчитать</button>
                         <button class="matches-action" type="button" id="btnKhlMatchExport">Выгрузить CSV</button>
+                        <button class="matches-action" type="button" id="btnKhlMatchPdf">Выгрузить PDF</button>
                     </div>
                 </div>
                 <div class="khl-match-list" id="admiralMatchesList"></div>
@@ -13234,7 +13235,7 @@ function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
     return pages;
 }
 
-function renderMatchSheetPdfPages(sourceRecord = null) {
+function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
     const record = matchSheetPdfRecord(sourceRecord);
     const players = archivedMatchPlayers(record);
     const rowsPerPage = 22;
@@ -13279,11 +13280,11 @@ function renderMatchSheetPdfPages(sourceRecord = null) {
         ctx.font = '700 42px "Russo One", "Arial Black", Arial, sans-serif';
         ctx.fillText('BenchReview Lite', margin, 66);
         ctx.font = '800 28px Arial, sans-serif';
-        ctx.fillText('МАТЧЕВЫЙ ЛИСТ', margin, 120);
+        ctx.fillText(options.title || 'МАТЧЕВЫЙ ЛИСТ', margin, 120);
         ctx.font = '700 23px Arial, sans-serif';
         ctx.fillStyle = '#344158';
-        ctx.fillText(`Соперник: ${record.opponent || '—'}`, margin + 430, 70);
-        ctx.fillText(`Дата: ${record.date ? trainingDayLabel(record.date) : '—'}`, margin + 430, 116);
+        ctx.fillText(options.subtitle || `Соперник: ${record.opponent || '—'}`, margin + 650, 70);
+        ctx.fillText(options.dateLabel || `Дата: ${record.date ? trainingDayLabel(record.date) : '—'}`, margin + 650, 116);
         ctx.textAlign = 'right';
         ctx.fillText(`Игроков: ${players.length}`, pageWidth - margin, 70);
         let x = margin;
@@ -13375,6 +13376,31 @@ function matchArchivePlayerKey(player) {
         : `${role}|${khlStatsNameKey(player?.name || '')}`;
 }
 
+function aggregateMatchRecords(selected) {
+    const rows = new Map();
+    selected.forEach(record => archivedMatchPlayers(record).forEach(player => {
+        const key = matchArchivePlayerKey(player);
+        const state = normalizeMatchSheetPlayer(record.sheet?.players?.[player.id]);
+        const current = rows.get(key) || {
+            player,
+            games: 0, plus: 0, minus: 0, powerPlay: 0, shortHanded: 0,
+            penaltyTotal: 0, opponentPenaltyTotal: 0, goalsTotal: 0, assists: 0,
+            shotsTotal: 0, faceoffWins: 0, faceoffLosses: 0, mmPoints: 0
+        };
+        ['games', 'plus', 'minus', 'powerPlay', 'shortHanded', 'assists', 'mmPoints'].forEach(field => {
+            current[field] += safeStatNumber(state[field]);
+        });
+        ['penaltyTotal', 'opponentPenaltyTotal', 'goalsTotal', 'shotsTotal'].forEach(field => {
+            current[field] += safeStatNumber(matchSheetTotalValue(state, field));
+        });
+        const faceoffs = matchSheetFaceoffPair(state);
+        current.faceoffWins += faceoffs.wins;
+        current.faceoffLosses += faceoffs.losses;
+        rows.set(key, current);
+    }));
+    return [...rows.values()].sort((a, b) => rosterSort(a.player, b.player));
+}
+
 function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchiveIds, targetId = 'matchAggregate') {
     const target = document.getElementById(targetId);
     if (!target) return;
@@ -13386,32 +13412,7 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
         target.textContent = 'Матчи не выбраны или сохранённых данных пока нет. Итог: 0.';
         return;
     }
-    const rows = new Map();
-    selected.forEach(record => archivedMatchPlayers(record).forEach(player => {
-        const key = matchArchivePlayerKey(player);
-        const state = normalizeMatchSheetPlayer(record.sheet?.players?.[player.id]);
-        const current = rows.get(key) || {
-            player,
-            games: 0, plus: 0, minus: 0, powerPlay: 0, shortHanded: 0,
-            penaltyTotal: 0, opponentPenaltyTotal: 0, goalsTotal: 0, assists: 0,
-            shotsTotal: 0, faceoffWins: 0, faceoffLosses: 0, mmPoints: 0
-        };
-        current.games += safeStatNumber(state.games);
-        current.plus += safeStatNumber(state.plus);
-        current.minus += safeStatNumber(state.minus);
-        current.powerPlay += safeStatNumber(state.powerPlay);
-        current.shortHanded += safeStatNumber(state.shortHanded);
-        current.penaltyTotal += safeStatNumber(matchSheetTotalValue(state, 'penaltyTotal'));
-        current.opponentPenaltyTotal += safeStatNumber(matchSheetTotalValue(state, 'opponentPenaltyTotal'));
-        current.goalsTotal += safeStatNumber(matchSheetTotalValue(state, 'goalsTotal'));
-        current.assists += safeStatNumber(state.assists);
-        current.shotsTotal += safeStatNumber(matchSheetTotalValue(state, 'shotsTotal'));
-        const faceoffs = matchSheetFaceoffPair(state);
-        current.faceoffWins += faceoffs.wins;
-        current.faceoffLosses += faceoffs.losses;
-        current.mmPoints += safeStatNumber(state.mmPoints);
-        rows.set(key, current);
-    }));
+    const rows = aggregateMatchRecords(selected);
     const head = document.createElement('div');
     head.className = 'match-aggregate-head';
     head.textContent = `Статистика за выбранные матчи: ${selected.length} ${selected.length === 1 ? 'матч' : 'матча'}`;
@@ -13421,7 +13422,7 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
     table.className = 'match-sheet-table';
     matchSheetHeader(table);
     const tbody = document.createElement('tbody');
-    [...rows.values()].sort((a, b) => rosterSort(a.player, b.player)).forEach(total => {
+    rows.forEach(total => {
         const row = document.createElement('tr');
         appendCell(row, `${total.player.number ? `№${total.player.number} ` : ''}${total.player.name || rosterRoleLabel(total.player.role)}`, 'match-sheet-player-cell');
         [total.games, total.plus, total.minus, total.powerPlay, total.shortHanded,
@@ -13433,6 +13434,12 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
     table.appendChild(tbody);
     wrap.appendChild(table);
     target.append(head, wrap);
+    const pdf = document.createElement('button');
+    pdf.type = 'button';
+    pdf.className = 'matches-action';
+    pdf.textContent = 'Выгрузить PDF';
+    pdf.addEventListener('click', () => exportMatchAggregatePdf(selected));
+    target.appendChild(pdf);
 }
 
 function matchArchiveBelongsToKhlMatch(record, match) {
@@ -13458,6 +13465,50 @@ function calculateSelectedKhlMatches() {
             : 'Выберите хотя бы один матч. Итог: 0.';
     }
     document.getElementById('matchAggregate')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return records;
+}
+
+function exportMatchAggregatePdf(records) {
+    if (!records.length) return;
+    try {
+        const totals = aggregateMatchRecords(records);
+        const sheet = { players: {}, order: [] };
+        const roster = totals.map((total, index) => {
+            const id = `aggregate-${index}`;
+            const state = Object.assign(emptyMatchSheetPlayer(), total, {
+                goals: [total.goalsTotal, 0, 0], shots: [total.shotsTotal, 0, 0],
+                penalties: [total.penaltyTotal, 0, 0],
+                opponentPenalties: [total.opponentPenaltyTotal, 0, 0],
+                faceoffWins: [total.faceoffWins, 0, 0], faceoffLosses: [total.faceoffLosses, 0, 0]
+            });
+            delete state.player;
+            sheet.players[id] = state;
+            sheet.order.push(id);
+            return Object.assign({}, total.player, { id });
+        });
+        const dates = records.map(record => record.date).filter(Boolean).sort();
+        const pages = renderMatchSheetPdfPages({ id: 'aggregate', opponent: `${records.length} матчей`, date: dates[0] || '', roster, sheet }, {
+            title: 'СВОДНАЯ СТАТИСТИКА',
+            subtitle: `Выбрано матчей: ${records.length}`,
+            dateLabel: `Период: ${dates[0] || '—'} — ${dates[dates.length - 1] || '—'}`
+        });
+        for (let start = 0; start < records.length; start += 22) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 2480; canvas.height = 1754;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawMatchSheetPdfText(ctx, 'МАТЧИ В РАСЧЁТЕ', 70, 75, 2340, { align: 'left', font: '700 36px Arial' });
+            records.slice(start, start + 22).forEach((record, i) => {
+                drawMatchSheetPdfCell(ctx, 70, 140 + i * 64, 2340, 64,
+                    `${start + i + 1}. ${record.date || 'Без даты'} · ${record.opponent || 'Соперник'}${record.emptySelection ? ' · без сохранённого листа, нулевые данные' : ''}`,
+                    { align: 'left', font: '700 24px Arial', fill: i % 2 ? '#f4f7fb' : '#fff' });
+            });
+            pages.push({ dataUrl: canvas.toDataURL('image/jpeg', .93), width: canvas.width, height: canvas.height });
+        }
+        downloadBlob(`match-summary-${records.length}-matches.pdf`, buildPdfFromJpegs(pages));
+    } catch (err) {
+        alert('Не удалось выгрузить сводку PDF: ' + err.message);
+    }
 }
 
 function renderMatchArchive() {
@@ -16491,6 +16542,7 @@ document.getElementById('matchesLayout').addEventListener('change', e => {
 });
 try { document.getElementById('matchesLayout').value = localStorage.getItem('benchreview.matches-layout') === 'tiles' ? 'tiles' : 'rows'; } catch (_) {}
 document.getElementById('btnKhlMatchCalculate').addEventListener('click', calculateSelectedKhlMatches);
+document.getElementById('btnKhlMatchPdf').addEventListener('click', () => exportMatchAggregatePdf(calculateSelectedKhlMatches()));
 document.getElementById('btnKhlMatchExport').addEventListener('click', () => {
     calculateSelectedKhlMatches();
     const rows = [...document.querySelectorAll('#matchAggregate table tr')];
