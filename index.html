@@ -2669,12 +2669,15 @@
     .match-sheet-action.danger i { background: rgba(239,68,68,.14); color: #f87171; }
     .match-sheet-action.penalty i { background: rgba(245,158,11,.14); color: #fbbf24; }
     .match-sheet-action:disabled { opacity: .36; cursor: default; }
-    .match-sheet-action[data-match-column="penalties"] { grid-column: 6; }
-    .match-sheet-action[data-match-column="opponent-penalties"] { grid-column: 7; }
-    .match-sheet-action[data-match-column="goals"] { grid-column: 8; }
-    .match-sheet-action[data-match-column="assists"] { grid-column: 9; }
-    .match-sheet-action[data-match-column="shots"] { grid-column: 10; }
-    .match-sheet-action[data-match-column="faceoffs"] { grid-column: 11; }
+    #matchSheetActions { display: none; }
+    .match-sheet-header-actions { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+    .match-sheet-table .match-sheet-header-actions .match-sheet-action {
+        min-width: 0; width: 100%; min-height: 36px; padding: 5px;
+        font-size: 10px; grid-template-columns: 18px minmax(0, 1fr); gap: 4px;
+        white-space: normal; overflow-wrap: anywhere; text-transform: none;
+    }
+    .match-sheet-header-actions .match-sheet-action i { width: 18px; height: 18px; }
+    .match-sheet-table thead th { vertical-align: bottom; }
     .match-sheet-wrap {
         border: 1px solid #262a32;
         border-radius: 10px;
@@ -4813,9 +4816,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.79" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.80" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.79</span>
+            <span class="version-tooltip">v0.9.80</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -11941,9 +11944,31 @@ function matchSheetHeader(table, options = {}) {
     groups.appendChild(player);
     ['Игр', '+', '−', 'Бол', 'Мен', 'Штр −', 'Штр +', 'Гол', 'Пас', 'Бр', 'Вбр', 'Очки в ММ'].forEach(label => {
         const th = document.createElement('th');
-        th.textContent = label;
+        if (options.resizable) {
+            const events = {
+                'Штр −': ['penalty'], 'Штр +': ['opponentPenalty'], 'Гол': ['goal'],
+                'Пас': ['assist'], 'Бр': ['shot'], 'Вбр': ['faceoffWin', 'faceoffLoss']
+            }[label] || [];
+            if (events.length) {
+                const actions = document.createElement('div');
+                actions.className = 'match-sheet-header-actions';
+                events.forEach(type => {
+                    const template = document.querySelector(`#matchSheetActions [data-match-event="${type}"]`);
+                    if (template) actions.appendChild(template.cloneNode(true));
+                });
+                th.appendChild(actions);
+            }
+        }
+        th.appendChild(document.createTextNode(label));
         groups.appendChild(th);
     });
+    if (options.resizable) {
+        const conceded = document.querySelector('#matchSheetActions [data-match-event="conceded"]');
+        const actions = document.createElement('div');
+        actions.className = 'match-sheet-header-actions';
+        if (conceded) actions.appendChild(conceded.cloneNode(true));
+        player.prepend(actions);
+    }
     thead.append(groups);
     table.appendChild(thead);
 }
@@ -16263,9 +16288,9 @@ document.querySelectorAll('[data-match-period]').forEach(btn => {
         renderMatchSheet();
     });
 });
-document.getElementById('matchSheetActions').addEventListener('click', e => {
+document.getElementById('statsSheetPanel').addEventListener('click', e => {
     const action = e.target.closest('[data-match-event]');
-    if (action) recordMatchSheetEvent(action.dataset.matchEvent);
+    if (action && !action.disabled) recordMatchSheetEvent(action.dataset.matchEvent);
 });
 document.getElementById('btnMatchSheetRemoveSelected').addEventListener('click', () => {
     removeMatchSheetPlayers([...matchSheetSelectedPlayerIds]);
