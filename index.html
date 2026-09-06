@@ -2628,7 +2628,7 @@
     .match-sheet-remove-selected:disabled { opacity: .38; cursor: default; }
     .match-sheet-actions {
         display: grid;
-        grid-template-columns: repeat(8, minmax(112px, 1fr));
+        grid-template-columns: repeat(12, minmax(78px, 1fr));
         gap: 7px;
         overflow-x: auto;
         padding-bottom: 2px;
@@ -2669,6 +2669,12 @@
     .match-sheet-action.danger i { background: rgba(239,68,68,.14); color: #f87171; }
     .match-sheet-action.penalty i { background: rgba(245,158,11,.14); color: #fbbf24; }
     .match-sheet-action:disabled { opacity: .36; cursor: default; }
+    .match-sheet-action[data-match-column="penalties"] { grid-column: 6; }
+    .match-sheet-action[data-match-column="opponent-penalties"] { grid-column: 7; }
+    .match-sheet-action[data-match-column="goals"] { grid-column: 8; }
+    .match-sheet-action[data-match-column="assists"] { grid-column: 9; }
+    .match-sheet-action[data-match-column="shots"] { grid-column: 10; }
+    .match-sheet-action[data-match-column="faceoffs"] { grid-column: 11; }
     .match-sheet-wrap {
         border: 1px solid #262a32;
         border-radius: 10px;
@@ -3197,6 +3203,7 @@
             grid-template-columns: repeat(4, minmax(135px, 1fr));
             overflow: visible;
         }
+        .match-sheet-action[data-match-column] { grid-column: auto; }
         .match-sheet-wrap { max-height: 54vh; }
         .match-sheet-panel.is-fullscreen .match-sheet-wrap { max-height: none; }
     }
@@ -4794,9 +4801,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.76" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.77" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.76</span>
+            <span class="version-tooltip">v0.9.77</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5274,14 +5281,14 @@
                         </div>
                     </div>
                     <div class="match-sheet-actions" id="matchSheetActions">
-                        <button class="match-sheet-action" type="button" data-match-event="faceoffWin"><i class="fa-solid fa-plus"></i><span>Вбрасывание выиграно</span></button>
-                        <button class="match-sheet-action danger" type="button" data-match-event="faceoffLoss"><i class="fa-solid fa-minus"></i><span>Вбрасывание проиграно</span></button>
-                        <button class="match-sheet-action" type="button" data-match-event="shot"><i class="fa-solid fa-bullseye"></i><span>Бросок</span></button>
-                        <button class="match-sheet-action" type="button" data-match-event="goal"><i class="fa-solid fa-hockey-puck"></i><span>Забили</span></button>
+                        <button class="match-sheet-action" type="button" data-match-event="faceoffWin" data-match-column="faceoffs"><i class="fa-solid fa-plus"></i><span>Вбрасывание выиграно</span></button>
+                        <button class="match-sheet-action danger" type="button" data-match-event="faceoffLoss" data-match-column="faceoffs"><i class="fa-solid fa-minus"></i><span>Вбрасывание проиграно</span></button>
+                        <button class="match-sheet-action" type="button" data-match-event="shot" data-match-column="shots"><i class="fa-solid fa-bullseye"></i><span>Бросок</span></button>
+                        <button class="match-sheet-action" type="button" data-match-event="goal" data-match-column="goals"><i class="fa-solid fa-hockey-puck"></i><span>Забили</span></button>
+                        <button class="match-sheet-action" type="button" data-match-event="assist" data-match-column="assists"><i class="fa-solid fa-handshake"></i><span>Пас</span></button>
                         <button class="match-sheet-action danger" type="button" data-match-event="conceded"><i class="fa-solid fa-circle-down"></i><span>Пропустили</span></button>
-                        <button class="match-sheet-action penalty" type="button" data-match-event="penalty"><i class="fa-solid fa-stopwatch"></i><span>Удаление</span></button>
-                        <button class="match-sheet-action penalty" type="button" data-match-event="opponentPenalty"><i class="fa-solid fa-user-minus"></i><span>Удаление соперника</span></button>
-                        <button class="match-sheet-action" type="button" data-match-event="block"><i class="fa-solid fa-shield-halved"></i><span>Блок броска</span></button>
+                        <button class="match-sheet-action penalty" type="button" data-match-event="penalty" data-match-column="penalties"><i class="fa-solid fa-stopwatch"></i><span>Удаление</span></button>
+                        <button class="match-sheet-action penalty" type="button" data-match-event="opponentPenalty" data-match-column="opponent-penalties"><i class="fa-solid fa-user-minus"></i><span>Удаление соперника</span></button>
                     </div>
                 </div>
 
@@ -10873,6 +10880,7 @@ const MATCH_SHEET_EVENTS = {
     faceoffLoss: { label: 'Вбрасывание -', field: 'faceoffLosses' },
     shot: { label: 'Бросок', field: 'shots' },
     goal: { label: 'Забили', field: 'goals', multi: true },
+    assist: { label: 'Пас', totalField: 'assists' },
     conceded: { label: 'Пропустили', field: 'conceded', multi: true },
     penalty: { label: 'Удаление', field: 'penalties' },
     opponentPenalty: { label: 'Удаление соперника', field: 'opponentPenalties' },
@@ -11915,10 +11923,29 @@ function matchSheetHeader(table, options = {}) {
     table.appendChild(thead);
 }
 
+function matchSheetFaceoffValue(state) {
+    const wins = (state.faceoffWins || []).reduce((sum, value) => sum + safeStatNumber(value), 0);
+    const losses = (state.faceoffLosses || []).reduce((sum, value) => sum + safeStatNumber(value), 0);
+    return wins || losses ? `${wins}/${losses}` : String(state.faceoffsTotal || '0/0');
+}
+
+function matchSheetFaceoffPair(state) {
+    const visible = matchSheetFaceoffValue(state);
+    const pair = visible.match(/^(\d+)\s*\/\s*(\d+)$/);
+    return pair ? { wins: Number(pair[1]), losses: Number(pair[2]) } : { wins: safeStatNumber(visible), losses: 0 };
+}
+
+function matchSheetOpponentPenaltyValue(state) {
+    const total = (state.opponentPenalties || []).reduce((sum, value) => sum + safeStatNumber(value), 0);
+    return total || String(state.opponentPenaltyTotal || '');
+}
+
 function matchSheetTotalValue(state, field) {
     if (field === 'penaltyTotal') return state.penalties.reduce((sum, value) => sum + value, 0);
+    if (field === 'opponentPenaltyTotal') return matchSheetOpponentPenaltyValue(state);
     if (field === 'goalsTotal') return state.goals.reduce((sum, value) => sum + value, 0);
     if (field === 'shotsTotal') return state.shots.reduce((sum, value) => sum + value, 0);
+    if (field === 'faceoffsTotal') return matchSheetFaceoffValue(state);
     return state[field] ?? '';
 }
 
@@ -12107,6 +12134,7 @@ function applyMatchSheetEvent(event, direction) {
         const state = direction > 0 ? matchSheetPlayerState(id) : matchSheetState.players[id];
         if (!state) return;
         if (config.field) state[config.field][periodIndex] = Math.max(0, state[config.field][periodIndex] + direction);
+        if (config.totalField) state[config.totalField] = String(Math.max(0, safeStatNumber(state[config.totalField]) + direction));
     });
 }
 
@@ -13201,11 +13229,11 @@ function renderMatchSheetPdfPages(sourceRecord = null) {
         { label: 'БОЛ', weight: 170, value: (_, state) => state.powerPlay || '—' },
         { label: 'МЕН', weight: 170, value: (_, state) => state.shortHanded || '—' },
         { label: 'ШТР −', weight: 150, value: (_, state) => matchSheetTotalValue(state, 'penaltyTotal') },
-        { label: 'ШТР +', weight: 150, value: (_, state) => state.opponentPenaltyTotal || '—' },
+        { label: 'ШТР +', weight: 150, value: (_, state) => matchSheetTotalValue(state, 'opponentPenaltyTotal') || '—' },
         { label: 'ГОЛ', weight: 110, value: (_, state) => matchSheetTotalValue(state, 'goalsTotal') },
         { label: 'ПАС', weight: 110, value: (_, state) => state.assists || '—' },
         { label: 'БР', weight: 110, value: (_, state) => matchSheetTotalValue(state, 'shotsTotal') },
-        { label: 'ВБР', weight: 190, value: (_, state) => state.faceoffsTotal || '—' },
+        { label: 'ВБР', weight: 190, value: (_, state) => matchSheetTotalValue(state, 'faceoffsTotal') || '—' },
         { label: 'ОЧКИ В ММ', weight: 250, value: (_, state) => state.mmPoints || '—' }
     ];
     const weightTotal = definitions.reduce((sum, item) => sum + item.weight, 0);
@@ -13301,11 +13329,11 @@ function renderArchivedMatchTable(record, target) {
             state.powerPlay || '—',
             state.shortHanded || '—',
             matchSheetTotalValue(state, 'penaltyTotal'),
-            state.opponentPenaltyTotal || '—',
+            matchSheetTotalValue(state, 'opponentPenaltyTotal') || '—',
             matchSheetTotalValue(state, 'goalsTotal'),
             state.assists || '—',
             matchSheetTotalValue(state, 'shotsTotal'),
-            state.faceoffsTotal || '—',
+            matchSheetTotalValue(state, 'faceoffsTotal') || '—',
             state.mmPoints || '—'
         ].forEach(value => appendCell(row, String(value), 'match-sheet-value'));
         tbody.appendChild(row);
@@ -13337,7 +13365,7 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
             player,
             games: 0, plus: 0, minus: 0, powerPlay: 0, shortHanded: 0,
             penaltyTotal: 0, opponentPenaltyTotal: 0, goalsTotal: 0, assists: 0,
-            shotsTotal: 0, faceoffsTotal: 0, mmPoints: 0
+            shotsTotal: 0, faceoffWins: 0, faceoffLosses: 0, mmPoints: 0
         };
         current.games += safeStatNumber(state.games);
         current.plus += safeStatNumber(state.plus);
@@ -13345,11 +13373,13 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
         current.powerPlay += safeStatNumber(state.powerPlay);
         current.shortHanded += safeStatNumber(state.shortHanded);
         current.penaltyTotal += safeStatNumber(matchSheetTotalValue(state, 'penaltyTotal'));
-        current.opponentPenaltyTotal += safeStatNumber(state.opponentPenaltyTotal);
+        current.opponentPenaltyTotal += safeStatNumber(matchSheetTotalValue(state, 'opponentPenaltyTotal'));
         current.goalsTotal += safeStatNumber(matchSheetTotalValue(state, 'goalsTotal'));
         current.assists += safeStatNumber(state.assists);
         current.shotsTotal += safeStatNumber(matchSheetTotalValue(state, 'shotsTotal'));
-        current.faceoffsTotal += safeStatNumber(state.faceoffsTotal);
+        const faceoffs = matchSheetFaceoffPair(state);
+        current.faceoffWins += faceoffs.wins;
+        current.faceoffLosses += faceoffs.losses;
         current.mmPoints += safeStatNumber(state.mmPoints);
         rows.set(key, current);
     }));
@@ -13367,7 +13397,7 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
         appendCell(row, `${total.player.number ? `№${total.player.number} ` : ''}${total.player.name || rosterRoleLabel(total.player.role)}`, 'match-sheet-player-cell');
         [total.games, total.plus, total.minus, total.powerPlay, total.shortHanded,
             total.penaltyTotal, total.opponentPenaltyTotal, total.goalsTotal, total.assists,
-            total.shotsTotal, total.faceoffsTotal, total.mmPoints
+            total.shotsTotal, `${total.faceoffWins}/${total.faceoffLosses}`, total.mmPoints
         ].forEach(value => appendCell(row, String(value), 'match-sheet-value'));
         tbody.appendChild(row);
     });
