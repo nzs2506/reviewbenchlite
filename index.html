@@ -2678,6 +2678,8 @@
         white-space: normal; overflow-wrap: normal; text-transform: none;
     }
     .match-sheet-header-actions .match-sheet-action i { width: 18px; height: 18px; }
+    .match-sheet-header-actions.faceoff-actions { flex-direction: row; }
+    .match-sheet-table .faceoff-actions .match-sheet-action { flex: 1 1 0; padding: 4px 1px; }
     .match-sheet-table thead th { vertical-align: bottom; }
     .match-sheet-wrap {
         border: 1px solid #262a32;
@@ -4817,9 +4819,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.80" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.81" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.80</span>
+            <span class="version-tooltip">v0.9.81</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -10906,9 +10908,9 @@ const MATCH_SHEET_EVENTS = {
     faceoffWin: { label: 'Вбрасывание +', field: 'faceoffWins' },
     faceoffLoss: { label: 'Вбрасывание -', field: 'faceoffLosses' },
     shot: { label: 'Бросок', field: 'shots' },
-    goal: { label: 'Забили', field: 'goals', multi: true },
+    goal: { label: 'Забили', field: 'goals', totalField: 'plus', multi: true },
     assist: { label: 'Пас', totalField: 'assists' },
-    conceded: { label: 'Пропустили', field: 'conceded', multi: true },
+    conceded: { label: 'Пропустили', field: 'conceded', totalField: 'minus', multi: true },
     penalty: { label: 'Удаление', field: 'penalties' },
     opponentPenalty: { label: 'Удаление соперника', field: 'opponentPenalties' },
     block: { label: 'Блок броска', field: 'blocks' }
@@ -11947,18 +11949,20 @@ function matchSheetHeader(table, options = {}) {
         const th = document.createElement('th');
         if (options.resizable) {
             const events = {
-                'Штр −': ['penalty'], 'Штр +': ['opponentPenalty'], 'Гол': ['goal'],
+                '+': ['goal'], '−': ['conceded'], 'Штр −': ['penalty'], 'Штр +': ['opponentPenalty'],
                 'Пас': ['assist'], 'Бр': ['shot'], 'Вбр': ['faceoffWin', 'faceoffLoss']
             }[label] || [];
             if (events.length) {
                 const actions = document.createElement('div');
                 actions.className = 'match-sheet-header-actions';
+                if (label === 'Вбр') actions.classList.add('faceoff-actions');
                 events.forEach(type => {
                     const template = document.querySelector(`#matchSheetActions [data-match-event="${type}"]`);
                     if (template) {
                         const button = template.cloneNode(true);
                         button.title = template.textContent.trim();
-                        const shortLabel = { faceoffWin: 'Выиграно', faceoffLoss: 'Проиграно', opponentPenalty: 'Штраф соперника' }[type];
+                        button.setAttribute('aria-label', button.title);
+                        const shortLabel = { faceoffWin: 'В+', faceoffLoss: 'В−', opponentPenalty: 'Штраф соперника' }[type];
                         if (shortLabel) button.querySelector('span').textContent = shortLabel;
                         actions.appendChild(button);
                     }
@@ -11969,13 +11973,6 @@ function matchSheetHeader(table, options = {}) {
         th.appendChild(document.createTextNode(label));
         groups.appendChild(th);
     });
-    if (options.resizable) {
-        const conceded = document.querySelector('#matchSheetActions [data-match-event="conceded"]');
-        const actions = document.createElement('div');
-        actions.className = 'match-sheet-header-actions';
-        if (conceded) actions.appendChild(conceded.cloneNode(true));
-        player.prepend(actions);
-    }
     thead.append(groups);
     table.appendChild(thead);
 }
