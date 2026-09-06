@@ -2392,8 +2392,7 @@
         min-height: 0;
     }
     .match-sheet-panel.is-fullscreen .match-sheet-roster-panel,
-    .match-sheet-panel.is-fullscreen .match-sheet-roster-toggle,
-    .match-sheet-panel.is-fullscreen .match-sheet-goalies {
+    .match-sheet-panel.is-fullscreen .match-sheet-roster-toggle {
         display: none !important;
     }
     .match-sheet-panel.is-fullscreen .match-sheet-footer { grid-template-columns: 1fr; }
@@ -2921,7 +2920,7 @@
     }
     .match-sheet-footer {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(290px, .7fr);
+        grid-template-columns: minmax(0, 1fr);
         gap: 12px;
     }
     .match-sheet-log,
@@ -2941,6 +2940,13 @@
     }
     .match-sheet-log-list,
     .match-sheet-goalie-list { display: grid; gap: 6px; }
+    .match-sheet-goalies { min-width: 0; order: -1; }
+    .match-sheet-goalie-list { overflow-x: auto; }
+    .match-sheet-goalie-table { width: 100%; min-width: 1050px; border-collapse: collapse; table-layout: fixed; color: #e8edf5; }
+    .match-sheet-goalie-table th, .match-sheet-goalie-table td { padding: 7px 4px; border: 1px solid #303641; text-align: center; }
+    .match-sheet-goalie-table th:first-child, .match-sheet-goalie-table td:first-child { width: 210px; text-align: left; }
+    .match-sheet-goalie-table th { font-size: 11px; color: #aab3c1; }
+    .match-sheet-goalie-table input { box-sizing: border-box; width: 100%; min-width: 0; background: #0f1318; border: 1px solid #303641; border-radius: 5px; color: #e8edf5; padding: 7px 2px; text-align: center; }
     .match-sheet-log-item,
     .match-sheet-goalie-row {
         min-height: 34px;
@@ -4819,9 +4825,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.81" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.82" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.81</span>
+            <span class="version-tooltip">v0.9.82</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5322,7 +5328,8 @@
                         <div class="match-sheet-log-list" id="matchSheetLog"></div>
                     </section>
                     <section class="match-sheet-goalies">
-                        <h3 class="match-sheet-subtitle">Вратари</h3>
+                        <h3 class="match-sheet-subtitle">Вратари — статистика этого матча</h3>
+                        <p class="match-sheet-log-empty">Данные сохраняются кнопкой «Сохранить матч». «—» означает, что показатель ещё не получен или не введён.</p>
                         <div class="match-sheet-goalie-list" id="matchSheetGoalies"></div>
                     </section>
                 </div>
@@ -10940,6 +10947,7 @@ function emptyMatchSheetPlayer() {
 
 function normalizeMatchSheetPlayer(value) {
     const normalized = emptyMatchSheetPlayer();
+    normalized.goalieStats = normalizeMatchGoalieStats(value?.goalieStats);
     MATCH_SHEET_PERIOD_FIELDS.forEach(field => {
         const source = Array.isArray(value?.[field]) ? value[field] : [];
         normalized[field] = [0, 1, 2].map(index => Math.max(0, Math.round(safeStatNumber(source[index]))));
@@ -11450,6 +11458,12 @@ async function importKhlMatchStats(matchId) {
             }
             if (!player) return;
             if (player.role === 'goalie') {
+                const sheet = matchSheetPlayerState(player.id);
+                const importedGoalie = { ...(entry.goalieStats || {}) };
+                if (entry.goalieGames !== undefined) importedGoalie.games = entry.goalieGames;
+                if (entry.goaliePim !== undefined) importedGoalie.pim = entry.goaliePim;
+                if (entry.goalieIceMinutes !== undefined) importedGoalie.ice = formatIceMinutesValue(entry.goalieIceMinutes);
+                sheet.goalieStats = normalizeMatchGoalieStats({ ...sheet.goalieStats, ...importedGoalie });
                 if (addToSeasonTotals) {
                     player.goalieGames += Math.max(0, Math.round(safeStatNumber(entry.goalieGames)));
                     player.goaliePim += Math.max(0, Math.round(safeStatNumber(entry.goaliePim)));
@@ -12319,27 +12333,63 @@ async function toggleMatchSheetFullscreen() {
     }
 }
 
+const MATCH_GOALIE_COLUMNS = [
+    ['games', 'И', 'Игры'], ['wins', 'В', 'Победы'], ['losses', 'П', 'Поражения'],
+    ['shootoutGames', 'ИБ', 'Игры с буллитами'], ['shotsAgainst', 'БВ', 'Броски по воротам'],
+    ['goalsAgainst', 'ПШ', 'Пропущенные шайбы'], ['saves', 'ОБ', 'Отражённые броски'],
+    ['savePercent', '%ОБ', 'Процент отражённых бросков'], ['gaa', 'КН', 'Коэффициент надёжности'],
+    ['goals', 'Ш', 'Шайбы'], ['assists', 'А', 'Передачи'], ['shutouts', 'И«0»', 'Игры на ноль'],
+    ['pim', 'Штр', 'Штрафные минуты'], ['ice', 'ВП', 'Время на площадке']
+];
+
+function normalizeMatchGoalieStats(value) {
+    const stats = {};
+    MATCH_GOALIE_COLUMNS.forEach(([key]) => {
+        const v = value?.[key];
+        stats[key] = v === undefined || v === null || v === '' ? ''
+            : key === 'ice' ? (/^\d{1,3}:[0-5]\d$/.test(String(v)) ? String(v) : '')
+            : Number.isFinite(Number(v)) ? String(Math.max(0, Number(v))) : '';
+    });
+    return stats;
+}
+
 function renderMatchSheetGoalies() {
     const target = document.getElementById('matchSheetGoalies');
     if (!target) return;
     target.innerHTML = '';
-    const aggregateMap = goalieAggregatesByName();
     const goalies = rosterPlayers.filter(player => player.role === 'goalie').sort(rosterSort);
     if (!goalies.length) {
         target.innerHTML = '<div class="match-sheet-log-empty">Вратари добавляются на странице «Статистика».</div>';
         return;
     }
-    goalies.forEach(player => {
-        const stats = combinedGoalieStats(player, aggregateMap);
-        const row = document.createElement('div');
-        row.className = 'match-sheet-goalie-row';
-        const name = document.createElement('strong');
-        name.textContent = `${player.number ? `№${player.number} ` : ''}${player.name || 'Вратарь'}`;
-        const meta = document.createElement('span');
-        meta.textContent = `${stats.games} И · ${stats.saves} ОБ · ${stats.sv.toFixed(1)}% · ${stats.ice}`;
-        row.append(name, meta);
-        target.appendChild(row);
+    const table = document.createElement('table');
+    table.className = 'match-sheet-goalie-table';
+    table.setAttribute('aria-label', 'Вратари — статистика матча');
+    const head = table.createTHead().insertRow();
+    [['name', 'Вратарь / №', 'Вратарь'], ...MATCH_GOALIE_COLUMNS].forEach(([, label, title]) => {
+        const th = document.createElement('th'); th.textContent = label; th.title = title; th.scope = 'col'; head.appendChild(th);
     });
+    const body = table.createTBody();
+    goalies.forEach(player => {
+        const stats = normalizeMatchGoalieStats(matchSheetState.players[player.id]?.goalieStats);
+        const row = body.insertRow();
+        const name = row.insertCell();
+        name.textContent = `${player.number ? `№${player.number} ` : ''}${player.name || 'Вратарь'}`;
+        MATCH_GOALIE_COLUMNS.forEach(([key, , title]) => {
+            const input = document.createElement('input');
+            input.type = 'text'; input.inputMode = key === 'ice' ? 'text' : 'decimal';
+            input.value = stats[key]; input.placeholder = '—';
+            input.setAttribute('aria-label', `${player.name}: ${title}`);
+            input.addEventListener('change', () => {
+                const state = matchSheetPlayerState(player.id);
+                state.goalieStats = normalizeMatchGoalieStats({ ...state.goalieStats, [key]: input.value });
+                input.value = state.goalieStats[key];
+                persistMatchSheet();
+            });
+            row.insertCell().appendChild(input);
+        });
+    });
+    target.appendChild(table);
 }
 
 function renderMatchSheetRosterManager() {
