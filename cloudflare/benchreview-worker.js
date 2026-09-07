@@ -183,10 +183,10 @@ function normalizeKhlAdmiralMatch(value) {
   };
 }
 
-async function listKhlAdmiralMatches(env, seasonId) {
+async function listKhlAdmiralMatches(env, seasonId, fresh = false) {
   const cacheKey = `khl:admiral:v3:${seasonId || ADMIRAL_KHL_SEASON_ID}:matches`;
   const cached = await env.BENCHREVIEW_KV.get(cacheKey, 'json');
-  if (cached?.matches?.length && Date.now() - Date.parse(cached.updatedAt || 0) < 6 * 60 * 60 * 1000) {
+  if (!fresh && cached?.matches?.length && Date.now() - Date.parse(cached.updatedAt || 0) < 6 * 60 * 60 * 1000) {
     return cached;
   }
   const response = await fetch(khlProxyUrl({ season_id: seasonId || ADMIRAL_KHL_SEASON_ID }));
@@ -213,9 +213,10 @@ function normalizeKhlMatchPlayer(player, teamId, goals, penalties) {
   const assistsForPlayer = goals.reduce((sum, goal) => sum + (Array.isArray(goal.assistants)
     ? goal.assistants.filter(findByIdentity).length
     : 0), 0);
-  const pim = penalties
+  const pimFromViolations = penalties
     .filter(item => findByIdentity(item.violator))
     .reduce((sum, item) => sum + (Number(item.penalty_time) || 0), 0);
+  const pim = Math.max(pimFromViolations, Math.round(stats.pim || 0));
   const role = player?.role_key === 'goaltender' ? 'goalie' : player?.role_key === 'defensemen' ? 'defense' : 'forward';
   const hasIceTime = stats.toi > 0;
   return {
@@ -239,35 +240,49 @@ function normalizeKhlMatchPlayer(player, teamId, goals, penalties) {
   };
 }
 
-async function getKhlAdmiralMatchStats(env, gameId) {
+async function getKhlAdmiralMatchStats(env, gameId, fresh = false) {
   const cleanGameId = String(gameId || '').trim();
   if (!/^\d+$/.test(cleanGameId)) throw new Error('invalid game id');
   const cacheKey = `khl:admiral:${ADMIRAL_KHL_SEASON_ID}:match:${cleanGameId}:stats`;
   const cached = await env.BENCHREVIEW_KV.get(cacheKey, 'json');
-  if (cached?.players?.length && Date.now() - Date.parse(cached.updatedAt || 0) < 24 * 60 * 60 * 1000) return cached;
+  const cacheTtlMs = cached?.final ? 24 * 60 * 60 * 1000 : 45 * 1000;
+  if (!fresh && cached?.players?.length && Date.now() - Date.parse(cached.updatedAt || 0) < cacheTtlMs) return cached;
   const response = await fetch(`${KHL_MOBILE_BASE}/event_v2.json?id=${encodeURIComponent(cleanGameId)}&locale=ru`);
   if (!response.ok) throw new Error(`KHL match API ${response.status}`);
   const data = await response.json();
   const event = data?.event;
   if (!event || String(event.stage_id || '') !== ADMIRAL_KHL_SEASON_ID) throw new Error('match is outside the 2026/27 season');
+  if (String(event.id || '') !== cleanGameId) throw new Error('KHL returned a different match');
   const teams = [event.team_a, event.team_b].filter(Boolean);
   const admiral = teams.find(team => String(team.id) === ADMIRAL_KHL_TEAM_ID);
   if (!admiral) throw new Error('Admiral team was not found in the match');
-  const goals = Array.isArray(event.goals) ? event.goals.filter(goal => String(goal?.author?.team_id || '') === ADMIRAL_KHL_TEAM_ID) : [];
+  const opponent = teams.find(team => String(team.id) !== ADMIRAL_KHL_TEAM_ID) || {};
+  const goals = Array.isArray(event.goals)
+    ? event.goals.filter(goal => String(goal?.author?.team_id || '') === ADMIRAL_KHL_TEAM_ID && goal?.status_abbr !== 'шб')
+    : [];
   const penalties = Array.isArray(event.violations) ? event.violations.filter(item => String(item?.violator?.team_id || '') === ADMIRAL_KHL_TEAM_ID) : [];
   const players = (Array.isArray(admiral.players) ? admiral.players : [])
     .map(player => normalizeKhlMatchPlayer(player, admiral.id, goals, penalties))
     .filter(player => player.games || player.goals || player.assists || player.shots || player.faceoffs || player.shifts || player.pim || player.goalieGames);
+  const state = String(event.game_state_key || '');
   const payload = {
     ok: true,
     gameId: cleanGameId,
     seasonId: ADMIRAL_KHL_SEASON_ID,
     teamId: ADMIRAL_KHL_TEAM_ID,
-    final: event.game_state_key === 'finished',
+    final: state === 'finished',
+    state,
+    score: String(event.score || ''),
+    startsAt: event.start_at ? new Date(Number(event.start_at) || event.start_at).toISOString() : '',
+    homeGoals: Number(event.team_a?.gf || 0) || 0,
+    awayGoals: Number(event.team_b?.gf || 0) || 0,
+    admiralGoals: Number(admiral.gf || 0) || 0,
+    opponentGoals: Number(opponent.gf || 0) || 0,
+    opponentShots: Number(opponent.shots || 0) || 0,
     updatedAt: new Date().toISOString(),
     players
   };
-  await env.BENCHREVIEW_KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: 24 * 60 * 60 });
+  await env.BENCHREVIEW_KV.put(cacheKey, JSON.stringify(payload), { expirationTtl: payload.final ? 24 * 60 * 60 : 120 });
   return payload;
 }
 
@@ -439,7 +454,7 @@ export default {
     if (url.pathname === '/api/session') return json({ ok: true, user: session.user });
     if (url.pathname === '/api/khl/admiral/matches' && request.method === 'GET') {
       try {
-        return json(await listKhlAdmiralMatches(env, url.searchParams.get('season') || ADMIRAL_KHL_SEASON_ID));
+        return json(await listKhlAdmiralMatches(env, url.searchParams.get('season') || ADMIRAL_KHL_SEASON_ID, url.searchParams.get('fresh') === '1'));
       } catch (err) {
         return json({ ok: false, error: String(err?.message || err) }, 502);
       }
@@ -447,7 +462,7 @@ export default {
     if (url.pathname.startsWith('/api/khl/admiral/matches/') && url.pathname.endsWith('/stats') && request.method === 'GET') {
       try {
         const gameId = url.pathname.split('/').filter(Boolean).at(-2);
-        return json(await getKhlAdmiralMatchStats(env, gameId));
+        return json(await getKhlAdmiralMatchStats(env, gameId, url.searchParams.get('fresh') === '1'));
       } catch (err) {
         return json({ ok: false, error: String(err?.message || err) }, 502);
       }

@@ -4825,9 +4825,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.82" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.83" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.82</span>
+            <span class="version-tooltip">v0.9.83</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5300,6 +5300,11 @@
                     <button class="match-sheet-reset" id="btnMatchSheetReset" type="button"><i class="fa-regular fa-trash-can"></i>Новый лист</button>
                 </div>
 
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0">
+                    <button class="matches-action primary" id="btnMatchSheetKhl" type="button">Обновить с КХЛ</button>
+                    <button class="matches-action" id="btnMatchSheetNearest" type="button">Ближайший матч</button>
+                    <span id="matchSheetKhlInfo" role="status" style="font-size:12px;color:#aab3c1"></span>
+                </div>
                 <div class="match-sheet-entry">
                     <div class="match-sheet-entry-head">
                         <div class="match-sheet-selection" id="matchSheetSelection">Сначала выберите игрока в таблице</div>
@@ -10299,6 +10304,7 @@ async function initCloudStateStorage() {
     renderGoaliePage();
     renderStatsPage();
     renderMatchesPage();
+    ensureAdmiralScheduleFresh();
 }
 function loadTrainingRecords() {
     trainingRecords = readLocalTrainingRecords();
@@ -11151,8 +11157,11 @@ function khlProxyUrl(params) {
     return `${KHL_PROXY_BASE}${encodeURIComponent(source.toString())}`;
 }
 
-async function fetchAdmiralMatchesFromSource() {
-    const cloudUrl = cloudStateUrl(`/api/khl/admiral/matches?season=${ADMIRAL_KHL_SEASON_ID}`);
+async function fetchAdmiralMatchesFromSource(fresh = false) {
+    // Свежесть теперь обеспечивает сам Worker по параметру ?fresh=1, поэтому облачный путь
+    // используется всегда, когда есть вход. Прямой прокси из браузера закрыт CORS —
+    // он остаётся лишь запасным путём для не-браузерных клиентов.
+    const cloudUrl = cloudStateUrl(`/api/khl/admiral/matches?season=${ADMIRAL_KHL_SEASON_ID}${fresh ? '&fresh=1' : ''}`);
     if (cloudUrl && benchAuthToken) {
         try {
             const response = await authFetch(cloudUrl, { method: 'GET', mode: 'cors' });
@@ -11168,7 +11177,7 @@ async function fetchAdmiralMatchesFromSource() {
         const data = await response.json();
         return data?.SiteKit?.Schedule || [];
     } catch (err) {
-        throw new Error('нужно обновить Cloudflare Worker для загрузки KHL');
+        throw new Error('не удалось загрузить расписание КХЛ — нужен вход в облако');
     }
 }
 
@@ -11194,6 +11203,206 @@ function matchSheetIsRelatedToMatch(match) {
     if (!match || !matchSheetState.date || !matchSheetState.opponent) return false;
     return String(match.date || '').slice(0, 10) === String(matchSheetState.date || '').slice(0, 10)
         && matchSheetOpponentKey(match.opponent) === matchSheetOpponentKey(matchSheetState.opponent);
+}
+
+// Колонки матчевого листа, которые заполняет кнопка «Обновить с КХЛ».
+// Всё остальное (+/−, Бол, Мен, Штр +, Очки в ММ) ведётся вручную и не трогается.
+const KHL_SHEET_SKATER_COLUMNS = 'Игр, Штр −, Гол, Пас, Бр, Вбр (выигр./проигр.)';
+
+let matchSheetInitialMatchResolved = false;
+let admiralScheduleRefreshing = null;
+
+function nearestAdmiralMatch(now = Date.now()) {
+    const today = dateInTimeZone(new Date(now).toISOString());
+    const upcoming = admiralMatches
+        .filter(m => m && m.date && String(m.date).slice(0, 10) >= today)
+        .sort(admiralMatchSort);
+    // Матч сегодня — самый ближний; иначе первый по дате вперёд.
+    return upcoming.find(m => String(m.date).slice(0, 10) === today) || upcoming[0] || null;
+}
+
+function matchSheetIsBlank() {
+    return !matchSheetState.archiveId
+        && !(matchSheetState.events || []).length
+        && !Object.values(matchSheetState.players || {}).some(matchSheetPlayerHasData);
+}
+
+// Подставляет в пустой лист ближайший матч по дате. Занятый/сохранённый лист не трогает.
+// Пока расписание не подгрузилось (nearestAdmiralMatch === null) — не помечает решённым, чтобы повторить позже.
+function maybeResolveNearestMatchSheet() {
+    if (matchSheetInitialMatchResolved) return false;
+    if (!matchSheetIsBlank()) { matchSheetInitialMatchResolved = true; return false; }
+    const nearest = nearestAdmiralMatch();
+    if (!nearest) return false;
+    matchSheetInitialMatchResolved = true;
+    const sameDate = String(matchSheetState.date || '').slice(0, 10) === String(nearest.date || '').slice(0, 10);
+    const sameOpp = matchSheetOpponentKey(matchSheetState.opponent) === matchSheetOpponentKey(nearest.opponent);
+    if (sameDate && sameOpp) return false;
+    matchSheetState.date = String(nearest.date || '').slice(0, 10);
+    matchSheetState.opponent = String(nearest.opponent || '').trim();
+    matchSheetIsDraft = true;
+    return true;
+}
+
+// Тихо подтягивает свежее расписание КХЛ (для «ближайшего матча» и поиска gameId).
+// Работает только при входе в облако; без входа остаётся то, что в localStorage.
+function ensureAdmiralScheduleFresh() {
+    if (admiralScheduleRefreshing) return admiralScheduleRefreshing;
+    // Расписание тянется через облачный Worker — без входа тихо выходим (прямой прокси закрыт CORS).
+    if (!benchAuthToken) return Promise.resolve();
+    admiralScheduleRefreshing = (async () => {
+        try {
+            const incoming = await fetchAdmiralMatchesFromSource(true);
+            mergeAdmiralMatches(incoming);
+            persistAdmiralMatches();
+            syncAdmiralMatchesToCalendar();
+            if (document.body.dataset.statsPage === 'sheet') {
+                if (maybeResolveNearestMatchSheet()) renderMatchSheet();
+                renderMatchSheetKhlInfo();
+            }
+            renderMatchesPage();
+        } catch (_) {
+            // офлайн или нет входа — не шумим
+        } finally {
+            admiralScheduleRefreshing = null;
+        }
+    })();
+    return admiralScheduleRefreshing;
+}
+
+function renderMatchSheetKhlInfo() {
+    const info = document.getElementById('matchSheetKhlInfo');
+    if (!info) return;
+    const match = admiralMatches.find(matchSheetIsRelatedToMatch);
+    info.textContent = match
+        ? `${admiralMatchDateLabel(match)} · ${admiralMatchTimeLabel(match) || 'время уточняется'} МСК · ${admiralMatchTitle(match)} · ${match.homeGoals}:${match.awayGoals} · ${match.final ? 'Завершён' : match.status || 'Ожидается'}`
+        : (matchSheetState.date && matchSheetState.opponent
+            ? 'В календаре КХЛ нет матча на эту дату с этим соперником.'
+            : 'Укажите дату и соперника или нажмите «Ближайший матч».');
+}
+
+async function openNearestMatchSheet() {
+    const info = document.getElementById('matchSheetKhlInfo');
+    const button = document.getElementById('btnMatchSheetNearest');
+    if (button) button.disabled = true;
+    if (info) info.textContent = 'Ищу ближайший матч…';
+    try {
+        await ensureAdmiralScheduleFresh(); // при входе обновит календарь, иначе тихо использует localStorage
+        const match = nearestAdmiralMatch();
+        if (!match) throw new Error('Ближайший матч не найден. Обновите календарь КХЛ на странице «Матчи».');
+        if (!matchSheetIsRelatedToMatch(match)
+            && Object.values(matchSheetState.players || {}).some(matchSheetPlayerHasData)
+            && !matchSheetIsDraft) {
+            if (!await showConfirm('Перейти к ближайшему матчу? Несохранённые изменения текущего листа будут потеряны.', { title: 'Ближайший матч', okLabel: 'Перейти', cancelLabel: 'Остаться' })) return;
+        }
+        matchSheetInitialMatchResolved = true;
+        await openKhlMatchSheet(match);
+        renderMatchSheetKhlInfo();
+    } catch (err) {
+        if (info) info.textContent = String(err.message || err);
+    } finally {
+        if (button) button.disabled = false;
+    }
+}
+
+async function refreshCurrentMatchFromKhl() {
+    const button = document.getElementById('btnMatchSheetKhl');
+    const info = document.getElementById('matchSheetKhlInfo');
+    const originalSheet = matchSheetState;
+    const originalDate = matchSheetState.date;
+    const originalOpponent = matchSheetState.opponent;
+    const unchanged = () => matchSheetState === originalSheet && matchSheetState.date === originalDate && matchSheetState.opponent === originalOpponent;
+    if (!matchSheetState.date || !matchSheetState.opponent) {
+        info.textContent = 'Сначала укажите дату и соперника матча (или нажмите «Ближайший матч»).';
+        return;
+    }
+    button.disabled = true;
+    info.textContent = 'Запрашиваю данные КХЛ…';
+    try {
+        await ensureAdmiralScheduleFresh(); // подтянуть свежий календарь для поиска gameId (при входе)
+        if (!unchanged()) return;
+        const matches = admiralMatches.filter(matchSheetIsRelatedToMatch);
+        if (!matches.length) throw new Error('В календаре КХЛ нет матча на эту дату с этим соперником. Проверьте дату/соперника.');
+        if (matches.length > 1) throw new Error('На эту дату несколько матчей — уточните соперника.');
+        const match = matches[0];
+        const data = await fetchKhlMatchStats(match, true);
+        if (!unchanged()) return;
+        if (String(data.gameId || match.gameId) !== String(match.gameId)) throw new Error('КХЛ вернул другой матч; данные не внесены.');
+        const cacheAgeMs = data.updatedAt ? Date.now() - Date.parse(data.updatedAt) : Infinity;
+        if (!(cacheAgeMs < 10 * 60 * 1000)) {
+            throw new Error('Cloudflare Worker отдаёт устаревший кэш КХЛ. Нужно задеплоить обновлённый benchreview-worker.js (npx wrangler deploy).');
+        }
+        // Обновляем карточку матча (счёт, статус, время) и календарь.
+        const stateLabel = { not_yet_started: 'Матч ещё не начался', preview: 'Матч ещё не начался', soon: 'Матч ещё не начался', in_progress: 'Идёт матч', finished: 'Завершён' };
+        if (data.state) {
+            match.final = Boolean(data.final);
+            match.status = stateLabel[data.state] || match.status || '';
+            if (data.startsAt) match.startsAt = data.startsAt;
+            if (Number.isFinite(data.homeGoals)) match.homeGoals = data.homeGoals;
+            if (Number.isFinite(data.awayGoals)) match.awayGoals = data.awayGoals;
+            match.updatedAt = new Date().toISOString();
+            persistAdmiralMatches();
+            syncAdmiralMatchesToCalendar();
+        }
+        renderMatchSheetKhlInfo();
+        const timing = info.textContent;
+        if (data.state && data.state !== 'in_progress' && data.state !== 'finished') {
+            info.textContent = `${timing} · данные не вносились — матч ещё не начался.`;
+            return;
+        }
+        const num = v => Math.max(0, Math.round(Number(v) || 0));
+        const players = Array.isArray(data.players) ? data.players : [];
+        const goalieIce = players.filter(e => e.role === 'goalie' && (num(e.goalieGames) || (Number(e.goalieIceMinutes) || 0) > 0));
+        let applied = 0;
+        let missed = 0;
+        players.forEach(entry => {
+            const player = findRosterPlayerForKhl(entry);
+            if (!player) { if (num(entry.games) || num(entry.goalieGames) || num(entry.shots) || num(entry.goals)) missed++; return; }
+            const state = matchSheetPlayerState(player.id);
+            if (player.role === 'goalie') {
+                const g = { ...state.goalieStats };
+                if (num(entry.goalieGames) || (Number(entry.goalieIceMinutes) || 0) > 0) g.games = '1';
+                if (Number.isFinite(Number(entry.goaliePim))) g.pim = String(num(entry.goaliePim));
+                if ((Number(entry.goalieIceMinutes) || 0) > 0) g.ice = formatIceMinutesValue(entry.goalieIceMinutes);
+                // Когда за матч играл ровно один вратарь — БВ/ПШ/ОБ/%ОБ/КН считаются по командным итогам.
+                if (data.final && goalieIce.length === 1 && String(goalieIce[0].id || '') === String(entry.id || '') && Number(data.opponentShots) > 0) {
+                    const shotsAgainst = num(data.opponentShots);
+                    const goalsAgainst = num(data.opponentGoals);
+                    const iceMin = Number(entry.goalieIceMinutes) || 0;
+                    g.shotsAgainst = String(shotsAgainst);
+                    g.goalsAgainst = String(goalsAgainst);
+                    g.saves = String(Math.max(0, shotsAgainst - goalsAgainst));
+                    g.savePercent = String(Math.round((1 - goalsAgainst / shotsAgainst) * 1000) / 10);
+                    if (iceMin > 0) g.gaa = String(Math.round((goalsAgainst * 60 / iceMin) * 100) / 100);
+                }
+                state.goalieStats = normalizeMatchGoalieStats(g);
+            } else {
+                state.games = num(entry.games) || state.games;
+                state.goals = [num(entry.goals), 0, 0];
+                state.shots = [num(entry.shots), 0, 0];
+                state.penalties = [num(entry.pim), 0, 0];
+                state.assists = num(entry.assists) ? String(num(entry.assists)) : '';
+                const fo = num(entry.faceoffs);
+                const fow = Math.min(fo, num(entry.faceoffWins));
+                state.faceoffWins = [fow, 0, 0];
+                state.faceoffLosses = [Math.max(0, fo - fow), 0, 0];
+                state.faceoffsTotal = '';
+            }
+            applied++;
+        });
+        // Импортированные значения — черновик, пока пользователь не нажмёт «Сохранить матч».
+        matchSheetIsDraft = true;
+        persistMatchSheet();
+        renderMatchSheet();
+        renderMatchesPage();
+        const stamp = data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '';
+        info.textContent = `${timing} · Внесено игроков: ${applied}${missed ? `, не найдено в составе: ${missed}` : ''}`
+            + `${stamp ? ` · данные КХЛ на ${stamp}` : ''} · колонки: ${KHL_SHEET_SKATER_COLUMNS}. Проверьте и нажмите «Сохранить матч».`;
+    } catch (err) {
+        if (unchanged()) { renderMatchSheetKhlInfo(); info.textContent = `Ошибка: ${String(err.message || err)}`; }
+    } finally {
+        button.disabled = false;
+    }
 }
 
 function renderMatchSheetMatchSelect() {
@@ -11292,6 +11501,7 @@ function renderMatchesPage() {
     renderMatchArchive();
     renderAdmiralMatches();
     renderMatchSheetMatchSelect();
+    renderMatchSheetKhlInfo();
 }
 
 function upsertAdmiralMatchCalendarPlan(match) {
@@ -11302,7 +11512,7 @@ function upsertAdmiralMatchCalendarPlan(match) {
         planType: 'match',
         place: match.venue || (match.isHome ? 'Владивосток' : match.opponentCity || 'Лёд'),
         scheduledDate: match.date,
-        startTime: admiralMatchTimeLabel(match) || '19:30',
+        startTime: admiralMatchTimeLabel(match),
         endTime: '',
         exerciseIds: [],
         completed: Boolean(match.final),
@@ -11334,7 +11544,7 @@ async function refreshAdmiralMatches() {
     if (status) status.textContent = 'Загружаю календарь KHL...';
     if (button) button.disabled = true;
     try {
-        const incoming = await fetchAdmiralMatchesFromSource();
+        const incoming = await fetchAdmiralMatchesFromSource(true);
         mergeAdmiralMatches(incoming);
         persistAdmiralMatches();
         syncAdmiralMatchesToCalendar();
@@ -11347,8 +11557,8 @@ async function refreshAdmiralMatches() {
     }
 }
 
-async function fetchKhlMatchStats(match) {
-    const cloudUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats`);
+async function fetchKhlMatchStats(match, fresh = false) {
+    const cloudUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats${fresh ? '?fresh=1' : ''}`);
     if (!cloudUrl || !benchAuthToken) throw new Error('нужно войти в облако для загрузки статистики');
     const response = await authFetch(cloudUrl, { method: 'GET', mode: 'cors' });
     const data = await response.json().catch(() => ({}));
@@ -11383,11 +11593,13 @@ function matchSheetPlayerHasData(value) {
     const state = normalizeMatchSheetPlayer(value);
     return MATCH_SHEET_PERIOD_FIELDS.some(field => state[field].some(Number))
         || ['games', 'plus', 'minus'].some(field => state[field] > 0)
-        || ['powerPlay', 'shortHanded', 'opponentPenaltyTotal', 'assists', 'faceoffsTotal', 'mmPoints'].some(field => String(state[field] || '').trim());
+        || ['powerPlay', 'shortHanded', 'opponentPenaltyTotal', 'assists', 'faceoffsTotal', 'mmPoints'].some(field => /[1-9а-яa-z]/i.test(String(state[field] || '')))
+        || Object.values(state.goalieStats || {}).some(v => /[1-9]/.test(String(v)));
 }
 
 async function openKhlMatchSheet(match) {
     if (!match) return false;
+    matchSheetInitialMatchResolved = true;
     const opponent = String(match.opponent || (match.isHome ? match.awayName : match.homeName) || 'Соперник').trim();
     const date = String(match.date || (match.startsAt ? match.startsAt.slice(0, 10) : todayInputValue())).slice(0, 10);
     const currentOpponent = String(matchSheetState.opponent || '').trim();
@@ -11475,8 +11687,8 @@ async function importKhlMatchStats(matchId) {
                 const explicitPlus = entry.plus ?? entry.pluses ?? entry.plus_count;
                 const explicitMinus = entry.minus ?? entry.minuses ?? entry.minus_count;
                 sheet.games = Math.max(0, Math.round(safeStatNumber(entry.games || 1)));
-                sheet.plus = explicitPlus === undefined ? Math.max(0, netPlusMinus) : Math.max(0, Math.round(safeStatNumber(explicitPlus)));
-                sheet.minus = explicitMinus === undefined ? Math.max(0, -netPlusMinus) : Math.max(0, Math.round(safeStatNumber(explicitMinus)));
+                if (explicitPlus !== undefined) sheet.plus = Math.max(0, Math.round(safeStatNumber(explicitPlus)));
+                if (explicitMinus !== undefined) sheet.minus = Math.max(0, Math.round(safeStatNumber(explicitMinus)));
                 sheet.goals = [Math.max(0, Math.round(safeStatNumber(entry.goals))), 0, 0];
                 sheet.shots = [Math.max(0, Math.round(safeStatNumber(entry.shots))), 0, 0];
                 sheet.penalties = [Math.max(0, Math.round(safeStatNumber(entry.pim))), 0, 0];
@@ -11648,12 +11860,15 @@ function syncMatchSheetRosterPresence() {
     const skaterIds = new Set(skaters.map(player => player.id));
     const excludedIds = new Set([...matchSheetExcludedSet()].filter(id => skaterIds.has(id)));
     const activeIds = new Set(skaters.filter(player => !excludedIds.has(player.id)).map(player => player.id));
+    // Вратари держат матчевую статистику в matchSheetState.players[id].goalieStats и в таблицу
+    // полевых не входят — их id нельзя вычищать вместе с удалёнными игроками.
+    const goalieIds = new Set(rosterPlayers.filter(player => player.role === 'goalie').map(player => player.id));
     const referencedIds = new Set([
         ...Object.keys(matchSheetState.players || {}),
         ...matchSheetState.events.flatMap(event => matchSheetEventPlayerIds(event))
     ]);
     referencedIds.forEach(id => {
-        if (!activeIds.has(id)) removePlayerFromMatchSheetEvents(id);
+        if (!activeIds.has(id) && !goalieIds.has(id)) removePlayerFromMatchSheetEvents(id);
     });
     matchSheetState.excludedPlayerIds = [...excludedIds];
     const orderedIds = (matchSheetState.order || []).filter(id => activeIds.has(id));
@@ -13080,7 +13295,12 @@ function setStatsPage(page) {
         renderRosterManager();
         renderLineupCandidates();
     }
-    if (statsPage === 'sheet') renderMatchSheet();
+    if (statsPage === 'sheet') {
+        maybeResolveNearestMatchSheet();
+        renderMatchSheet();
+        // Если расписание ещё не подгружено — тянем и повторяем подстановку ближайшего матча.
+        if (!matchSheetInitialMatchResolved) ensureAdmiralScheduleFresh();
+    }
 }
 
 function renderStatsPage() {
@@ -16346,6 +16566,8 @@ document.getElementById('statsSheetPanel').addEventListener('click', e => {
     const action = e.target.closest('[data-match-event]');
     if (action && !action.disabled) recordMatchSheetEvent(action.dataset.matchEvent);
 });
+document.getElementById('btnMatchSheetKhl').addEventListener('click', refreshCurrentMatchFromKhl);
+document.getElementById('btnMatchSheetNearest').addEventListener('click', openNearestMatchSheet);
 document.getElementById('btnMatchSheetRemoveSelected').addEventListener('click', () => {
     removeMatchSheetPlayers([...matchSheetSelectedPlayerIds]);
 });
