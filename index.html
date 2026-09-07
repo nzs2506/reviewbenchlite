@@ -4825,9 +4825,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.83" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.84" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.83</span>
+            <span class="version-tooltip">v0.9.84</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -11206,8 +11206,10 @@ function matchSheetIsRelatedToMatch(match) {
 }
 
 // Колонки матчевого листа, которые заполняет кнопка «Обновить с КХЛ».
-// Всё остальное (+/−, Бол, Мен, Штр +, Очки в ММ) ведётся вручную и не трогается.
-const KHL_SHEET_SKATER_COLUMNS = 'Игр, Штр −, Гол, Пас, Бр, Вбр (выигр./проигр.)';
+// Бол, Мен, Штр +, Очки в ММ ведутся вручную и не трогаются.
+// «+»/«−» приходят из официального протокола khl.ru (в мобильном API их нет).
+const KHL_SHEET_COLUMNS_FULL = 'Игр, +, −, Штр −, Гол, Пас, Бр, Вбр + строка вратаря';
+const KHL_SHEET_COLUMNS_BASE = 'Игр, Штр −, Гол, Пас, Бр, Вбр (без +/− — протокол КХЛ недоступен)';
 
 let matchSheetInitialMatchResolved = false;
 let admiralScheduleRefreshing = null;
@@ -11361,19 +11363,29 @@ async function refreshCurrentMatchFromKhl() {
             const state = matchSheetPlayerState(player.id);
             if (player.role === 'goalie') {
                 const g = { ...state.goalieStats };
-                if (num(entry.goalieGames) || (Number(entry.goalieIceMinutes) || 0) > 0) g.games = '1';
-                if (Number.isFinite(Number(entry.goaliePim))) g.pim = String(num(entry.goaliePim));
-                if ((Number(entry.goalieIceMinutes) || 0) > 0) g.ice = formatIceMinutesValue(entry.goalieIceMinutes);
-                // Когда за матч играл ровно один вратарь — БВ/ПШ/ОБ/%ОБ/КН считаются по командным итогам.
-                if (data.final && goalieIce.length === 1 && String(goalieIce[0].id || '') === String(entry.id || '') && Number(data.opponentShots) > 0) {
-                    const shotsAgainst = num(data.opponentShots);
-                    const goalsAgainst = num(data.opponentGoals);
-                    const iceMin = Number(entry.goalieIceMinutes) || 0;
-                    g.shotsAgainst = String(shotsAgainst);
-                    g.goalsAgainst = String(goalsAgainst);
-                    g.saves = String(Math.max(0, shotsAgainst - goalsAgainst));
-                    g.savePercent = String(Math.round((1 - goalsAgainst / shotsAgainst) * 1000) / 10);
-                    if (iceMin > 0) g.gaa = String(Math.round((goalsAgainst * 60 / iceMin) * 100) / 100);
+                const pg = entry.protocolGoalie;
+                if (pg && num(pg.games) >= 1) {
+                    // Официальный протокол khl.ru — заполняем всю строку вратаря (14 граф).
+                    ['games', 'wins', 'losses', 'shootoutGames', 'shotsAgainst', 'goalsAgainst', 'saves',
+                     'savePercent', 'gaa', 'goals', 'assists', 'shutouts', 'pim', 'ice'].forEach(key => {
+                        const v = pg[key];
+                        if (v !== null && v !== undefined && v !== '') g[key] = String(v);
+                    });
+                } else {
+                    // Фолбэк: из event_v2 достоверны только И/Штр/ВП; БВ/ПШ/ОБ/%ОБ/КН — расчёт по одному вратарю.
+                    if (num(entry.goalieGames) || (Number(entry.goalieIceMinutes) || 0) > 0) g.games = '1';
+                    if (Number.isFinite(Number(entry.goaliePim))) g.pim = String(num(entry.goaliePim));
+                    if ((Number(entry.goalieIceMinutes) || 0) > 0) g.ice = formatIceMinutesValue(entry.goalieIceMinutes);
+                    if (data.final && goalieIce.length === 1 && String(goalieIce[0].id || '') === String(entry.id || '') && Number(data.opponentShots) > 0) {
+                        const shotsAgainst = num(data.opponentShots);
+                        const goalsAgainst = num(data.opponentGoals);
+                        const iceMin = Number(entry.goalieIceMinutes) || 0;
+                        g.shotsAgainst = String(shotsAgainst);
+                        g.goalsAgainst = String(goalsAgainst);
+                        g.saves = String(Math.max(0, shotsAgainst - goalsAgainst));
+                        g.savePercent = String(Math.round((1 - goalsAgainst / shotsAgainst) * 1000) / 10);
+                        if (iceMin > 0) g.gaa = String(Math.round((goalsAgainst * 60 / iceMin) * 100) / 100);
+                    }
                 }
                 state.goalieStats = normalizeMatchGoalieStats(g);
             } else {
@@ -11387,6 +11399,9 @@ async function refreshCurrentMatchFromKhl() {
                 state.faceoffWins = [fow, 0, 0];
                 state.faceoffLosses = [Math.max(0, fo - fow), 0, 0];
                 state.faceoffsTotal = '';
+                // + и − по игроку — только из официального протокола (в event_v2 их нет).
+                if (Number.isFinite(Number(entry.plus))) state.plus = num(entry.plus);
+                if (Number.isFinite(Number(entry.minus))) state.minus = num(entry.minus);
             }
             applied++;
         });
@@ -11396,8 +11411,9 @@ async function refreshCurrentMatchFromKhl() {
         renderMatchSheet();
         renderMatchesPage();
         const stamp = data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '';
+        const cols = data.protocolOk ? KHL_SHEET_COLUMNS_FULL : KHL_SHEET_COLUMNS_BASE;
         info.textContent = `${timing} · Внесено игроков: ${applied}${missed ? `, не найдено в составе: ${missed}` : ''}`
-            + `${stamp ? ` · данные КХЛ на ${stamp}` : ''} · колонки: ${KHL_SHEET_SKATER_COLUMNS}. Проверьте и нажмите «Сохранить матч».`;
+            + `${stamp ? ` · данные КХЛ на ${stamp}` : ''} · колонки: ${cols}. Проверьте и нажмите «Сохранить матч».`;
     } catch (err) {
         if (unchanged()) { renderMatchSheetKhlInfo(); info.textContent = `Ошибка: ${String(err.message || err)}`; }
     } finally {

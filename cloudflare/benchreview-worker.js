@@ -240,6 +240,96 @@ function normalizeKhlMatchPlayer(player, teamId, goals, penalties) {
   };
 }
 
+const KHL_SITE_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0 Safari/537.36';
+
+function parseKhlSetCookies(headers) {
+  const jar = {};
+  const list = typeof headers.getSetCookie === 'function'
+    ? headers.getSetCookie()
+    : (headers.get('set-cookie') ? [headers.get('set-cookie')] : []);
+  for (const line of list) {
+    const m = /^\s*([^=;\s]+)=([^;]*)/.exec(line || '');
+    if (m) jar[m[1]] = m[2];
+  }
+  return jar;
+}
+
+function khlCookieHeader(jar) {
+  return Object.entries(jar).map(([k, v]) => `${k}=${v}`).join('; ');
+}
+
+function khlProtoInt(value) {
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) ? n : null;
+}
+
+function khlProtoNumStr(value) {
+  const s = String(value == null ? '' : value).replace(',', '.').trim();
+  return /^-?\d+(\.\d+)?$/.test(s) ? s : '';
+}
+
+// Официальный протокол матча с khl.ru: даёт +/-, отдельные + и -, и полную строку вратаря.
+// Механика: GET страницы (переживая анти-бот 307-редирект и куки spid/spsc) -> из HTML берём
+// bitrix_sessid -> POST /rest/game/protocol/ с этим sessid. Возвращает {skaters, goalies} по номерам.
+async function fetchKhlGameProtocol(tournament, khlGameId) {
+  const t = String(tournament || '').replace(/\D/g, '');
+  const g = String(khlGameId || '').replace(/\D/g, '');
+  if (!t || !g) return null;
+  const pageUrl = `https://www.khl.ru/game/${t}/${g}/protocol/`;
+  const baseHeaders = { 'User-Agent': KHL_SITE_UA, 'Accept-Language': 'ru-RU,ru;q=0.9', Accept: 'text/html' };
+  const jar = {};
+  let resp = await fetch(pageUrl, { headers: baseHeaders, redirect: 'manual' });
+  Object.assign(jar, parseKhlSetCookies(resp.headers));
+  for (let hop = 0; hop < 4 && resp.status >= 300 && resp.status < 400; hop++) {
+    const loc = resp.headers.get('location') || pageUrl;
+    resp = await fetch(loc, { headers: { ...baseHeaders, Cookie: khlCookieHeader(jar) }, redirect: 'manual' });
+    Object.assign(jar, parseKhlSetCookies(resp.headers));
+  }
+  if (!resp.ok) return null;
+  const html = await resp.text();
+  const sessid = (/bitrix_sessid"\s*:\s*"([a-f0-9]{32})"/i.exec(html) || /bitrix_sessid['"]?\s*,\s*['"]([a-f0-9]{32})['"]/i.exec(html) || [])[1];
+  if (!sessid) return null;
+  const post = await fetch('https://www.khl.ru/rest/game/protocol/', {
+    method: 'POST',
+    headers: {
+      'User-Agent': KHL_SITE_UA,
+      'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      'X-Requested-With': 'XMLHttpRequest',
+      Origin: 'https://www.khl.ru',
+      Referer: pageUrl,
+      Cookie: khlCookieHeader(jar)
+    },
+    body: `values[tournament]=${t}&values[gameid]=${g}&values[is_print]=false&sessid=${sessid}`
+  });
+  if (!post.ok) return null;
+  const body = await post.json().catch(() => null);
+  if (!body || body.status !== 'success' || !body.data || !body.data.teams) return null;
+  const sides = [body.data.teams.home, body.data.teams.visitor].filter(Boolean);
+  const side = sides.find(x => /адмирал/i.test(x.name || ''))
+    || sides.find(x => String((x.stats?.fwd?.[0] || x.stats?.def?.[0] || x.stats?.gk?.[0] || {}).clubidg || '') === '418');
+  if (!side || !side.stats) return null;
+  const skaters = {};
+  for (const grp of ['fwd', 'def']) {
+    for (const p of (Array.isArray(side.stats[grp]) ? side.stats[grp] : [])) {
+      const jn = String(p.jn || '').trim();
+      if (jn) skaters[jn] = { plus: khlProtoInt(p.plus), minus: khlProtoInt(p.minus), plusMinus: khlProtoInt(p.pm) };
+    }
+  }
+  const goalies = {};
+  for (const p of (Array.isArray(side.stats.gk) ? side.stats.gk : [])) {
+    const jn = String(p.jn || '').trim();
+    if (!jn) continue;
+    goalies[jn] = {
+      games: khlProtoInt(p.gp), wins: khlProtoInt(p.w), losses: khlProtoInt(p.l),
+      shootoutGames: khlProtoInt(p.sop), shotsAgainst: khlProtoInt(p.sog), goalsAgainst: khlProtoInt(p.ga),
+      saves: khlProtoInt(p.sv), savePercent: khlProtoNumStr(p.sv_pct), gaa: khlProtoNumStr(p.gaa),
+      goals: khlProtoInt(p.g), assists: khlProtoInt(p.a), shutouts: khlProtoInt(p.so),
+      pim: khlProtoInt(p.pim), ice: /^\d{1,3}:[0-5]\d$/.test(String(p.toi || '')) ? String(p.toi) : ''
+    };
+  }
+  return { skaters, goalies };
+}
+
 async function getKhlAdmiralMatchStats(env, gameId, fresh = false) {
   const cleanGameId = String(gameId || '').trim();
   if (!/^\d+$/.test(cleanGameId)) throw new Error('invalid game id');
@@ -265,6 +355,27 @@ async function getKhlAdmiralMatchStats(env, gameId, fresh = false) {
     .map(player => normalizeKhlMatchPlayer(player, admiral.id, goals, penalties))
     .filter(player => player.games || player.goals || player.assists || player.shots || player.faceoffs || player.shifts || player.pim || player.goalieGames);
   const state = String(event.game_state_key || '');
+  // Официальный протокол khl.ru добавляет +/-, + и - по игрокам и полную строку вратаря.
+  let protocol = null;
+  try {
+    protocol = await fetchKhlGameProtocol(event.outer_stage_id, event.khl_id || cleanGameId);
+  } catch (_) {
+    protocol = null;
+  }
+  if (protocol) {
+    for (const p of players) {
+      const skater = protocol.skaters[String(p.number)];
+      if (skater) {
+        if (skater.plus != null) p.plus = skater.plus;
+        if (skater.minus != null) p.minus = skater.minus;
+        if (skater.plusMinus != null) p.plusMinus = skater.plusMinus;
+      }
+      if (p.role === 'goalie') {
+        const gk = protocol.goalies[String(p.number)];
+        if (gk) p.protocolGoalie = gk;
+      }
+    }
+  }
   const payload = {
     ok: true,
     gameId: cleanGameId,
@@ -279,6 +390,7 @@ async function getKhlAdmiralMatchStats(env, gameId, fresh = false) {
     admiralGoals: Number(admiral.gf || 0) || 0,
     opponentGoals: Number(opponent.gf || 0) || 0,
     opponentShots: Number(opponent.shots || 0) || 0,
+    protocolOk: Boolean(protocol),
     updatedAt: new Date().toISOString(),
     players
   };
