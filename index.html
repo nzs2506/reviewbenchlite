@@ -4825,9 +4825,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.87" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.88" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.87</span>
+            <span class="version-tooltip">v0.9.88</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -13469,10 +13469,14 @@ function matchSheetPdfRecord(record = null) {
 
 function matchSheetPdfScoreLine(record) {
     const official = normalizeMatchSheetScore(record?.sheet?.matchScore);
-    if (official?.final) return `Итоговый счёт: ${official.homeGoals}:${official.awayGoals}`;
     const related = admiralMatches.find(match => String(match.date || '').slice(0, 10) === String(record?.date || '').slice(0, 10)
         && matchSheetOpponentKey(match.opponent) === matchSheetOpponentKey(record?.opponent));
-    if (related?.final) return `Итоговый счёт: ${related.homeGoals}:${related.awayGoals}`;
+    const finalScore = official?.final ? official : (related?.final ? normalizeMatchSheetScore(related) : null);
+    if (finalScore) {
+        const homeName = finalScore.homeName || related?.homeName || 'Команда хозяев';
+        const awayName = finalScore.awayName || related?.awayName || 'Команда гостей';
+        return `${homeName} ${finalScore.homeGoals}:${finalScore.awayGoals} (счёт финальный) ${awayName}`;
+    }
     const events = Array.isArray(record?.sheet?.events) ? record.sheet.events : [];
     const goals = events.filter(event => event.type === 'goal').length;
     const conceded = events.filter(event => event.type === 'conceded').length;
@@ -13551,8 +13555,9 @@ function renderMatchSheetGoaliesPdfPage(record) {
     ctx.fillStyle = '#344158';
     ctx.fillText(`Соперник: ${record.opponent || '—'}`, margin + 780, 70);
     ctx.fillText(`Дата: ${record.date ? trainingDayLabel(record.date) : '—'}`, margin + 780, 116);
-    ctx.textAlign = 'right';
-    ctx.fillText(matchSheetPdfScoreLine(record), pageWidth - margin, 70);
+    drawMatchSheetPdfText(ctx, matchSheetPdfScoreLine(record), margin, 158, tableWidth, {
+        font: '800 30px Arial, sans-serif', color: '#14213b', pad: 12
+    });
 
     let x = margin;
     const tableTop = 200;
@@ -13648,8 +13653,10 @@ function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
         ctx.fillStyle = '#344158';
         ctx.fillText(`Соперник: ${record.opponent || 'Соперник'}`, margin + 430, 70);
         ctx.fillText(`Дата: ${trainingDayLabel(record.date)}`, margin + 430, 116);
+        drawMatchSheetPdfText(ctx, matchSheetPdfScoreLine(record), margin, 158, tableWidth, {
+            font: '800 30px Arial, sans-serif', color: '#14213b', pad: 12
+        });
         ctx.textAlign = 'right';
-        ctx.fillText(matchSheetPdfScoreLine(record), pageWidth - margin, 70);
         ctx.fillText(`Игроков: ${players.length}`, pageWidth - margin, 116);
 
         const tableTop = titleHeight;
@@ -13786,8 +13793,10 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
         ctx.fillStyle = '#344158';
         ctx.fillText(options.subtitle || `Соперник: ${record.opponent || '—'}`, margin + 650, 70);
         ctx.fillText(options.dateLabel || `Дата: ${record.date ? trainingDayLabel(record.date) : '—'}`, margin + 650, 116);
+        drawMatchSheetPdfText(ctx, matchSheetPdfScoreLine(record), margin, 154, tableWidth, {
+            font: '800 30px Arial, sans-serif', color: '#14213b', pad: 12
+        });
         ctx.textAlign = 'right';
-        ctx.fillText(matchSheetPdfScoreLine(record), pageWidth - margin, 70);
         ctx.fillText(`Игроков: ${players.length}`, pageWidth - margin, 116);
         let x = margin;
         definitions.forEach(column => {
