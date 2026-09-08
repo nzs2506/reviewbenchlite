@@ -4825,9 +4825,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.85" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.86" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.85</span>
+            <span class="version-tooltip">v0.9.86</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -13442,6 +13442,97 @@ function drawMatchSheetPdfCell(ctx, x, y, width, height, text, options = {}) {
     drawMatchSheetPdfText(ctx, text, x, y + height / 2, width, options);
 }
 
+function matchSheetPdfGoalies(record) {
+    const excluded = new Set((record.sheet?.excludedPlayerIds || []).map(String));
+    return (record.roster || [])
+        .filter(player => player.role === 'goalie' && !excluded.has(String(player.id)))
+        .sort(rosterSort)
+        .slice(0, 2)
+        .map((player, index) => ({
+            player,
+            roleLabel: index === 0 ? 'Основной' : 'Запасной',
+            stats: normalizeMatchGoalieStats(record.sheet?.players?.[player.id]?.goalieStats)
+        }));
+}
+
+function renderMatchSheetGoaliesPdfPage(record) {
+    const pageWidth = 2480;
+    const pageHeight = 1754;
+    const margin = 70;
+    const tableWidth = pageWidth - margin * 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = pageWidth;
+    canvas.height = pageHeight;
+    const ctx = canvas.getContext('2d');
+    const goalies = matchSheetPdfGoalies(record);
+    const columns = [
+        { label: 'РОЛЬ', weight: 180, value: goalie => goalie.roleLabel },
+        { label: 'ВРАТАРЬ / №', weight: 420, value: goalie => `${goalie.player.number ? `№${goalie.player.number}  ` : ''}${goalie.player.name || 'Вратарь'}`, align: 'left' },
+        ...MATCH_GOALIE_COLUMNS.map(([key, label]) => ({
+            label,
+            weight: key === 'ice' ? 150 : key === 'savePercent' || key === 'gaa' ? 135 : 118,
+            value: goalie => goalie.stats[key] || '—'
+        }))
+    ];
+    const weightTotal = columns.reduce((sum, column) => sum + column.weight, 0);
+    columns.forEach(column => { column.width = column.weight / weightTotal * tableWidth; });
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, pageWidth, pageHeight);
+    ctx.fillStyle = '#14213b';
+    ctx.fillRect(0, 0, pageWidth, 18);
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#14213b';
+    ctx.font = '700 42px "Russo One", "Arial Black", Arial, sans-serif';
+    ctx.fillText('ХК АДМИРАЛ', margin, 66);
+    ctx.font = '800 28px Arial, sans-serif';
+    ctx.fillText('ВРАТАРИ — СТАТИСТИКА МАТЧА', margin, 120);
+    ctx.font = '700 23px Arial, sans-serif';
+    ctx.fillStyle = '#344158';
+    ctx.fillText(`Соперник: ${record.opponent || '—'}`, margin + 780, 70);
+    ctx.fillText(`Дата: ${record.date ? trainingDayLabel(record.date) : '—'}`, margin + 780, 116);
+
+    let x = margin;
+    const tableTop = 200;
+    const headerHeight = 76;
+    columns.forEach((column, index) => {
+        drawMatchSheetPdfCell(ctx, x, tableTop, column.width, headerHeight, column.label, {
+            fill: '#14213b', color: '#ffffff', align: column.align || 'center', pad: 10,
+            font: index === 1 ? '800 16px Arial, sans-serif' : '800 15px Arial, sans-serif', stroke: '#ffffff'
+        });
+        x += column.width;
+    });
+
+    const rows = [0, 1].map(index => goalies[index] || {
+        player: {},
+        roleLabel: index === 0 ? 'Основной' : 'Запасной',
+        stats: normalizeMatchGoalieStats()
+    });
+    rows.forEach((goalie, rowIndex) => {
+        let cellX = margin;
+        const y = tableTop + headerHeight + rowIndex * 72;
+        const fill = rowIndex % 2 ? '#f4f7fb' : '#ffffff';
+        columns.forEach((column, index) => {
+            drawMatchSheetPdfCell(ctx, cellX, y, column.width, 72, column.value(goalie), {
+                fill, align: column.align || 'center', pad: index === 1 ? 14 : 5,
+                font: index === 1 ? '700 19px Arial, sans-serif' : '700 18px Arial, sans-serif', color: '#172033'
+            });
+            cellX += column.width;
+        });
+    });
+    if (!goalies.length) {
+        drawMatchSheetPdfText(ctx, 'В текущем матчевом листе вратари не указаны.', margin, tableTop + headerHeight + 118, tableWidth, {
+            align: 'left', font: '700 22px Arial, sans-serif', color: '#536079'
+        });
+    }
+    ctx.font = '700 19px Arial, sans-serif';
+    ctx.fillStyle = '#536079';
+    ctx.textAlign = 'right';
+    ctx.fillText('Страница 2 — вратари', pageWidth - margin, pageHeight - 64);
+    return { dataUrl: canvas.toDataURL('image/jpeg', 0.93), width: pageWidth, height: pageHeight };
+}
+
 function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
     const record = matchSheetPdfRecord(sourceRecord);
     const players = archivedMatchPlayers(record);
@@ -13493,7 +13584,7 @@ function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
         ctx.fillStyle = '#14213b';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText('BenchReview Lite', margin, 66);
+        ctx.fillText('ХК АДМИРАЛ', margin, 66);
         ctx.font = '800 28px Arial, sans-serif';
         ctx.fillText('МАТЧЕВЫЙ ЛИСТ', margin, 120);
         ctx.font = '700 23px Arial, sans-serif';
@@ -13631,7 +13722,7 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
         ctx.textAlign = 'left';
         ctx.fillStyle = '#14213b';
         ctx.font = '700 42px "Russo One", "Arial Black", Arial, sans-serif';
-        ctx.fillText('BenchReview Lite', margin, 66);
+        ctx.fillText('ХК АДМИРАЛ', margin, 66);
         ctx.font = '800 28px Arial, sans-serif';
         ctx.fillText(options.title || 'МАТЧЕВЫЙ ЛИСТ', margin, 120);
         ctx.font = '700 23px Arial, sans-serif';
@@ -13669,6 +13760,8 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
         ctx.fillText(`Страница ${pageIndex + 1} из ${pageCount}`, pageWidth - margin, pageHeight - 64);
         pages.push({ dataUrl: canvas.toDataURL('image/jpeg', 0.93), width: pageWidth, height: pageHeight });
     }
+    // The goalie overview always follows the first skater page, so it is the second PDF sheet.
+    pages.splice(Math.min(1, pages.length), 0, renderMatchSheetGoaliesPdfPage(record));
     return pages;
 }
 
@@ -15139,7 +15232,7 @@ function renderGoalieReportPdfPages(match) {
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.font = '700 42px "Russo One", "Arial Black", Arial, sans-serif';
-        ctx.fillText('BenchReview Lite', 90, 68);
+        ctx.fillText('ХК АДМИРАЛ', 90, 68);
         ctx.font = '800 30px Arial, sans-serif';
         ctx.fillText('ОТЧЕТ ВРАТАРЯ', 90, 126);
         ctx.font = '700 23px Arial, sans-serif';
