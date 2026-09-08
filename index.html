@@ -4825,9 +4825,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.86" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.87" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.86</span>
+            <span class="version-tooltip">v0.9.87</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -13448,9 +13448,8 @@ function matchSheetPdfGoalies(record) {
         .filter(player => player.role === 'goalie' && !excluded.has(String(player.id)))
         .sort(rosterSort)
         .slice(0, 2)
-        .map((player, index) => ({
+        .map(player => ({
             player,
-            roleLabel: index === 0 ? 'Основной' : 'Запасной',
             stats: normalizeMatchGoalieStats(record.sheet?.players?.[player.id]?.goalieStats)
         }));
 }
@@ -13466,8 +13465,7 @@ function renderMatchSheetGoaliesPdfPage(record) {
     const ctx = canvas.getContext('2d');
     const goalies = matchSheetPdfGoalies(record);
     const columns = [
-        { label: 'РОЛЬ', weight: 180, value: goalie => goalie.roleLabel },
-        { label: 'ВРАТАРЬ / №', weight: 420, value: goalie => `${goalie.player.number ? `№${goalie.player.number}  ` : ''}${goalie.player.name || 'Вратарь'}`, align: 'left' },
+        { label: 'ВРАТАРЬ / №', weight: 520, value: goalie => `${goalie.player.number ? `№${goalie.player.number}  ` : ''}${goalie.player.name || '—'}`, align: 'left' },
         ...MATCH_GOALIE_COLUMNS.map(([key, label]) => ({
             label,
             weight: key === 'ice' ? 150 : key === 'savePercent' || key === 'gaa' ? 135 : 118,
@@ -13499,14 +13497,13 @@ function renderMatchSheetGoaliesPdfPage(record) {
     columns.forEach((column, index) => {
         drawMatchSheetPdfCell(ctx, x, tableTop, column.width, headerHeight, column.label, {
             fill: '#14213b', color: '#ffffff', align: column.align || 'center', pad: 10,
-            font: index === 1 ? '800 16px Arial, sans-serif' : '800 15px Arial, sans-serif', stroke: '#ffffff'
+            font: index === 0 ? '800 16px Arial, sans-serif' : '800 15px Arial, sans-serif', stroke: '#ffffff'
         });
         x += column.width;
     });
 
     const rows = [0, 1].map(index => goalies[index] || {
         player: {},
-        roleLabel: index === 0 ? 'Основной' : 'Запасной',
         stats: normalizeMatchGoalieStats()
     });
     rows.forEach((goalie, rowIndex) => {
@@ -13515,8 +13512,8 @@ function renderMatchSheetGoaliesPdfPage(record) {
         const fill = rowIndex % 2 ? '#f4f7fb' : '#ffffff';
         columns.forEach((column, index) => {
             drawMatchSheetPdfCell(ctx, cellX, y, column.width, 72, column.value(goalie), {
-                fill, align: column.align || 'center', pad: index === 1 ? 14 : 5,
-                font: index === 1 ? '700 19px Arial, sans-serif' : '700 18px Arial, sans-serif', color: '#172033'
+                fill, align: column.align || 'center', pad: index === 0 ? 14 : 5,
+                font: index === 0 ? '700 19px Arial, sans-serif' : '700 18px Arial, sans-serif', color: '#172033'
             });
             cellX += column.width;
         });
