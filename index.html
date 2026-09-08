@@ -6054,7 +6054,7 @@ let statsPage = 'roster';
 let rosterPlayers = [];
 let matchSheetPeriod = 1;
 let matchSheetSelectedPlayerIds = new Set();
-let matchSheetState = { version: MATCH_SHEET_SCHEMA_VERSION, archiveId: '', opponent: '', date: '', players: {}, events: [], order: [], excludedPlayerIds: [], sortDirection: 'manual' };
+let matchSheetState = { version: MATCH_SHEET_SCHEMA_VERSION, archiveId: '', opponent: '', date: '', matchScore: null, players: {}, events: [], order: [], excludedPlayerIds: [], sortDirection: 'manual' };
 let matchSheetArchive = [];
 let admiralMatches = [];
 let matchSheetArchiveExpandedId = '';
@@ -10969,6 +10969,30 @@ function normalizeMatchSheetPlayer(value) {
     return normalized;
 }
 
+function normalizeMatchSheetScore(value) {
+    if (!value || typeof value !== 'object') return null;
+    const homeGoals = Number(value.homeGoals);
+    const awayGoals = Number(value.awayGoals);
+    if (!Number.isFinite(homeGoals) || !Number.isFinite(awayGoals)) return null;
+    return {
+        homeGoals: Math.max(0, Math.round(homeGoals)),
+        awayGoals: Math.max(0, Math.round(awayGoals)),
+        final: Boolean(value.final),
+        homeName: String(value.homeName || '').slice(0, 80),
+        awayName: String(value.awayName || '').slice(0, 80)
+    };
+}
+
+function matchSheetScoreFromKhl(data, match) {
+    return normalizeMatchSheetScore({
+        homeGoals: data?.homeGoals ?? match?.homeGoals,
+        awayGoals: data?.awayGoals ?? match?.awayGoals,
+        final: data?.final ?? match?.final,
+        homeName: match?.homeName,
+        awayName: match?.awayName
+    });
+}
+
 function loadMatchSheet() {
     try {
         const raw = localStorage.getItem(MATCH_SHEET_STORAGE_KEY);
@@ -10979,6 +11003,7 @@ function loadMatchSheet() {
             archiveId: String(parsed?.archiveId || ''),
             opponent: String(parsed?.opponent || '').slice(0, 50),
             date: String(parsed?.date || ''),
+            matchScore: normalizeMatchSheetScore(parsed?.matchScore),
             players: {},
             events: Array.isArray(parsed?.events) ? parsed.events.slice(-150) : [],
             order: Array.isArray(parsed?.order) ? parsed.order.map(String) : [],
@@ -11003,7 +11028,7 @@ function loadMatchSheet() {
             persistMatchSheet();
         }
     } catch (_) {
-        matchSheetState = { version: MATCH_SHEET_SCHEMA_VERSION, archiveId: '', opponent: '', date: '', players: {}, events: [], order: [], excludedPlayerIds: [], sortDirection: 'manual' };
+        matchSheetState = { version: MATCH_SHEET_SCHEMA_VERSION, archiveId: '', opponent: '', date: '', matchScore: null, players: {}, events: [], order: [], excludedPlayerIds: [], sortDirection: 'manual' };
     }
 }
 
@@ -11034,6 +11059,7 @@ function normalizeMatchArchiveRecord(value) {
             archiveId: String(value?.id || sheet.archiveId || ''),
             opponent: String(sheet.opponent || value?.opponent || '').slice(0, 50),
             date: String(sheet.date || value?.date || todayInputValue()),
+            matchScore: normalizeMatchSheetScore(sheet.matchScore),
             players,
             events: Array.isArray(sheet.events) ? sheet.events.slice(-150) : [],
             order: Array.isArray(sheet.order) ? sheet.order.map(String) : [],
@@ -11346,6 +11372,7 @@ async function refreshCurrentMatchFromKhl() {
             persistAdmiralMatches();
             syncAdmiralMatchesToCalendar();
         }
+        matchSheetState.matchScore = matchSheetScoreFromKhl(data, match);
         renderMatchSheetKhlInfo();
         const timing = info.textContent;
         if (data.state && data.state !== 'in_progress' && data.state !== 'finished') {
@@ -11578,7 +11605,19 @@ async function refreshAdmiralMatches() {
 async function fetchKhlMatchStats(match, fresh = false) {
     const cloudUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats${fresh ? '?fresh=1' : ''}`);
     if (!cloudUrl || !benchAuthToken) throw new Error('нужно войти в облако для загрузки статистики');
-    const response = await authFetch(cloudUrl, { method: 'GET', mode: 'cors' });
+    // The Worker may fail the first DNS/TLS handshake on Safari or mobile networks.
+    // Retrying here avoids losing an otherwise valid match-sheet import to that transient error.
+    let response;
+    for (let attempt = 0; attempt < 2 && !response; attempt++) {
+        try {
+            response = await authFetch(cloudUrl, { method: 'GET', mode: 'cors', cache: 'no-store' });
+        } catch (err) {
+            if (attempt === 1) {
+                throw new Error('Нет связи с сервером статистики. Проверьте интернет и повторите загрузку.');
+            }
+            await new Promise(resolve => window.setTimeout(resolve, 450));
+        }
+    }
     const data = await response.json().catch(() => ({}));
     if (!response.ok || !data.ok) throw new Error(data.error || `KHL API ${response.status}`);
     return data;
@@ -11659,6 +11698,8 @@ async function openKhlMatchSheet(match) {
     const currentDate = String(matchSheetState.date || '').trim();
     const hasCurrent = Boolean(matchSheetState.archiveId);
     const isSameMatch = currentDate === date && matchSheetOpponentKey(currentOpponent) === matchSheetOpponentKey(opponent);
+    const savedRecord = matchSheetArchive.find(record => record.date === date
+        && matchSheetOpponentKey(record.opponent) === matchSheetOpponentKey(opponent));
     if (hasCurrent && !isSameMatch) {
         const decision = await showConfirm(
             `Текущий матчевый лист будет заменен матчем «${opponent}» от ${date}.`,
@@ -11677,6 +11718,19 @@ async function openKhlMatchSheet(match) {
             saveMatchSheetToArchive();
         }
     }
+    // The match card is the entry point to the saved sheet.  A saved match must be
+    // reopened as it was recorded, not replaced with a fresh KHL import.
+    if (savedRecord) {
+        matchSheetState = normalizeMatchArchiveRecord(savedRecord).sheet;
+        matchSheetState.archiveId = savedRecord.id;
+        matchSheetIsDraft = false;
+        matchSheetSelectedPlayerIds.clear();
+        matchSheetPeriod = 1;
+        persistMatchSheet();
+        setView('stats');
+        setStatsPage('sheet');
+        return true;
+    }
     if (!isSameMatch || matchSheetIsDraft) {
         const preservedOrder = matchSheetSkaters().map(player => player.id);
         const preservedSortDirection = matchSheetState.sortDirection;
@@ -11685,6 +11739,7 @@ async function openKhlMatchSheet(match) {
             archiveId: '',
             opponent,
             date,
+            matchScore: matchSheetScoreFromKhl(null, match),
             players: {},
             events: [],
             order: preservedOrder,
@@ -11704,7 +11759,10 @@ async function openKhlMatchSheet(match) {
 async function importKhlMatchStats(matchId) {
     const match = admiralMatches.find(item => item.id === matchId);
     if (!match) return;
+    const savedRecord = matchSheetArchive.find(record => record.date === String(match.date || '').slice(0, 10)
+        && matchSheetOpponentKey(record.opponent) === matchSheetOpponentKey(match.opponent));
     if (!await openKhlMatchSheet(match)) return;
+    if (savedRecord) return;
     if (!match.final) {
         // Будущий матч открывается пустым: дату и соперника уже записала openKhlMatchSheet.
         return;
@@ -11712,6 +11770,7 @@ async function importKhlMatchStats(matchId) {
     const addToSeasonTotals = !match.statsImportedAt;
     try {
         const data = await fetchKhlMatchStats(match);
+        matchSheetState.matchScore = matchSheetScoreFromKhl(data, match);
         let imported = 0;
         let created = 0;
         (Array.isArray(data.players) ? data.players : []).forEach(entry => {
@@ -11812,21 +11871,10 @@ function saveMatchSheetToArchive() {
     else matchSheetArchive.unshift(record);
     persistMatchSheetArchive();
     renderMatchArchive();
-    const preservedOrder = matchSheetSkaters().map(player => player.id);
-    const preservedSortDirection = matchSheetState.sortDirection;
-    matchSheetState = {
-        version: MATCH_SHEET_SCHEMA_VERSION,
-        archiveId: '',
-        opponent: '',
-        date: '',
-        players: {},
-        events: [],
-        order: preservedOrder,
-        excludedPlayerIds: [],
-        sortDirection: preservedSortDirection
-    };
-    matchSheetSelectedPlayerIds.clear();
-    matchSheetPeriod = 1;
+    // Saving must never turn the visible sheet into a blank draft. Keep all values
+    // in place and link this working copy to the saved archive record, so the next
+    // press of «Сохранить матч» updates the same match.
+    matchSheetState.archiveId = id;
     matchSheetIsDraft = false;
     persistMatchSheet();
     renderMatchSheet();
@@ -12802,6 +12850,7 @@ async function resetMatchSheet() {
         archiveId: '',
         opponent: '',
         date: '',
+        matchScore: null,
         players: {},
         events: [],
         order: preservedOrder,
@@ -13418,6 +13467,18 @@ function matchSheetPdfRecord(record = null) {
     });
 }
 
+function matchSheetPdfScoreLine(record) {
+    const official = normalizeMatchSheetScore(record?.sheet?.matchScore);
+    if (official?.final) return `Итоговый счёт: ${official.homeGoals}:${official.awayGoals}`;
+    const related = admiralMatches.find(match => String(match.date || '').slice(0, 10) === String(record?.date || '').slice(0, 10)
+        && matchSheetOpponentKey(match.opponent) === matchSheetOpponentKey(record?.opponent));
+    if (related?.final) return `Итоговый счёт: ${related.homeGoals}:${related.awayGoals}`;
+    const events = Array.isArray(record?.sheet?.events) ? record.sheet.events : [];
+    const goals = events.filter(event => event.type === 'goal').length;
+    const conceded = events.filter(event => event.type === 'conceded').length;
+    return events.length ? `Счёт по листу: ${goals}:${conceded}` : 'Итоговый счёт: —';
+}
+
 function drawMatchSheetPdfText(ctx, text, x, y, width, options = {}) {
     const align = options.align || 'center';
     const pad = options.pad ?? 8;
@@ -13490,6 +13551,8 @@ function renderMatchSheetGoaliesPdfPage(record) {
     ctx.fillStyle = '#344158';
     ctx.fillText(`Соперник: ${record.opponent || '—'}`, margin + 780, 70);
     ctx.fillText(`Дата: ${record.date ? trainingDayLabel(record.date) : '—'}`, margin + 780, 116);
+    ctx.textAlign = 'right';
+    ctx.fillText(matchSheetPdfScoreLine(record), pageWidth - margin, 70);
 
     let x = margin;
     const tableTop = 200;
@@ -13558,9 +13621,6 @@ function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
         { label: 'УДАЛЕНИЯ', field: 'penalties' },
         { label: 'УДАЛ. СОПЕРНИКА', field: 'opponentPenalties' }
     ];
-    const events = record.sheet.events || [];
-    const teamGoals = events.filter(event => event.type === 'goal').length;
-    const teamConceded = events.filter(event => event.type === 'conceded').length;
     const excludedGoalies = new Set((record.sheet?.excludedPlayerIds || []).map(String));
     const goalieNames = (record.roster || [])
         .filter(player => player.role === 'goalie' && !excludedGoalies.has(String(player.id)))
@@ -13589,7 +13649,7 @@ function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
         ctx.fillText(`Соперник: ${record.opponent || 'Соперник'}`, margin + 430, 70);
         ctx.fillText(`Дата: ${trainingDayLabel(record.date)}`, margin + 430, 116);
         ctx.textAlign = 'right';
-        ctx.fillText(`Счет по отметкам: ${teamGoals}:${teamConceded}`, pageWidth - margin, 70);
+        ctx.fillText(matchSheetPdfScoreLine(record), pageWidth - margin, 70);
         ctx.fillText(`Игроков: ${players.length}`, pageWidth - margin, 116);
 
         const tableTop = titleHeight;
@@ -13727,7 +13787,8 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
         ctx.fillText(options.subtitle || `Соперник: ${record.opponent || '—'}`, margin + 650, 70);
         ctx.fillText(options.dateLabel || `Дата: ${record.date ? trainingDayLabel(record.date) : '—'}`, margin + 650, 116);
         ctx.textAlign = 'right';
-        ctx.fillText(`Игроков: ${players.length}`, pageWidth - margin, 70);
+        ctx.fillText(matchSheetPdfScoreLine(record), pageWidth - margin, 70);
+        ctx.fillText(`Игроков: ${players.length}`, pageWidth - margin, 116);
         let x = margin;
         definitions.forEach(column => {
             drawMatchSheetPdfCell(ctx, x, titleHeight, column.width, headerHeight, column.label, {
