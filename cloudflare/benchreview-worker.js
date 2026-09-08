@@ -327,7 +327,10 @@ async function fetchKhlGameProtocol(tournament, khlGameId) {
       pim: khlProtoInt(p.pim), ice: /^\d{1,3}:[0-5]\d$/.test(String(p.toi || '')) ? String(p.toi) : ''
     };
   }
-  return { skaters, goalies };
+  // Заявка из протокола содержит и игроков с нулевой статистикой. Клиент
+  // использует её только для состава конкретного матчевого листа.
+  const playerNumbers = [...new Set([...Object.keys(skaters), ...Object.keys(goalies)])];
+  return { skaters, goalies, playerNumbers };
 }
 
 async function getKhlAdmiralMatchStats(env, gameId, fresh = false) {
@@ -347,6 +350,11 @@ async function getKhlAdmiralMatchStats(env, gameId, fresh = false) {
   const admiral = teams.find(team => String(team.id) === ADMIRAL_KHL_TEAM_ID);
   if (!admiral) throw new Error('Admiral team was not found in the match');
   const opponent = teams.find(team => String(team.id) !== ADMIRAL_KHL_TEAM_ID) || {};
+  // event_v2 хранит фактическую заявку матча, в том числе игрока с нулевой
+  // статистикой. Это запасной источник, если HTML-протокол временно закрыт
+  // антиботом; при успехе ниже приоритет остаётся за протоколом.
+  const matchPlayerNumbers = [...new Set((Array.isArray(admiral.players) ? admiral.players : [])
+    .map(player => String(player?.shirt_number || '').trim()).filter(Boolean))];
   const goals = Array.isArray(event.goals)
     ? event.goals.filter(goal => String(goal?.author?.team_id || '') === ADMIRAL_KHL_TEAM_ID && goal?.status_abbr !== 'шб')
     : [];
@@ -391,6 +399,8 @@ async function getKhlAdmiralMatchStats(env, gameId, fresh = false) {
     opponentGoals: Number(opponent.gf || 0) || 0,
     opponentShots: Number(opponent.shots || 0) || 0,
     protocolOk: Boolean(protocol),
+    protocolPlayerNumbers: protocol?.playerNumbers || [],
+    matchPlayerNumbers,
     updatedAt: new Date().toISOString(),
     players
   };

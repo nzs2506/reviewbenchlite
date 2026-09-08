@@ -4825,9 +4825,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.84" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.85" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.84</span>
+            <span class="version-tooltip">v0.9.85</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -11208,7 +11208,7 @@ function matchSheetIsRelatedToMatch(match) {
 // Колонки матчевого листа, которые заполняет кнопка «Обновить с КХЛ».
 // Бол, Мен, Штр +, Очки в ММ ведутся вручную и не трогаются.
 // «+»/«−» приходят из официального протокола khl.ru (в мобильном API их нет).
-const KHL_SHEET_COLUMNS_FULL = 'Игр, +, −, Штр −, Гол, Пас, Бр, Вбр + строка вратаря';
+const KHL_SHEET_COLUMNS_FULL = 'Игр, +, −, Штр −, Гол, Пас, Бр, Вбр + строка вратаря + заявка';
 const KHL_SHEET_COLUMNS_BASE = 'Игр, Штр −, Гол, Пас, Бр, Вбр (без +/− — протокол КХЛ недоступен)';
 
 let matchSheetInitialMatchResolved = false;
@@ -11355,6 +11355,7 @@ async function refreshCurrentMatchFromKhl() {
         const num = v => Math.max(0, Math.round(Number(v) || 0));
         const players = Array.isArray(data.players) ? data.players : [];
         const goalieIce = players.filter(e => e.role === 'goalie' && (num(e.goalieGames) || (Number(e.goalieIceMinutes) || 0) > 0));
+        const protocolRoster = applyKhlProtocolRoster(data);
         let applied = 0;
         let missed = 0;
         players.forEach(entry => {
@@ -11413,6 +11414,7 @@ async function refreshCurrentMatchFromKhl() {
         const stamp = data.updatedAt ? new Date(data.updatedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '';
         const cols = data.protocolOk ? KHL_SHEET_COLUMNS_FULL : KHL_SHEET_COLUMNS_BASE;
         info.textContent = `${timing} · Внесено игроков: ${applied}${missed ? `, не найдено в составе: ${missed}` : ''}`
+            + `${protocolRoster.applied ? ` · по ${protocolRoster.source} в листе: ${protocolRoster.kept}, убрано: ${protocolRoster.removed}` : ''}`
             + `${stamp ? ` · данные КХЛ на ${stamp}` : ''} · колонки: ${cols}. Проверьте и нажмите «Сохранить матч».`;
     } catch (err) {
         if (unchanged()) { renderMatchSheetKhlInfo(); info.textContent = `Ошибка: ${String(err.message || err)}`; }
@@ -11599,6 +11601,41 @@ function findRosterPlayerForKhl(entry) {
     if (exact) return exact;
     const surname = name.split(' ')[0];
     return candidates.find(player => khlStatsNameKey(player.name).split(' ')[0] === surname) || null;
+}
+
+function khlJerseyNumber(value) {
+    const digits = String(value ?? '').match(/\d+/g)?.join('') || '';
+    return digits.replace(/^0+(?=\d)/, '');
+}
+
+// Удаляем только из текущего листа, не из общего состава команды. Отсутствие
+// статистики не считается доказательством: фильтр запускается лишь по заявке
+// из официального протокола КХЛ.
+function applyKhlProtocolRoster(data) {
+    const protocolNumbers = Array.isArray(data?.protocolPlayerNumbers) ? data.protocolPlayerNumbers : [];
+    const fallbackNumbers = Array.isArray(data?.matchPlayerNumbers) ? data.matchPlayerNumbers : [];
+    const numbers = new Set((protocolNumbers.length ? protocolNumbers : fallbackNumbers)
+        .map(khlJerseyNumber).filter(Boolean));
+    if (!numbers.size) return { applied: false, removed: 0, kept: 0 };
+    const eligible = rosterPlayers.filter(player => khlJerseyNumber(player.number));
+    if (!eligible.length) return { applied: false, removed: 0, kept: 0 };
+    const excluded = matchSheetExcludedSet();
+    let removed = 0;
+    let kept = 0;
+    eligible.forEach(player => {
+        if (numbers.has(khlJerseyNumber(player.number))) {
+            excluded.delete(player.id);
+            kept++;
+        } else if (!excluded.has(player.id)) {
+            excluded.add(player.id);
+            matchSheetSelectedPlayerIds.delete(player.id);
+            removePlayerFromMatchSheetEvents(player.id);
+            removed++;
+        }
+    });
+    matchSheetState.excludedPlayerIds = [...excluded];
+    matchSheetState.order = (matchSheetState.order || []).filter(id => !excluded.has(id));
+    return { applied: true, removed, kept, source: protocolNumbers.length ? 'протоколу' : 'заявке КХЛ' };
 }
 
 function addKhlIceTime(current, minutes) {
@@ -11873,18 +11910,17 @@ function matchSheetSkaters() {
 
 function syncMatchSheetRosterPresence() {
     const skaters = allMatchSheetSkaters();
-    const skaterIds = new Set(skaters.map(player => player.id));
-    const excludedIds = new Set([...matchSheetExcludedSet()].filter(id => skaterIds.has(id)));
+    const sheetRoster = rosterPlayers.filter(player => cleanStatName(player.name) || String(player.number || '').trim());
+    const sheetRosterIds = new Set(sheetRoster.map(player => player.id));
+    const excludedIds = new Set([...matchSheetExcludedSet()].filter(id => sheetRosterIds.has(id)));
     const activeIds = new Set(skaters.filter(player => !excludedIds.has(player.id)).map(player => player.id));
-    // Вратари держат матчевую статистику в matchSheetState.players[id].goalieStats и в таблицу
-    // полевых не входят — их id нельзя вычищать вместе с удалёнными игроками.
-    const goalieIds = new Set(rosterPlayers.filter(player => player.role === 'goalie').map(player => player.id));
+    const activeRosterIds = new Set(sheetRoster.filter(player => !excludedIds.has(player.id)).map(player => player.id));
     const referencedIds = new Set([
         ...Object.keys(matchSheetState.players || {}),
         ...matchSheetState.events.flatMap(event => matchSheetEventPlayerIds(event))
     ]);
     referencedIds.forEach(id => {
-        if (!activeIds.has(id) && !goalieIds.has(id)) removePlayerFromMatchSheetEvents(id);
+        if (!activeRosterIds.has(id)) removePlayerFromMatchSheetEvents(id);
     });
     matchSheetState.excludedPlayerIds = [...excludedIds];
     const orderedIds = (matchSheetState.order || []).filter(id => activeIds.has(id));
@@ -12588,9 +12624,12 @@ function renderMatchSheetGoalies() {
     const target = document.getElementById('matchSheetGoalies');
     if (!target) return;
     target.innerHTML = '';
-    const goalies = rosterPlayers.filter(player => player.role === 'goalie').sort(rosterSort);
+    const excluded = matchSheetExcludedSet();
+    const goalies = rosterPlayers.filter(player => player.role === 'goalie' && !excluded.has(player.id)).sort(rosterSort);
     if (!goalies.length) {
-        target.innerHTML = '<div class="match-sheet-log-empty">Вратари добавляются на странице «Статистика».</div>';
+        target.innerHTML = rosterPlayers.some(player => player.role === 'goalie')
+            ? '<div class="match-sheet-log-empty">Вратари не попали в текущий матчевый лист. Их можно вернуть через «Состав».</div>'
+            : '<div class="match-sheet-log-empty">Вратари добавляются на странице «Статистика».</div>';
         return;
     }
     const table = document.createElement('table');
@@ -12662,15 +12701,12 @@ function renderMatchSheetRosterManager() {
         });
         role.value = player.role;
         const sheetToggle = document.createElement('button');
-        const inSheet = !matchSheetExcludedSet().has(player.id) || player.role === 'goalie';
+        const inSheet = !matchSheetExcludedSet().has(player.id);
         sheetToggle.type = 'button';
         sheetToggle.className = `match-sheet-roster-sheet-toggle ${inSheet ? 'in-sheet' : 'out-sheet'}`;
         sheetToggle.dataset.matchRosterSheetToggle = player.id;
-        sheetToggle.disabled = player.role === 'goalie';
-        sheetToggle.textContent = player.role === 'goalie' ? 'Вратарь' : (inSheet ? 'В листе' : 'Вернуть');
-        sheetToggle.title = player.role === 'goalie'
-            ? 'Вратари не отображаются в таблице полевых игроков'
-            : (inSheet ? 'Убрать из текущего матчевого листа' : 'Вернуть в текущий матчевый лист');
+        sheetToggle.textContent = inSheet ? 'В листе' : 'Вернуть';
+        sheetToggle.title = inSheet ? 'Убрать из текущего матчевого листа' : 'Вернуть в текущий матчевый лист';
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.className = 'match-sheet-roster-remove';
@@ -13358,7 +13394,8 @@ function renderStatsRoster() {
 }
 
 function archivedMatchPlayers(record) {
-    const players = (record.roster || []).filter(player => player.role !== 'goalie');
+    const excluded = new Set((record.sheet?.excludedPlayerIds || []).map(String));
+    const players = (record.roster || []).filter(player => player.role !== 'goalie' && !excluded.has(String(player.id)));
     const order = Array.isArray(record.sheet?.order) ? record.sheet.order : [];
     const rank = new Map(order.map((id, index) => [id, index]));
     if (record.sheet?.sortDirection === 'asc') return players.sort(rosterSort);
@@ -13436,8 +13473,9 @@ function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
     const events = record.sheet.events || [];
     const teamGoals = events.filter(event => event.type === 'goal').length;
     const teamConceded = events.filter(event => event.type === 'conceded').length;
+    const excludedGoalies = new Set((record.sheet?.excludedPlayerIds || []).map(String));
     const goalieNames = (record.roster || [])
-        .filter(player => player.role === 'goalie')
+        .filter(player => player.role === 'goalie' && !excludedGoalies.has(String(player.id)))
         .map(player => `${player.number ? `№${player.number} ` : ''}${player.name || 'Вратарь'}`)
         .join(', ');
     const pages = [];
