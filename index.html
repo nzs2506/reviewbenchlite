@@ -4825,9 +4825,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.88" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.89" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.88</span>
+            <span class="version-tooltip">v0.9.89</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -13475,7 +13475,7 @@ function matchSheetPdfScoreLine(record) {
     if (finalScore) {
         const homeName = finalScore.homeName || related?.homeName || 'Команда хозяев';
         const awayName = finalScore.awayName || related?.awayName || 'Команда гостей';
-        return `${homeName} ${finalScore.homeGoals}:${finalScore.awayGoals} (счёт финальный) ${awayName}`;
+        return `${homeName} ${finalScore.homeGoals}:${finalScore.awayGoals} ${awayName}`;
     }
     const events = Array.isArray(record?.sheet?.events) ? record.sheet.events : [];
     const goals = events.filter(event => event.type === 'goal').length;
