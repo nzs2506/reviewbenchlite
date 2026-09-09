@@ -2669,6 +2669,15 @@
     .match-sheet-action.penalty i { background: rgba(245,158,11,.14); color: #fbbf24; }
     .match-sheet-action:disabled { opacity: .36; cursor: default; }
     #matchSheetActions { display: none; }
+    .match-sheet-palette { display: inline-flex; align-items: center; gap: 6px; }
+    .match-sheet-palette button {
+        min-width: 34px; height: 28px; border: 1px solid #3a4250; border-radius: 7px;
+        background: #14171c; color: #cbd5e1; font-size: 11px; font-weight: 900; cursor: pointer;
+    }
+    .match-sheet-palette button[data-highlight-color="green"] { color: #86efac; border-color: #276749; }
+    .match-sheet-palette button[data-highlight-color="red"] { color: #fca5a5; border-color: #8b3434; }
+    .match-sheet-palette button.active { box-shadow: 0 0 0 2px #60a5fa; }
+    .match-sheet-position-order { color: #94a3b8; font-size: 11px; font-weight: 800; white-space: nowrap; }
     .match-sheet-header-actions { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
     .match-sheet-table .match-sheet-header-actions .match-sheet-action {
         min-width: 0; width: 100%; min-height: 36px; padding: 5px;
@@ -2871,7 +2880,7 @@
         background: #2563eb;
         color: #fff;
     }
-    .match-sheet-player.defense b { background: #f39a82; }
+    .match-sheet-player b { background: #93c5fd; }
     .match-sheet-player span {
         overflow: hidden;
         text-overflow: ellipsis;
@@ -2908,6 +2917,8 @@
         outline: none;
     }
     .match-sheet-total-input:focus { border-color: #3b82f6; }
+    .match-sheet-total-input.match-sheet-highlight-green { background: rgba(34,197,94,.20); border-color: #22c55e; color: #dcfce7; }
+    .match-sheet-total-input.match-sheet-highlight-red { background: rgba(239,68,68,.20); border-color: #ef4444; color: #fee2e2; }
     .match-sheet-empty {
         min-height: 180px;
         display: grid;
@@ -3015,8 +3026,16 @@
     .match-aggregate { margin: 0 0 12px; border: 1px solid #24579a; border-radius: 9px; overflow: hidden; background: #111923; }
     .match-aggregate[hidden] { display: none; }
     .match-aggregate-head { padding: 10px 12px; color: #dbeafe; font-size: 11px; font-weight: 900; }
-    .match-aggregate-table-wrap { overflow: auto; border-top: 1px solid #24579a; }
-    .match-aggregate .match-sheet-table { font-size: 10px; }
+    .match-aggregate-table-wrap { overflow: visible; border-top: 1px solid #24579a; }
+    .match-aggregate .match-sheet-table { width: 100%; min-width: 0; table-layout: fixed; font-size: 11px; }
+    .match-aggregate .match-sheet-table .match-sheet-player-head,
+    .match-aggregate .match-sheet-table .match-sheet-player-cell { position: static; width: 31%; min-width: 0; max-width: none; white-space: normal; }
+    .match-aggregate .match-sheet-table th,
+    .match-aggregate .match-sheet-table td { min-width: 0; padding: 6px 3px; }
+    .match-aggregate .match-sheet-table tbody tr { cursor: default; }
+    .match-aggregate-role-row td { padding: 8px 12px !important; background: #1d2b3e; color: #bfdbfe; font-weight: 1000; text-transform: uppercase; letter-spacing: .08em; text-align: left; }
+    .match-aggregate-edit { width: 100%; min-width: 0; height: 29px; border: 1px solid #303b4a; border-radius: 5px; background: #0f141c; color: #f8fafc; text-align: center; font-weight: 800; }
+    .match-aggregate-remove { width: 24px; height: 26px; border: 1px solid #5b3035; border-radius: 5px; background: #24161a; color: #fca5a5; cursor: pointer; }
     .match-archive-card {
         border: 1px solid #2b3039;
         border-radius: 9px;
@@ -4825,9 +4844,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.89" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.90" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.89</span>
+            <span class="version-tooltip">v0.9.90</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5287,12 +5306,7 @@
                     <label class="match-sheet-field">Дата
                         <input id="matchSheetDate" type="date">
                     </label>
-                    <div class="match-sheet-periods" aria-label="Период">
-                        <button class="active" type="button" data-match-period="1">1</button>
-                        <button type="button" data-match-period="2">2</button>
-                        <button type="button" data-match-period="3">3</button>
-                    </div>
-                    <button class="match-sheet-sort" id="btnMatchSheetSort" type="button" title="Сортировать по номеру"><i class="fa-solid fa-arrow-down-1-9"></i><span>По номеру</span></button>
+                    <span class="match-sheet-position-order">Защитники → нападающие · по номерам</span>
                     <button class="match-sheet-roster-toggle" id="btnMatchSheetRoster" type="button"><i class="fa-solid fa-users"></i><span>Состав</span></button>
                     <button class="match-sheet-save" id="btnMatchSheetSave" type="button"><i class="fa-solid fa-floppy-disk"></i><span>Сохранить матч</span></button>
                     <button class="match-sheet-pdf" id="btnMatchSheetPdf" type="button" title="Скачать матчевый лист"><i class="fa-regular fa-file-pdf"></i><span>PDF</span></button>
@@ -5309,6 +5323,10 @@
                     <div class="match-sheet-entry-head">
                         <div class="match-sheet-selection" id="matchSheetSelection">Сначала выберите игрока в таблице</div>
                         <div class="match-sheet-selection-tools">
+                            <div class="match-sheet-palette" aria-label="Подсветка ячейки">
+                                <button type="button" data-highlight-color="green" title="Выделить хорошее значение">Хорошо</button>
+                                <button type="button" data-highlight-color="red" title="Выделить требующее внимания значение">Внимание</button>
+                            </div>
                             <button class="match-sheet-remove-selected" id="btnMatchSheetRemoveSelected" type="button" disabled><i class="fa-regular fa-trash-can"></i> Убрать выбранных</button>
                             <button class="match-sheet-undo" id="btnMatchSheetUndo" type="button" disabled><i class="fa-solid fa-rotate-left"></i>Отменить последнее</button>
                         </div>
@@ -6054,6 +6072,9 @@ let statsPage = 'roster';
 let rosterPlayers = [];
 let matchSheetPeriod = 1;
 let matchSheetSelectedPlayerIds = new Set();
+let matchSheetHighlightColor = '';
+let matchAggregateEdits = new Map();
+let lastMatchAggregateRecords = [];
 let matchSheetState = { version: MATCH_SHEET_SCHEMA_VERSION, archiveId: '', opponent: '', date: '', matchScore: null, players: {}, events: [], order: [], excludedPlayerIds: [], sortDirection: 'manual' };
 let matchSheetArchive = [];
 let admiralMatches = [];
@@ -6159,6 +6180,15 @@ function fitCanvas() {
     const s = Math.max(0.2, Math.min(fitW / d.w, fitH / d.h) * fitFactor);
     canvas.setDimensions({ width: Math.round(d.w * s), height: Math.round(d.h * s) });
     canvas.setZoom(s);
+    // Safari can keep a stale flex width on the wrapper after a viewport/toolbar
+    // resize, leaving an empty dark area beside the rink. Pin the frame to the
+    // actual Fabric canvas dimensions on every layout pass.
+    const canvasBox = document.getElementById('canvasBox');
+    if (canvasBox) {
+        canvasBox.style.width = `${Math.round(d.w * s)}px`;
+        canvasBox.style.height = `${Math.round(d.h * s)}px`;
+        canvasBox.style.flex = '0 0 auto';
+    }
     canvas.calcOffset();
     const r = Math.round(90 * s) + 'px';
     const halfRadii = {
@@ -10945,7 +10975,8 @@ function emptyMatchSheetPlayer() {
         faceoffsTotal: '',
         mmPoints: '',
         plusMinus: 0,
-        rating: ''
+        rating: '',
+        highlights: {}
     };
     MATCH_SHEET_PERIOD_FIELDS.forEach(field => { state[field] = [0, 0, 0]; });
     return state;
@@ -10960,6 +10991,9 @@ function normalizeMatchSheetPlayer(value) {
     });
     normalized.plusMinus = Math.round(safeStatNumber(value?.plusMinus));
     normalized.rating = value?.rating === undefined || value?.rating === null ? '' : String(value.rating).slice(0, 5);
+    normalized.highlights = Object.fromEntries(Object.entries(value?.highlights || {})
+        .filter(([field, color]) => typeof field === 'string' && ['green', 'red'].includes(color))
+        .map(([field, color]) => [field, color]));
     normalized.games = Math.max(0, Math.round(safeStatNumber(value?.games)));
     normalized.plus = Math.max(0, Math.round(safeStatNumber(value?.plus)));
     normalized.minus = Math.max(0, Math.round(safeStatNumber(value?.minus)));
@@ -11696,27 +11730,23 @@ async function openKhlMatchSheet(match) {
     const date = String(match.date || (match.startsAt ? match.startsAt.slice(0, 10) : todayInputValue())).slice(0, 10);
     const currentOpponent = String(matchSheetState.opponent || '').trim();
     const currentDate = String(matchSheetState.date || '').trim();
-    const hasCurrent = Boolean(matchSheetState.archiveId);
     const isSameMatch = currentDate === date && matchSheetOpponentKey(currentOpponent) === matchSheetOpponentKey(opponent);
     const savedRecord = matchSheetArchive.find(record => record.date === date
         && matchSheetOpponentKey(record.opponent) === matchSheetOpponentKey(opponent));
-    if (hasCurrent && !isSameMatch) {
+    const hasEnteredData = matchSheetState.events.length
+        || Object.values(matchSheetState.players || {}).some(matchSheetPlayerHasData);
+    if (hasEnteredData && !isSameMatch) {
         const decision = await showConfirm(
-            `Текущий матчевый лист будет заменен матчем «${opponent}» от ${date}.`,
+            `Сохранить данные по матчу «${currentOpponent || 'без соперника'}» от ${currentDate || 'без даты'}?`,
             {
-                title: 'Открыть матч',
-                okLabel: 'Сохранить текущий',
-                extraLabel: 'Сохранить как новую',
-                skipLabel: 'Не сохранять',
-                cancelLabel: 'Отмена'
+                title: 'Есть внесённые данные',
+                okLabel: 'Сохранить и переключиться',
+                skipLabel: 'Переключиться без сохранения',
+                cancelLabel: 'Остаться'
             }
         );
         if (decision === false) return false;
         if (decision === true) saveMatchSheetToArchive();
-        if (decision === 'extra') {
-            matchSheetState.archiveId = '';
-            saveMatchSheetToArchive();
-        }
     }
     // The match card is the entry point to the saved sheet.  A saved match must be
     // reopened as it was recorded, not replaced with a fresh KHL import.
@@ -11945,15 +11975,13 @@ function allMatchSheetSkaters() {
 function matchSheetSkaters() {
     const excluded = matchSheetExcludedSet();
     const players = allMatchSheetSkaters().filter(player => !excluded.has(player.id));
-    if (matchSheetState.sortDirection === 'asc') return players.sort(rosterSort);
-    if (matchSheetState.sortDirection === 'desc') return players.sort((a, b) => rosterSort(b, a));
-    const order = Array.isArray(matchSheetState.order) ? matchSheetState.order : [];
-    const rank = new Map(order.map((id, index) => [id, index]));
-    return players.sort((a, b) => {
-        const ai = rank.has(a.id) ? rank.get(a.id) : Number.MAX_SAFE_INTEGER;
-        const bi = rank.has(b.id) ? rank.get(b.id) : Number.MAX_SAFE_INTEGER;
-        return ai === bi ? rosterSort(a, b) : ai - bi;
-    });
+    return players.sort(matchSheetPositionSort);
+}
+
+function matchSheetPositionSort(a, b) {
+    const rank = { defense: 0, forward: 1, goalie: 2 };
+    const roleDifference = (rank[a.role] ?? 9) - (rank[b.role] ?? 9);
+    return roleDifference || rosterSort(a, b);
 }
 
 function syncMatchSheetRosterPresence() {
@@ -12334,7 +12362,7 @@ function matchSheetTotalValue(state, field) {
 
 function appendMatchSheetTotalInput(row, player, state, field, options = {}) {
     const input = document.createElement('input');
-    input.className = 'match-sheet-total-input';
+    input.className = `match-sheet-total-input${state.highlights?.[field] ? ` match-sheet-highlight-${state.highlights[field]}` : ''}`;
     input.type = options.numeric ? 'number' : 'text';
     if (options.numeric) {
         input.min = '0';
@@ -12350,15 +12378,14 @@ function appendMatchSheetTotalInput(row, player, state, field, options = {}) {
 
 function renderMatchSheet() {
     syncMatchSheetRosterPresence();
+    document.querySelectorAll('[data-highlight-color]').forEach(button => {
+        button.classList.toggle('active', button.dataset.highlightColor === matchSheetHighlightColor);
+    });
     const opponent = document.getElementById('matchSheetOpponent');
     const date = document.getElementById('matchSheetDate');
     if (opponent && opponent.value !== matchSheetState.opponent) opponent.value = matchSheetState.opponent;
     if (date && date.value !== matchSheetState.date) date.value = matchSheetState.date;
     renderMatchSheetMatchSelect();
-    document.querySelectorAll('[data-match-period]').forEach(btn => {
-        btn.classList.toggle('active', Number(btn.dataset.matchPeriod) === matchSheetPeriod);
-    });
-    updateMatchSheetSortButton();
 
     const players = matchSheetSkaters();
     const validIds = new Set(players.map(player => player.id));
@@ -12373,7 +12400,7 @@ function renderMatchSheet() {
             name.textContent = selectedPlayers.length === 1
                 ? `${selectedPlayers[0].number ? `№${selectedPlayers[0].number} ` : ''}${selectedPlayers[0].name || rosterRoleLabel(selectedPlayers[0].role)}`
                 : selectedPlayers.map(player => player.number ? `№${player.number}` : player.name).join(', ');
-            selection.append(name, ` · ${matchSheetPeriod}-й период`);
+            selection.append(name);
         } else {
             selection.textContent = 'Сначала выберите игрока в таблице';
         }
@@ -12487,9 +12514,7 @@ function renderMatchSheetLog() {
             ? players.map(player => player.number ? `№${player.number}` : player.name).join(', ')
             : `${players[0]?.number ? `№${players[0].number} ` : ''}${players[0]?.name || 'Игрок'}`;
         text.textContent = `${names} · ${MATCH_SHEET_EVENTS[event.type]?.label || 'Событие'}`;
-        const time = document.createElement('time');
-        time.textContent = `${event.period}-й период`;
-        copy.append(text, time);
+        copy.append(text);
         const tools = document.createElement('div');
         tools.className = 'match-sheet-log-tools';
         const edit = document.createElement('button');
@@ -13704,7 +13729,7 @@ function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
             const fill = rowIndex % 2 ? '#f4f7fb' : '#ffffff';
             let cellX = margin;
             drawMatchSheetPdfCell(ctx, cellX, y, columns.player, rowHeight, `${player.number ? `№${player.number}  ` : ''}${player.name || rosterRoleLabel(player.role)}`, {
-                fill, align: 'left', pad: 15, font: '700 21px Arial, sans-serif', color: player.role === 'defense' ? '#a3321d' : '#172033'
+                fill, align: 'left', pad: 15, font: '700 21px Arial, sans-serif', color: '#172033'
             });
             cellX += columns.player;
             [0, 1, 2].forEach(period => {
@@ -13816,7 +13841,7 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
                     align: column.align || 'center',
                     pad: index === 0 ? 14 : 5,
                     font: index === 0 ? '700 20px Arial, sans-serif' : '700 18px Arial, sans-serif',
-                    color: index === 0 && player.role === 'defense' ? '#a3321d' : '#172033'
+                    color: '#172033'
                 });
                 cellX += column.width;
             });
@@ -13891,6 +13916,15 @@ function matchArchivePlayerKey(player) {
 
 function aggregateMatchRecords(selected) {
     const rows = new Map();
+    // A selected-match report is a team report: include the full current roster,
+    // even when a player did not dress for any of the selected games.
+    rosterPlayers.filter(player => cleanStatName(player.name) || String(player.number || '').trim()).forEach(player => {
+        rows.set(matchArchivePlayerKey(player), {
+            player, games: 0, plus: 0, minus: 0, powerPlay: 0, shortHanded: 0,
+            penaltyTotal: 0, opponentPenaltyTotal: 0, goalsTotal: 0, assists: 0,
+            shotsTotal: 0, faceoffWins: 0, faceoffLosses: 0, mmPoints: 0
+        });
+    });
     selected.forEach(record => archivedMatchPlayers(record).forEach(player => {
         const key = matchArchivePlayerKey(player);
         const state = normalizeMatchSheetPlayer(record.sheet?.players?.[player.id]);
@@ -13911,13 +13945,32 @@ function aggregateMatchRecords(selected) {
         current.faceoffLosses += faceoffs.losses;
         rows.set(key, current);
     }));
-    return [...rows.values()].sort((a, b) => rosterSort(a.player, b.player));
+    return [...rows.values()].sort((a, b) => matchSheetPositionSort(a.player, b.player));
+}
+
+function matchAggregateSelectionKey(records) {
+    return records.map(record => String(record.id || '')).sort().join('|');
+}
+
+function matchAggregateEditBucket(records) {
+    const key = matchAggregateSelectionKey(records);
+    if (!matchAggregateEdits.has(key)) matchAggregateEdits.set(key, { values: {}, removed: new Set() });
+    return matchAggregateEdits.get(key);
+}
+
+function applyMatchAggregateEdits(records, rows) {
+    const edits = matchAggregateEditBucket(records);
+    return rows.filter(row => !edits.removed.has(matchArchivePlayerKey(row.player))).map(row => {
+        const values = edits.values[matchArchivePlayerKey(row.player)];
+        return values ? { ...row, ...values } : row;
+    });
 }
 
 function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchiveIds, targetId = 'matchAggregate') {
     const target = document.getElementById(targetId);
     if (!target) return;
     const selected = records.filter(record => selectedIds.has(record.id));
+    lastMatchAggregateRecords = selected;
     target.hidden = !selected.length;
     target.innerHTML = '';
     if (!selected.length) {
@@ -13925,7 +13978,7 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
         target.textContent = 'Матчи не выбраны или сохранённых данных пока нет. Итог: 0.';
         return;
     }
-    const rows = aggregateMatchRecords(selected);
+    const rows = applyMatchAggregateEdits(selected, aggregateMatchRecords(selected));
     const head = document.createElement('div');
     head.className = 'match-aggregate-head';
     head.textContent = `Статистика за выбранные матчи: ${selected.length} ${selected.length === 1 ? 'матч' : 'матча'}`;
@@ -13935,14 +13988,44 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
     table.className = 'match-sheet-table';
     matchSheetHeader(table);
     const tbody = document.createElement('tbody');
-    rows.forEach(total => {
+    const columnsCount = 13;
+    ['defense', 'forward', 'goalie'].forEach(role => {
+        const roleRows = rows.filter(total => total.player.role === role);
+        if (!roleRows.length) return;
+        const roleRow = document.createElement('tr');
+        roleRow.className = 'match-aggregate-role-row';
+        const roleCell = document.createElement('td');
+        roleCell.colSpan = columnsCount;
+        roleCell.textContent = ({ defense: 'Защитники', forward: 'Нападающие', goalie: 'Вратари' })[role];
+        roleRow.appendChild(roleCell);
+        tbody.appendChild(roleRow);
+        roleRows.forEach(total => {
         const row = document.createElement('tr');
-        appendCell(row, `${total.player.number ? `№${total.player.number} ` : ''}${total.player.name || rosterRoleLabel(total.player.role)}`, 'match-sheet-player-cell');
-        [total.games, total.plus, total.minus, total.powerPlay, total.shortHanded,
-            total.penaltyTotal, total.opponentPenaltyTotal, total.goalsTotal, total.assists,
-            total.shotsTotal, `${total.faceoffWins}/${total.faceoffLosses}`, total.mmPoints
-        ].forEach(value => appendCell(row, String(value), 'match-sheet-value'));
+        const identity = document.createElement('td');
+        identity.className = 'match-sheet-player-cell';
+        const name = document.createElement('span');
+        name.textContent = `${total.player.number ? `№${total.player.number} ` : ''}${total.player.name || rosterRoleLabel(total.player.role)}`;
+        const remove = document.createElement('button');
+        remove.type = 'button'; remove.className = 'match-aggregate-remove'; remove.title = 'Убрать из этой выборки';
+        remove.dataset.matchAggregateRemove = matchArchivePlayerKey(total.player);
+        remove.innerHTML = '<i class="fa-regular fa-trash-can"></i>';
+        identity.append(name, remove);
+        row.appendChild(identity);
+        [
+            ['games', total.games], ['plus', total.plus], ['minus', total.minus], ['powerPlay', total.powerPlay], ['shortHanded', total.shortHanded],
+            ['penaltyTotal', total.penaltyTotal], ['opponentPenaltyTotal', total.opponentPenaltyTotal], ['goalsTotal', total.goalsTotal], ['assists', total.assists],
+            ['shotsTotal', total.shotsTotal], ['faceoffs', `${total.faceoffWins}/${total.faceoffLosses}`], ['mmPoints', total.mmPoints]
+        ].forEach(([field, value]) => {
+            const cell = document.createElement('td');
+            const input = document.createElement('input');
+            input.className = 'match-aggregate-edit'; input.value = String(value ?? 0);
+            input.dataset.matchAggregateField = field;
+            input.dataset.matchAggregatePlayer = matchArchivePlayerKey(total.player);
+            input.setAttribute('aria-label', `${field}: ${total.player.name}`);
+            cell.appendChild(input); row.appendChild(cell);
+        });
         tbody.appendChild(row);
+        });
     });
     table.appendChild(tbody);
     wrap.appendChild(table);
@@ -13984,7 +14067,7 @@ function calculateSelectedKhlMatches() {
 function exportMatchAggregatePdf(records) {
     if (!records.length) return;
     try {
-        const totals = aggregateMatchRecords(records);
+        const totals = applyMatchAggregateEdits(records, aggregateMatchRecords(records));
         const sheet = { players: {}, order: [] };
         const roster = totals.map((total, index) => {
             const id = `aggregate-${index}`;
@@ -16777,6 +16860,15 @@ document.querySelectorAll('[data-match-period]').forEach(btn => {
     });
 });
 document.getElementById('statsSheetPanel').addEventListener('click', e => {
+    const palette = e.target.closest('[data-highlight-color]');
+    if (palette) {
+        const color = palette.dataset.highlightColor;
+        matchSheetHighlightColor = matchSheetHighlightColor === color ? '' : color;
+        document.querySelectorAll('[data-highlight-color]').forEach(button => {
+            button.classList.toggle('active', button.dataset.highlightColor === matchSheetHighlightColor);
+        });
+        return;
+    }
     const action = e.target.closest('[data-match-event]');
     if (action && !action.disabled) recordMatchSheetEvent(action.dataset.matchEvent);
 });
@@ -16796,6 +16888,17 @@ document.getElementById('matchSheetTable').addEventListener('click', e => {
     if (remove) {
         e.stopPropagation();
         removeMatchSheetPlayers([remove.dataset.matchSheetRemovePlayer]);
+        return;
+    }
+    const totalInput = e.target.closest('[data-match-total-field]');
+    if (totalInput && matchSheetHighlightColor) {
+        const state = matchSheetPlayerState(totalInput.dataset.matchPlayerId);
+        const field = totalInput.dataset.matchTotalField;
+        state.highlights = state.highlights || {};
+        if (state.highlights[field] === matchSheetHighlightColor) delete state.highlights[field];
+        else state.highlights[field] = matchSheetHighlightColor;
+        persistMatchSheet();
+        renderMatchSheet();
         return;
     }
     if (e.target.closest('[data-match-rating], [data-match-total-field], [data-match-drag-handle]')) return;
@@ -16859,7 +16962,7 @@ document.getElementById('matchSheetMatchSelect').addEventListener('change', asyn
 });
 document.getElementById('btnMatchSheetUndo').addEventListener('click', undoMatchSheetEvent);
 document.getElementById('btnMatchSheetReset').addEventListener('click', resetMatchSheet);
-document.getElementById('btnMatchSheetSort').addEventListener('click', sortMatchSheetByNumber);
+document.getElementById('btnMatchSheetSort')?.addEventListener('click', sortMatchSheetByNumber);
 document.getElementById('btnMatchSheetRoster').addEventListener('click', toggleMatchSheetRosterPanel);
 document.getElementById('btnMatchSheetSave').addEventListener('click', saveMatchSheetToArchive);
 document.getElementById('btnMatchSheetPdf').addEventListener('click', () => exportMatchSheetPdf());
@@ -17057,6 +17160,28 @@ document.getElementById('matchesLayout').addEventListener('change', e => {
 });
 try { document.getElementById('matchesLayout').value = localStorage.getItem('benchreview.matches-layout') === 'tiles' ? 'tiles' : 'rows'; } catch (_) {}
 document.getElementById('btnKhlMatchCalculate').addEventListener('click', calculateSelectedKhlMatches);
+document.getElementById('matchAggregate').addEventListener('change', e => {
+    const input = e.target.closest('[data-match-aggregate-field]');
+    if (!input || !lastMatchAggregateRecords.length) return;
+    const bucket = matchAggregateEditBucket(lastMatchAggregateRecords);
+    const playerKey = input.dataset.matchAggregatePlayer;
+    const values = bucket.values[playerKey] || {};
+    if (input.dataset.matchAggregateField === 'faceoffs') {
+        const pair = String(input.value || '').match(/^(\d+)\s*\/\s*(\d+)$/);
+        values.faceoffWins = pair ? Number(pair[1]) : 0;
+        values.faceoffLosses = pair ? Number(pair[2]) : 0;
+    } else {
+        values[input.dataset.matchAggregateField] = Math.max(0, safeStatNumber(input.value));
+    }
+    bucket.values[playerKey] = values;
+    renderMatchArchiveAggregate(lastMatchAggregateRecords, new Set(lastMatchAggregateRecords.map(record => record.id)));
+});
+document.getElementById('matchAggregate').addEventListener('click', e => {
+    const remove = e.target.closest('[data-match-aggregate-remove]');
+    if (!remove || !lastMatchAggregateRecords.length) return;
+    matchAggregateEditBucket(lastMatchAggregateRecords).removed.add(remove.dataset.matchAggregateRemove);
+    renderMatchArchiveAggregate(lastMatchAggregateRecords, new Set(lastMatchAggregateRecords.map(record => record.id)));
+});
 document.getElementById('btnKhlMatchPdf').addEventListener('click', () => exportMatchAggregatePdf(calculateSelectedKhlMatches()));
 document.getElementById('btnKhlMatchExport').addEventListener('click', () => {
     calculateSelectedKhlMatches();
