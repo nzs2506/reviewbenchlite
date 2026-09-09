@@ -4844,9 +4844,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.90" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.91" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.90</span>
+            <span class="version-tooltip">v0.9.91</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -13472,6 +13472,7 @@ function archivedMatchPlayers(record) {
     const players = (record.roster || []).filter(player => player.role !== 'goalie' && !excluded.has(String(player.id)));
     const order = Array.isArray(record.sheet?.order) ? record.sheet.order : [];
     const rank = new Map(order.map((id, index) => [id, index]));
+    if (record.sheet?.sortDirection === 'position') return players.sort(matchSheetPositionSort);
     if (record.sheet?.sortDirection === 'asc') return players.sort(rosterSort);
     if (record.sheet?.sortDirection === 'desc') return players.sort((a, b) => rosterSort(b, a));
     return players.sort((a, b) => {
@@ -13532,6 +13533,13 @@ function drawMatchSheetPdfCell(ctx, x, y, width, height, text, options = {}) {
     drawMatchSheetPdfText(ctx, text, x, y + height / 2, width, options);
 }
 
+function matchSheetPdfHighlightFill(state, field, fallback) {
+    const color = state?.highlights?.[field];
+    if (color === 'green') return '#d9fbe3';
+    if (color === 'red') return '#ffe0e0';
+    return fallback;
+}
+
 function matchSheetPdfGoalies(record) {
     const excluded = new Set((record.sheet?.excludedPlayerIds || []).map(String));
     return (record.roster || [])
@@ -13544,7 +13552,7 @@ function matchSheetPdfGoalies(record) {
         }));
 }
 
-function renderMatchSheetGoaliesPdfPage(record) {
+function renderMatchSheetGoaliesPdfPage(record, pageNumber = 2, totalPages = 2) {
     const pageWidth = 2480;
     const pageHeight = 1754;
     const margin = 70;
@@ -13619,7 +13627,7 @@ function renderMatchSheetGoaliesPdfPage(record) {
     ctx.font = '700 19px Arial, sans-serif';
     ctx.fillStyle = '#536079';
     ctx.textAlign = 'right';
-    ctx.fillText('Страница 2 — вратари', pageWidth - margin, pageHeight - 64);
+    ctx.fillText(`Страница ${pageNumber} из ${totalPages} — вратари`, pageWidth - margin, pageHeight - 64);
     return { dataUrl: canvas.toDataURL('image/jpeg', 0.93), width: pageWidth, height: pageHeight };
 }
 
@@ -13781,19 +13789,19 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
     const headerHeight = 76;
     const rowHeight = 60;
     const definitions = [
-        { label: '№ / ФАМИЛИЯ', weight: 420, value: (player, state) => `${player.number ? `№${player.number}  ` : ''}${player.name || rosterRoleLabel(player.role)}`, align: 'left' },
-        { label: 'ИГР', weight: 110, value: (_, state) => state.games },
-        { label: '+', weight: 90, value: (_, state) => state.plus },
-        { label: '−', weight: 90, value: (_, state) => state.minus },
-        { label: 'БОЛ', weight: 170, value: (_, state) => state.powerPlay || '—' },
-        { label: 'МЕН', weight: 170, value: (_, state) => state.shortHanded || '—' },
-        { label: 'ШТР −', weight: 150, value: (_, state) => matchSheetTotalValue(state, 'penaltyTotal') },
-        { label: 'ШТР +', weight: 150, value: (_, state) => matchSheetTotalValue(state, 'opponentPenaltyTotal') || '—' },
-        { label: 'ГОЛ', weight: 110, value: (_, state) => matchSheetTotalValue(state, 'goalsTotal') },
-        { label: 'ПАС', weight: 110, value: (_, state) => state.assists || '—' },
-        { label: 'БР', weight: 110, value: (_, state) => matchSheetTotalValue(state, 'shotsTotal') },
-        { label: 'ВБР', weight: 190, value: (_, state) => matchSheetTotalValue(state, 'faceoffsTotal') || '—' },
-        { label: 'ОЧКИ В ММ', weight: 250, value: (_, state) => state.mmPoints || '—' }
+        { field: 'player', label: '№ / ФАМИЛИЯ', weight: 420, value: (player, state) => `${player.number ? `№${player.number}  ` : ''}${player.name || rosterRoleLabel(player.role)}`, align: 'left' },
+        { field: 'games', label: 'ИГР', weight: 110, value: (_, state) => state.games },
+        { field: 'plus', label: '+', weight: 90, value: (_, state) => state.plus },
+        { field: 'minus', label: '−', weight: 90, value: (_, state) => state.minus },
+        { field: 'powerPlay', label: 'БОЛ', weight: 170, value: (_, state) => state.powerPlay || '—' },
+        { field: 'shortHanded', label: 'МЕН', weight: 170, value: (_, state) => state.shortHanded || '—' },
+        { field: 'penaltyTotal', label: 'ШТР −', weight: 150, value: (_, state) => matchSheetTotalValue(state, 'penaltyTotal') },
+        { field: 'opponentPenaltyTotal', label: 'ШТР +', weight: 150, value: (_, state) => matchSheetTotalValue(state, 'opponentPenaltyTotal') || '—' },
+        { field: 'goalsTotal', label: 'ГОЛ', weight: 110, value: (_, state) => matchSheetTotalValue(state, 'goalsTotal') },
+        { field: 'assists', label: 'ПАС', weight: 110, value: (_, state) => state.assists || '—' },
+        { field: 'shotsTotal', label: 'БР', weight: 110, value: (_, state) => matchSheetTotalValue(state, 'shotsTotal') },
+        { field: 'faceoffsTotal', label: 'ВБР', weight: 190, value: (_, state) => matchSheetTotalValue(state, 'faceoffsTotal') || '—' },
+        { field: 'mmPoints', label: 'ОЧКИ В ММ', weight: 250, value: (_, state) => state.mmPoints || '—' }
     ];
     const weightTotal = definitions.reduce((sum, item) => sum + item.weight, 0);
     definitions.forEach(item => { item.width = item.weight / weightTotal * tableWidth; });
@@ -13837,7 +13845,7 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
             let cellX = margin;
             definitions.forEach((column, index) => {
                 drawMatchSheetPdfCell(ctx, cellX, y, column.width, rowHeight, column.value(player, state), {
-                    fill,
+                    fill: index === 0 ? fill : matchSheetPdfHighlightFill(state, column.field, fill),
                     align: column.align || 'center',
                     pad: index === 0 ? 14 : 5,
                     font: index === 0 ? '700 20px Arial, sans-serif' : '700 18px Arial, sans-serif',
@@ -13849,11 +13857,11 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
         ctx.font = '700 19px Arial, sans-serif';
         ctx.fillStyle = '#536079';
         ctx.textAlign = 'right';
-        ctx.fillText(`Страница ${pageIndex + 1} из ${pageCount}`, pageWidth - margin, pageHeight - 64);
+        ctx.fillText(`Страница ${pageIndex + 1} из ${pageCount + 1}`, pageWidth - margin, pageHeight - 64);
         pages.push({ dataUrl: canvas.toDataURL('image/jpeg', 0.93), width: pageWidth, height: pageHeight });
     }
-    // The goalie overview always follows the first skater page, so it is the second PDF sheet.
-    pages.splice(Math.min(1, pages.length), 0, renderMatchSheetGoaliesPdfPage(record));
+    // Keep all skater pages together; the goalie overview is always the last page.
+    pages.push(renderMatchSheetGoaliesPdfPage(record, pageCount + 1, pageCount + 1));
     return pages;
 }
 
@@ -13922,7 +13930,7 @@ function aggregateMatchRecords(selected) {
         rows.set(matchArchivePlayerKey(player), {
             player, games: 0, plus: 0, minus: 0, powerPlay: 0, shortHanded: 0,
             penaltyTotal: 0, opponentPenaltyTotal: 0, goalsTotal: 0, assists: 0,
-            shotsTotal: 0, faceoffWins: 0, faceoffLosses: 0, mmPoints: 0
+            shotsTotal: 0, faceoffWins: 0, faceoffLosses: 0, mmPoints: 0, highlights: {}
         });
     });
     selected.forEach(record => archivedMatchPlayers(record).forEach(player => {
@@ -13932,7 +13940,7 @@ function aggregateMatchRecords(selected) {
             player,
             games: 0, plus: 0, minus: 0, powerPlay: 0, shortHanded: 0,
             penaltyTotal: 0, opponentPenaltyTotal: 0, goalsTotal: 0, assists: 0,
-            shotsTotal: 0, faceoffWins: 0, faceoffLosses: 0, mmPoints: 0
+            shotsTotal: 0, faceoffWins: 0, faceoffLosses: 0, mmPoints: 0, highlights: {}
         };
         ['games', 'plus', 'minus', 'powerPlay', 'shortHanded', 'assists', 'mmPoints'].forEach(field => {
             current[field] += safeStatNumber(state[field]);
@@ -13943,6 +13951,9 @@ function aggregateMatchRecords(selected) {
         const faceoffs = matchSheetFaceoffPair(state);
         current.faceoffWins += faceoffs.wins;
         current.faceoffLosses += faceoffs.losses;
+        Object.entries(state.highlights || {}).forEach(([field, color]) => {
+            if (color === 'red' || !current.highlights[field]) current.highlights[field] = color;
+        });
         rows.set(key, current);
     }));
     return [...rows.values()].sort((a, b) => matchSheetPositionSort(a.player, b.player));
@@ -14068,7 +14079,7 @@ function exportMatchAggregatePdf(records) {
     if (!records.length) return;
     try {
         const totals = applyMatchAggregateEdits(records, aggregateMatchRecords(records));
-        const sheet = { players: {}, order: [] };
+        const sheet = { players: {}, order: [], sortDirection: 'position' };
         const roster = totals.map((total, index) => {
             const id = `aggregate-${index}`;
             const state = Object.assign(emptyMatchSheetPlayer(), total, {
