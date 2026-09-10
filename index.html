@@ -4884,6 +4884,9 @@
         justify-content: space-between;
         gap: var(--s3);
         background: var(--bg);
+        /* A single shared edge keeps every section visually anchored. On the
+           rink it also reads as the top edge of the right-hand component tray. */
+        box-shadow: inset 0 -1px 0 var(--line);
     }
     .app-header > * { min-width: 0; }
     .app-title {
@@ -5175,9 +5178,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.1" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.2" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.1</span>
+            <span class="version-tooltip">v0.10.2</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
