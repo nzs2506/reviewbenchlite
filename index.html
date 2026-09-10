@@ -5074,7 +5074,6 @@
     .goalie-input { height: 40px; border-color: var(--line); border-radius: var(--r-sm); background: var(--raised); color: var(--tx); }
     .goalie-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
     .goalie-save { min-height: 40px; border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); }
-    .goalie-save br { display: none; }
     .goalie-save:hover { background: var(--accent); color: var(--on-accent); filter: brightness(1.08); }
     .goalie-report-pdf { min-height: 40px; border-color: var(--line); border-radius: var(--r-sm); background: transparent; color: var(--tx); }
     .goalie-report-pdf:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--tx); }
@@ -5131,9 +5130,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.99" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.0" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.99</span>
+            <span class="version-tooltip">v0.10.0</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5319,7 +5318,7 @@
                     </div>
                     <div class="goalie-side-form">
                         <div class="goalie-side-actions">
-                            <button class="goalie-save" id="btnGoalieSaveMatch" type="button">Сохранить<br>Матч</button>
+                            <button class="goalie-save" id="btnGoalieSaveMatch" type="button">Сохранить матч</button>
                             <button class="goalie-report-pdf" id="btnGoaliePdf" type="button"><i class="fa-regular fa-file-pdf"></i> PDF отчет</button>
                         </div>
                         <div class="goalie-keeper-fields">
@@ -16138,7 +16137,7 @@ function renderGoaliePage() {
     });
     document.getElementById('btnGoalieUndo').disabled = !active.events.length;
     document.getElementById('btnGoalieRedo').disabled = !active.undone.length;
-    document.getElementById('btnGoalieSaveMatch').innerHTML = goalieEditingMatchId ? 'Обновить<br>Матч' : 'Сохранить<br>Матч';
+    document.getElementById('btnGoalieSaveMatch').textContent = goalieEditingMatchId ? 'Обновить матч' : 'Сохранить матч';
     renderGoalieSavedList();
 }
 
