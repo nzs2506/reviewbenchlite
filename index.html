@@ -4844,9 +4844,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.91" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.92" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.91</span>
+            <span class="version-tooltip">v0.9.92</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -13922,6 +13922,43 @@ function matchArchivePlayerKey(player) {
         : `${role}|${khlStatsNameKey(player?.name || '')}`;
 }
 
+// БОЛ и МЕН заполняются вручную. Помимо обычного числа тренер может указать
+// пару в формате 0-1; в сводке такие значения нужно складывать по обеим частям.
+function addMatchSheetManualValue(current, incoming) {
+    const read = value => {
+        const raw = String(value ?? '').trim();
+        const pair = raw.match(/^(\d+)\s*-\s*(\d+)$/);
+        return pair ? { left: Number(pair[1]), right: Number(pair[2]), pair: true }
+            : { left: safeStatNumber(raw), right: 0, pair: false };
+    };
+    const a = read(current);
+    const b = read(incoming);
+    if (a.pair || b.pair) return `${a.left + b.left}-${a.right + b.right}`;
+    return a.left + b.left;
+}
+
+function emptyAggregateGoalieStats() {
+    return normalizeMatchGoalieStats();
+}
+
+function addAggregateGoalieStats(current, incoming) {
+    const result = normalizeMatchGoalieStats(current);
+    const source = normalizeMatchGoalieStats(incoming);
+    const numericFields = MATCH_GOALIE_COLUMNS.map(([key]) => key)
+        .filter(key => !['ice', 'savePercent', 'gaa'].includes(key));
+    numericFields.forEach(field => {
+        result[field] = String(safeStatNumber(result[field]) + safeStatNumber(source[field]));
+    });
+    const iceMinutes = parseGoalieIceMinutes(result.ice) + parseGoalieIceMinutes(source.ice);
+    result.ice = iceMinutes ? formatGoalieIce(iceMinutes) : '';
+    const shots = safeStatNumber(result.shotsAgainst);
+    const saves = safeStatNumber(result.saves);
+    const goalsAgainst = safeStatNumber(result.goalsAgainst);
+    result.savePercent = shots ? (saves / shots * 100).toFixed(1) : '';
+    result.gaa = iceMinutes ? (goalsAgainst * 60 / iceMinutes).toFixed(2) : '';
+    return normalizeMatchGoalieStats(result);
+}
+
 function aggregateMatchRecords(selected) {
     const rows = new Map();
     // A selected-match report is a team report: include the full current roster,
@@ -13930,20 +13967,33 @@ function aggregateMatchRecords(selected) {
         rows.set(matchArchivePlayerKey(player), {
             player, games: 0, plus: 0, minus: 0, powerPlay: 0, shortHanded: 0,
             penaltyTotal: 0, opponentPenaltyTotal: 0, goalsTotal: 0, assists: 0,
-            shotsTotal: 0, faceoffWins: 0, faceoffLosses: 0, mmPoints: 0, highlights: {}
+            shotsTotal: 0, faceoffWins: 0, faceoffLosses: 0, mmPoints: 0, highlights: {},
+            goalieStats: emptyAggregateGoalieStats()
         });
     });
-    selected.forEach(record => archivedMatchPlayers(record).forEach(player => {
+    selected.forEach(record => {
+        const excluded = new Set((record.sheet?.excludedPlayerIds || []).map(String));
+        const players = (record.roster || []).filter(player => !excluded.has(String(player.id)));
+        players.forEach(player => {
         const key = matchArchivePlayerKey(player);
         const state = normalizeMatchSheetPlayer(record.sheet?.players?.[player.id]);
         const current = rows.get(key) || {
             player,
             games: 0, plus: 0, minus: 0, powerPlay: 0, shortHanded: 0,
             penaltyTotal: 0, opponentPenaltyTotal: 0, goalsTotal: 0, assists: 0,
-            shotsTotal: 0, faceoffWins: 0, faceoffLosses: 0, mmPoints: 0, highlights: {}
+            shotsTotal: 0, faceoffWins: 0, faceoffLosses: 0, mmPoints: 0, highlights: {},
+            goalieStats: emptyAggregateGoalieStats()
         };
-        ['games', 'plus', 'minus', 'powerPlay', 'shortHanded', 'assists', 'mmPoints'].forEach(field => {
+        if (player.role === 'goalie') {
+            current.goalieStats = addAggregateGoalieStats(current.goalieStats, state.goalieStats);
+            rows.set(key, current);
+            return;
+        }
+        ['games', 'plus', 'minus', 'assists', 'mmPoints'].forEach(field => {
             current[field] += safeStatNumber(state[field]);
+        });
+        ['powerPlay', 'shortHanded'].forEach(field => {
+            current[field] = addMatchSheetManualValue(current[field], state[field]);
         });
         ['penaltyTotal', 'opponentPenaltyTotal', 'goalsTotal', 'shotsTotal'].forEach(field => {
             current[field] += safeStatNumber(matchSheetTotalValue(state, field));
@@ -13955,7 +14005,8 @@ function aggregateMatchRecords(selected) {
             if (color === 'red' || !current.highlights[field]) current.highlights[field] = color;
         });
         rows.set(key, current);
-    }));
+        });
+    });
     return [...rows.values()].sort((a, b) => matchSheetPositionSort(a.player, b.player));
 }
 
