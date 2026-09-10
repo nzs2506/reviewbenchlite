@@ -2676,6 +2676,10 @@
     }
     .match-sheet-palette button[data-highlight-color="green"] { color: #86efac; border-color: #276749; }
     .match-sheet-palette button[data-highlight-color="red"] { color: #fca5a5; border-color: #8b3434; }
+    .match-sheet-palette button[data-match-aggregate-highlight="green"] { background: #14532d; color: #dcfce7; border-color: #22c55e; }
+    .match-sheet-palette button[data-match-aggregate-highlight="red"] { background: #7f1d1d; color: #fee2e2; border-color: #ef4444; }
+    .match-sheet-palette button[data-match-aggregate-highlight="green"].active { background: #16a34a; color: #fff; box-shadow: 0 0 0 2px #86efac; }
+    .match-sheet-palette button[data-match-aggregate-highlight="red"].active { background: #dc2626; color: #fff; box-shadow: 0 0 0 2px #fca5a5; }
     .match-sheet-palette button.active { box-shadow: 0 0 0 2px #60a5fa; }
     .match-sheet-position-order { color: #94a3b8; font-size: 11px; font-weight: 800; white-space: nowrap; }
     .match-sheet-header-actions { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
@@ -4848,9 +4852,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.95" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.96" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.95</span>
+            <span class="version-tooltip">v0.9.96</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
