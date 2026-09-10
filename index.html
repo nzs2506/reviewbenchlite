@@ -5178,9 +5178,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.3" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.4" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.3</span>
+            <span class="version-tooltip">v0.10.4</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -6507,8 +6507,21 @@ function fitCanvas() {
     const wrap = document.querySelector('.canvas-wrapper');
     if (!wrap || document.body.dataset.view !== 'field') return false;
     const rect = wrap.getBoundingClientRect();
-    const wrapW = Math.max(wrap.clientWidth || 0, rect.width || 0);
-    const wrapH = Math.max(wrap.clientHeight || 0, rect.height || 0);
+    let wrapW = Math.max(wrap.clientWidth || 0, rect.width || 0);
+    let wrapH = Math.max(wrap.clientHeight || 0, rect.height || 0);
+    // Safari can report a stale grid-item size after its browser chrome or
+    // page zoom changes. Derive the editor space from the live viewport too;
+    // the right tray, header and bottom toolbar are the only fixed neighbours.
+    const viewportW = Math.max(window.innerWidth || 0, document.documentElement.clientWidth || 0);
+    const viewportH = Math.max(window.innerHeight || 0, document.documentElement.clientHeight || 0);
+    const sidePanel = document.querySelector('.side-panel');
+    const header = document.querySelector('.app-header');
+    const toolbar = document.querySelector('.bottom-toolbar');
+    const sideW = sidePanel ? sidePanel.getBoundingClientRect().width : 0;
+    const headerH = header ? header.getBoundingClientRect().height : 0;
+    const toolbarH = toolbar ? toolbar.getBoundingClientRect().height : 0;
+    wrapW = Math.max(wrapW, viewportW - sideW);
+    wrapH = Math.max(wrapH, viewportH - headerH - toolbarH);
     if (wrapW < 40 || wrapH < 40) return false;
     const d = designSize();
     const wrapStyle = getComputedStyle(wrap);
