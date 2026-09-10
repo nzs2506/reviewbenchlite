@@ -5178,9 +5178,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.2" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.3" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.2</span>
+            <span class="version-tooltip">v0.10.3</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -11493,7 +11493,12 @@ function normalizeAdmiralMatch(value) {
     const date = String((startsAt && dateInTimeZone(startsAt)) || value.date_played || value.date || todayInputValue()).slice(0, 10);
     const final = value.final === true || value.final === '1' || /final|окон|заверш/i.test(String(value.status || value.game_status || ''));
     const venue = String(value.venue || value.venue_name || '').trim();
-    const isHome = /владивосток|фетисов/i.test(`${venue} ${homeCity}`);
+    // The schedule's venue/city fields are not reliable for every KHL match.
+    // Home/away is determined by the actual home team; a home game is always
+    // played in Vladivostok for this calendar.
+    const isHome = homeTeamId === ADMIRAL_KHL_TEAM_ID
+        || /адмирал/i.test(homeName)
+        || (!homeTeamId && !homeName && /владивосток|фетисов/i.test(`${venue} ${homeCity}`));
     const opponentName = isHome ? awayName : homeName;
     const opponentCity = isHome ? awayCity : homeCity;
     const homeGoals = Math.max(0, Math.round(safeStatNumber(value.homeGoals ?? value.home_goal_count)));
@@ -11903,7 +11908,9 @@ function renderAdmiralMatches() {
         const status = card.querySelector('[data-role="status"]');
         status.textContent = match.final ? `Счет ${result}` : 'Будущий матч';
         status.classList.toggle('final', match.final);
-        card.querySelector('[data-role="venue"]').textContent = match.venue || match.opponentCity || '';
+        card.querySelector('[data-role="venue"]').textContent = match.isHome
+            ? 'Владивосток'
+            : (match.venue || match.opponentCity || '');
         card.querySelector('[data-khl-match-calendar]').dataset.khlMatchCalendar = match.id;
         const select = card.querySelector('[data-khl-match-select]');
         select.dataset.khlMatchSelect = match.id;
@@ -11931,7 +11938,7 @@ function upsertAdmiralMatchCalendarPlan(match) {
         id: existing?.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         title: admiralMatchTitle(match),
         planType: 'match',
-        place: match.venue || (match.isHome ? 'Владивосток' : match.opponentCity || 'Лёд'),
+        place: match.isHome ? 'Владивосток' : (match.venue || match.opponentCity || 'Лёд'),
         scheduledDate: match.date,
         startTime: admiralMatchTimeLabel(match),
         endTime: '',
