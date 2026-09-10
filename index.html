@@ -5074,9 +5074,29 @@
     .goalie-input { height: 40px; border-color: var(--line); border-radius: var(--r-sm); background: var(--raised); color: var(--tx); }
     .goalie-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
     .goalie-save { min-height: 40px; border: 1px solid var(--accent); background: var(--accent); color: var(--on-accent); }
+    .goalie-save br { display: none; }
     .goalie-save:hover { background: var(--accent); color: var(--on-accent); filter: brightness(1.08); }
     .goalie-report-pdf { min-height: 40px; border-color: var(--line); border-radius: var(--r-sm); background: transparent; color: var(--tx); }
     .goalie-report-pdf:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--tx); }
+    .goalie-tab { height: 34px; border-color: var(--line); background: var(--raised); color: var(--tx-dim); }
+    .goalie-tab.active { border-color: var(--accent); background: var(--accent-soft); color: var(--tx); }
+    .goalie-net {
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        background: var(--raised);
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    .goalie-zone { border-color: var(--line); color: var(--tx); font-size: 28px; }
+    .goalie-zone:hover { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); }
+    .goalie-zone.goal-hit { background: rgba(229,100,106,.18); }
+    .goalie-mode-btn { height: 44px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--raised); color: var(--tx); font-size: 15px; }
+    .goalie-mode-btn.shot,
+    .goalie-mode-btn.goal { background: var(--raised); color: var(--tx); }
+    .goalie-mode-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--tx); outline: 0; }
+    .goalie-undo-row { height: 40px; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--raised); overflow: hidden; }
+    .goalie-undo-row button { color: var(--tx-dim); }
+    .goalie-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); margin-top: var(--s3); color: var(--tx); font-size: 13px; }
+    .goalie-stats > div { padding: var(--s2) var(--s3); border: 1px solid var(--line-soft); border-radius: var(--r-sm); background: var(--raised); }
 
     @media (max-width: 760px) {
         .matches-action,
@@ -5111,9 +5131,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.98" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.99" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.98</span>
+            <span class="version-tooltip">v0.9.99</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
