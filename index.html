@@ -5065,6 +5065,51 @@
     .match-aggregate-table-wrap { border-top-color: var(--line); }
     .match-aggregate-role-row td { background: var(--raised-2); color: #bfdbfe; }
 
+    /* The season summary is rendered into a plain target, unlike the archive
+       summary which already has .match-aggregate on its wrapper.  Give that
+       target the same bounded table behaviour, so its intrinsic column width
+       cannot push the whole statistics screen to the right. */
+    .stats-shell,
+    .stats-shell > *,
+    .stats-block,
+    #seasonMatchAggregate {
+        min-width: 0;
+    }
+    .stats-shell {
+        width: min(1480px, 100%);
+        max-width: 1480px;
+        justify-self: center;
+    }
+    #seasonMatchAggregate {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: var(--r);
+        background: var(--surface);
+    }
+    #seasonMatchAggregate .match-aggregate-head { padding: var(--s3) var(--s4); }
+    #seasonMatchAggregate .match-aggregate-table-wrap { overflow: visible; border-top: 1px solid var(--line); }
+    #seasonMatchAggregate .match-sheet-table {
+        width: 100%;
+        min-width: 0;
+        table-layout: fixed;
+        font-size: 11px;
+    }
+    #seasonMatchAggregate .match-sheet-table .match-sheet-player-head,
+    #seasonMatchAggregate .match-sheet-table .match-sheet-player-cell {
+        position: static;
+        width: 31%;
+        min-width: 0;
+        max-width: none;
+        white-space: normal;
+    }
+    #seasonMatchAggregate .match-sheet-table th,
+    #seasonMatchAggregate .match-sheet-table td { min-width: 0; padding: 6px 3px; }
+    #seasonMatchAggregate .match-sheet-table tbody tr { cursor: default; }
+    #seasonMatchAggregate .match-aggregate-role-row td { padding: 8px 12px !important; }
+    #seasonMatchAggregate .match-aggregate-tools { padding: 0 var(--s4) var(--s3); }
+
     /* Goalie uses the same dark visual language as the rest of the product. */
     .goalie-view { background: var(--bg); color: var(--tx); }
     .goalie-card { border-color: var(--line); border-radius: var(--r); background: var(--surface); box-shadow: none; }
@@ -5130,9 +5175,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.0" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.1" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.0</span>
+            <span class="version-tooltip">v0.10.1</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
