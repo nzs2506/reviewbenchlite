@@ -3035,6 +3035,10 @@
     .match-aggregate .match-sheet-table tbody tr { cursor: default; }
     .match-aggregate-role-row td { padding: 8px 12px !important; background: #1d2b3e; color: #bfdbfe; font-weight: 1000; text-transform: uppercase; letter-spacing: .08em; text-align: left; }
     .match-aggregate-edit { width: 100%; min-width: 0; height: 29px; border: 1px solid #303b4a; border-radius: 5px; background: #0f141c; color: #f8fafc; text-align: center; font-weight: 800; }
+    .match-aggregate-edit.match-aggregate-highlight-green { background: rgba(34,197,94,.20); border-color: #22c55e; color: #dcfce7; }
+    .match-aggregate-edit.match-aggregate-highlight-red { background: rgba(239,68,68,.20); border-color: #ef4444; color: #fee2e2; }
+    .match-aggregate-tools { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; padding: 0 12px 10px; }
+    .match-aggregate-tools span { color: #aab7ca; font-size: 11px; font-weight: 800; }
     .match-aggregate-remove { width: 24px; height: 26px; border: 1px solid #5b3035; border-radius: 5px; background: #24161a; color: #fca5a5; cursor: pointer; }
     .match-archive-card {
         border: 1px solid #2b3039;
@@ -4844,9 +4848,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.94" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.95" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.94</span>
+            <span class="version-tooltip">v0.9.95</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5996,6 +6000,7 @@ const MATCH_SHEET_STORAGE_KEY = 'benchreview-lite.match-sheet.v1';
 // Сохранённые матчи находятся отдельно в MATCH_ARCHIVE_STORAGE_KEY и доступны
 // из любой вкладки.
 const MATCH_SHEET_TAB_STORAGE_KEY = 'benchreview-lite.match-sheet.tab.v1';
+const MATCH_AGGREGATE_EDITS_STORAGE_KEY = 'benchreview-lite.match-aggregate-edits.v1';
 const MATCH_ARCHIVE_STORAGE_KEY = 'benchreview-lite.match-sheet-archive.v1';
 const MATCH_SHEET_SCHEMA_VERSION = 3;
 const MATCHES_STORAGE_KEY = 'benchreview-lite.matches.v1';
@@ -6078,6 +6083,7 @@ let matchSheetPeriod = 1;
 let matchSheetSelectedPlayerIds = new Set();
 let matchSheetHighlightColor = '';
 let matchAggregateEdits = new Map();
+let matchAggregateHighlightColor = '';
 let lastMatchAggregateRecords = [];
 let matchSheetState = { version: MATCH_SHEET_SCHEMA_VERSION, archiveId: '', opponent: '', date: '', matchScore: null, players: {}, events: [], order: [], excludedPlayerIds: [], sortDirection: 'manual' };
 let matchSheetArchive = [];
@@ -14058,17 +14064,41 @@ function matchAggregateSelectionKey(records) {
     return records.map(record => String(record.id || '')).sort().join('|');
 }
 
+function loadMatchAggregateEdits() {
+    try {
+        const stored = JSON.parse(localStorage.getItem(MATCH_AGGREGATE_EDITS_STORAGE_KEY) || '{}');
+        if (!stored || typeof stored !== 'object') return;
+        matchAggregateEdits = new Map(Object.entries(stored).map(([key, value]) => [key, {
+            values: value?.values && typeof value.values === 'object' ? value.values : {},
+            highlights: value?.highlights && typeof value.highlights === 'object' ? value.highlights : {},
+            removed: new Set(Array.isArray(value?.removed) ? value.removed.map(String) : [])
+        }]));
+    } catch (_) { matchAggregateEdits = new Map(); }
+}
+
+function persistMatchAggregateEdits() {
+    try {
+        const serialized = Object.fromEntries([...matchAggregateEdits.entries()].map(([key, value]) => [key, {
+            values: value.values || {}, highlights: value.highlights || {}, removed: [...(value.removed || [])]
+        }]));
+        localStorage.setItem(MATCH_AGGREGATE_EDITS_STORAGE_KEY, JSON.stringify(serialized));
+    } catch (_) {}
+}
+
 function matchAggregateEditBucket(records) {
     const key = matchAggregateSelectionKey(records);
-    if (!matchAggregateEdits.has(key)) matchAggregateEdits.set(key, { values: {}, removed: new Set() });
+    if (!matchAggregateEdits.has(key)) matchAggregateEdits.set(key, { values: {}, highlights: {}, removed: new Set() });
     return matchAggregateEdits.get(key);
 }
 
 function applyMatchAggregateEdits(records, rows) {
     const edits = matchAggregateEditBucket(records);
     return rows.filter(row => !edits.removed.has(matchArchivePlayerKey(row.player))).map(row => {
-        const values = edits.values[matchArchivePlayerKey(row.player)];
-        return values ? { ...row, ...values } : row;
+        const key = matchArchivePlayerKey(row.player);
+        const values = edits.values[key];
+        const highlights = edits.highlights[key];
+        const result = { ...row, highlights: { ...(row.highlights || {}), ...(highlights || {}) } };
+        return values ? { ...result, ...values } : result;
     });
 }
 
@@ -14088,6 +14118,16 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
     const head = document.createElement('div');
     head.className = 'match-aggregate-head';
     head.textContent = `Статистика за выбранные матчи: ${selected.length} ${selected.length === 1 ? 'матч' : 'матча'}`;
+    const tools = document.createElement('div');
+    tools.className = 'match-aggregate-tools';
+    tools.innerHTML = `<span>Выделение в отчёте:</span>
+        <div class="match-sheet-palette" aria-label="Подсветка общей статистики">
+            <button type="button" data-match-aggregate-highlight="green" title="Выделить хорошее значение">Хорошо</button>
+            <button type="button" data-match-aggregate-highlight="red" title="Выделить требующее внимания значение">Внимание</button>
+        </div>`;
+    tools.querySelectorAll('[data-match-aggregate-highlight]').forEach(button => {
+        button.classList.toggle('active', button.dataset.matchAggregateHighlight === matchAggregateHighlightColor);
+    });
     const wrap = document.createElement('div');
     wrap.className = 'match-aggregate-table-wrap';
     const table = document.createElement('table');
@@ -14124,7 +14164,8 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
         ].forEach(([field, value]) => {
             const cell = document.createElement('td');
             const input = document.createElement('input');
-            input.className = 'match-aggregate-edit'; input.value = String(value ?? 0);
+            input.className = `match-aggregate-edit${total.highlights?.[field] ? ` match-aggregate-highlight-${total.highlights[field]}` : ''}`;
+            input.value = String(value ?? 0);
             input.dataset.matchAggregateField = field;
             input.dataset.matchAggregatePlayer = matchArchivePlayerKey(total.player);
             input.setAttribute('aria-label', `${field}: ${total.player.name}`);
@@ -14135,7 +14176,7 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
     });
     table.appendChild(tbody);
     wrap.appendChild(table);
-    target.append(head, wrap);
+    target.append(head, tools, wrap);
     const pdf = document.createElement('button');
     pdf.type = 'button';
     pdf.className = 'matches-action';
@@ -17276,16 +17317,40 @@ document.getElementById('matchAggregate').addEventListener('change', e => {
         const pair = String(input.value || '').match(/^(\d+)\s*\/\s*(\d+)$/);
         values.faceoffWins = pair ? Number(pair[1]) : 0;
         values.faceoffLosses = pair ? Number(pair[2]) : 0;
+    } else if (['powerPlay', 'shortHanded'].includes(input.dataset.matchAggregateField)) {
+        values[input.dataset.matchAggregateField] = String(input.value || '').trim().slice(0, 18);
     } else {
         values[input.dataset.matchAggregateField] = Math.max(0, safeStatNumber(input.value));
     }
     bucket.values[playerKey] = values;
+    persistMatchAggregateEdits();
     renderMatchArchiveAggregate(lastMatchAggregateRecords, new Set(lastMatchAggregateRecords.map(record => record.id)));
 });
 document.getElementById('matchAggregate').addEventListener('click', e => {
+    const palette = e.target.closest('[data-match-aggregate-highlight]');
+    if (palette) {
+        const color = palette.dataset.matchAggregateHighlight;
+        matchAggregateHighlightColor = matchAggregateHighlightColor === color ? '' : color;
+        renderMatchArchiveAggregate(lastMatchAggregateRecords, new Set(lastMatchAggregateRecords.map(record => record.id)));
+        return;
+    }
+    const input = e.target.closest('[data-match-aggregate-field]');
+    if (input && matchAggregateHighlightColor && lastMatchAggregateRecords.length) {
+        const bucket = matchAggregateEditBucket(lastMatchAggregateRecords);
+        const playerKey = input.dataset.matchAggregatePlayer;
+        const field = input.dataset.matchAggregateField;
+        const highlights = bucket.highlights[playerKey] || {};
+        if (highlights[field] === matchAggregateHighlightColor) delete highlights[field];
+        else highlights[field] = matchAggregateHighlightColor;
+        bucket.highlights[playerKey] = highlights;
+        persistMatchAggregateEdits();
+        renderMatchArchiveAggregate(lastMatchAggregateRecords, new Set(lastMatchAggregateRecords.map(record => record.id)));
+        return;
+    }
     const remove = e.target.closest('[data-match-aggregate-remove]');
     if (!remove || !lastMatchAggregateRecords.length) return;
     matchAggregateEditBucket(lastMatchAggregateRecords).removed.add(remove.dataset.matchAggregateRemove);
+    persistMatchAggregateEdits();
     renderMatchArchiveAggregate(lastMatchAggregateRecords, new Set(lastMatchAggregateRecords.map(record => record.id)));
 });
 document.getElementById('btnKhlMatchPdf').addEventListener('click', () => exportMatchAggregatePdf(calculateSelectedKhlMatches()));
@@ -17413,6 +17478,7 @@ function bootBenchReviewApp() {
     loadRosterPlayers();
     loadMatchSheet();
     loadMatchSheetArchive();
+    loadMatchAggregateEdits();
     loadAdmiralMatches();
     applyMatchSheetPlayerColWidth(storedMatchSheetPlayerColWidth());
     loadGoalieMatches();
