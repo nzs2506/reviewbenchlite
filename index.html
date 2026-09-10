@@ -4844,9 +4844,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.93" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.94" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.93</span>
+            <span class="version-tooltip">v0.9.94</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5982,7 +5982,7 @@ const BENCHREVIEW_DB_VERSION = 1;
 const BENCHREVIEW_DB_STORE = 'records';
 const DEFAULT_SYNC_API_URL = 'https://benchreview-lite-api.nzs2593.workers.dev';
 const CLOUD_TEAM_ID = 'default';
-const CLOUD_STATE_KEYS = ['blocks', 'planned', 'goalieMatches', 'roster', 'rosterRemoved', 'matchSheet', 'matchArchive', 'matches'];
+const CLOUD_STATE_KEYS = ['blocks', 'planned', 'goalieMatches', 'roster', 'rosterRemoved', 'matchArchive', 'matches'];
 const CLOUD_PUSH_DEBOUNCE_MS = 700;
 const AUTH_STORAGE_KEY = 'benchreview-lite.auth.v1';
 const BLOCK_STORAGE_KEY = 'benchreview-lite.blocks.v1';
@@ -5992,6 +5992,10 @@ const ROSTER_STORAGE_KEY = 'benchreview-lite.roster.v1';
 const ROSTER_BACKUP_KEY = 'benchreview-lite.roster.backup.v1';
 const ROSTER_REMOVED_KEY = 'benchreview-lite.roster.removed.v1';
 const MATCH_SHEET_STORAGE_KEY = 'benchreview-lite.match-sheet.v1';
+// Открытый лист — рабочая поверхность вкладки, а не общий документ браузера.
+// Сохранённые матчи находятся отдельно в MATCH_ARCHIVE_STORAGE_KEY и доступны
+// из любой вкладки.
+const MATCH_SHEET_TAB_STORAGE_KEY = 'benchreview-lite.match-sheet.tab.v1';
 const MATCH_ARCHIVE_STORAGE_KEY = 'benchreview-lite.match-sheet-archive.v1';
 const MATCH_SHEET_SCHEMA_VERSION = 3;
 const MATCHES_STORAGE_KEY = 'benchreview-lite.matches.v1';
@@ -10292,17 +10296,9 @@ function applyRemoteCloudState(states) {
     rosterPlayers = normalizeCloudRoster([...(Array.isArray(remote('roster')) ? remote('roster') : []), ...rosterPlayers]);
     matchSheetArchive = mergeCloudLists(matchSheetArchive, remote('matchArchive')).map(normalizeMatchArchiveRecord);
     admiralMatches = mergeCloudLists(admiralMatches, remote('matches')).map(normalizeAdmiralMatch).filter(Boolean).sort(admiralMatchSort);
-    const remoteSheet = remote('matchSheet');
-    if (!meaningfulMatchSheetState(matchSheetState) && meaningfulMatchSheetState(remoteSheet)) {
-        const normalized = normalizeMatchArchiveRecord({ sheet: remoteSheet }).sheet;
-        if (safeStatNumber(remoteSheet?.version) < MATCH_SHEET_SCHEMA_VERSION) {
-            normalized.archiveId = '';
-            normalized.opponent = '';
-            normalized.date = '';
-        }
-        matchSheetState = { ...normalized, archiveId: String(remoteSheet.archiveId || normalized.archiveId || '') };
-        if (safeStatNumber(remoteSheet?.version) < MATCH_SHEET_SCHEMA_VERSION) matchSheetState.archiveId = '';
-    }
+    // Открытый матчевый лист намеренно не синхронизируется: это состояние
+    // конкретной вкладки. Между устройствами синхронизируется matchArchive —
+    // то есть только лист после явного «Сохранить матч».
 }
 async function initCloudStateStorage() {
     cloudStateHydrating = true;
@@ -11029,7 +11025,12 @@ function matchSheetScoreFromKhl(data, match) {
 
 function loadMatchSheet() {
     try {
-        const raw = localStorage.getItem(MATCH_SHEET_STORAGE_KEY);
+        let raw = sessionStorage.getItem(MATCH_SHEET_TAB_STORAGE_KEY);
+        // Одноразово переносим старый общий открытый лист в первую обновлённую
+        // вкладку. После этого новые вкладки стартуют с чистого листа и не
+        // перехватывают незавершённую работу друг друга.
+        const legacyRaw = !raw ? localStorage.getItem(MATCH_SHEET_STORAGE_KEY) : '';
+        if (!raw && legacyRaw) raw = legacyRaw;
         const parsed = raw ? JSON.parse(raw) : {};
         const storedVersion = Math.max(1, Math.round(safeStatNumber(parsed?.version)) || 1);
         matchSheetState = {
@@ -11047,6 +11048,10 @@ function loadMatchSheet() {
         Object.entries(parsed?.players || {}).forEach(([id, value]) => {
             matchSheetState.players[id] = normalizeMatchSheetPlayer(value);
         });
+        if (legacyRaw) {
+            sessionStorage.setItem(MATCH_SHEET_TAB_STORAGE_KEY, JSON.stringify(matchSheetState));
+            localStorage.removeItem(MATCH_SHEET_STORAGE_KEY);
+        }
         if (storedVersion < MATCH_SHEET_SCHEMA_VERSION) {
             matchSheetState.archiveId = '';
             matchSheetState.opponent = '';
@@ -11067,11 +11072,12 @@ function loadMatchSheet() {
 }
 
 function persistMatchSheet(options = {}) {
-    // Лист, открытый из календаря матча, — черновик до явного «Сохранить матч».
-    if (matchSheetIsDraft) return;
     try {
-        localStorage.setItem(MATCH_SHEET_STORAGE_KEY, JSON.stringify(matchSheetState));
+        sessionStorage.setItem(MATCH_SHEET_TAB_STORAGE_KEY, JSON.stringify(matchSheetState));
     } catch (_) {}
+    // Лист, открытый из календаря матча, — черновик до явного «Сохранить матч».
+    // Черновик остаётся в этой вкладке, но не попадает в общий архив и облако.
+    if (matchSheetIsDraft) return;
     if (options.pushRemote !== false) scheduleCloudStatePush('matchSheet');
 }
 
