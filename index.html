@@ -4844,9 +4844,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.92" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.93" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.92</span>
+            <span class="version-tooltip">v0.9.93</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -13959,6 +13959,41 @@ function addAggregateGoalieStats(current, incoming) {
     return normalizeMatchGoalieStats(result);
 }
 
+function matchGoalieStatsHaveData(value) {
+    const stats = normalizeMatchGoalieStats(value);
+    return MATCH_GOALIE_COLUMNS.some(([key]) => key !== 'savePercent' && key !== 'gaa'
+        && (key === 'ice' ? parseGoalieIceMinutes(stats[key]) > 0 : safeStatNumber(stats[key]) > 0));
+}
+
+// До появления вратарской строки в матчевом листе часть матчей сохранялась
+// только в разделе «Вратарь». Для сводки это тот же матч: связываем записи
+// по дате, сопернику и имени, но используем журнал лишь когда в листе пусто.
+function goalieSavedStatsForMatch(record, player) {
+    const total = emptyAggregateGoalieStats();
+    const recordDate = String(record?.date || '').slice(0, 10);
+    const opponent = matchSheetOpponentKey(record?.opponent);
+    const playerName = cleanStatName(player?.name).toLowerCase();
+    goalieSavedMatches
+        .filter(match => String(match?.matchDate || '').slice(0, 10) === recordDate
+            && matchSheetOpponentKey(match?.opponent) === opponent)
+        .forEach(match => (match.goalies || []).forEach(goalie => {
+            if (cleanStatName(goalie?.name).toLowerCase() !== playerName) return;
+            const stats = goalie.stats || goalieStats(goalie);
+            const ice = goalie.iceTime || stats.ice || '';
+            const hasWork = safeStatNumber(stats.shots) || safeStatNumber(stats.goals)
+                || safeStatNumber(stats.saves) || parseGoalieIceMinutes(ice) > 0;
+            const source = {
+                games: hasWork ? '1' : '',
+                shotsAgainst: stats.shots,
+                goalsAgainst: stats.goals,
+                saves: stats.saves,
+                ice
+            };
+            Object.assign(total, addAggregateGoalieStats(total, source));
+        }));
+    return total;
+}
+
 function aggregateMatchRecords(selected) {
     const rows = new Map();
     // A selected-match report is a team report: include the full current roster,
@@ -13985,7 +14020,10 @@ function aggregateMatchRecords(selected) {
             goalieStats: emptyAggregateGoalieStats()
         };
         if (player.role === 'goalie') {
-            current.goalieStats = addAggregateGoalieStats(current.goalieStats, state.goalieStats);
+            const sourceStats = matchGoalieStatsHaveData(state.goalieStats)
+                ? state.goalieStats
+                : goalieSavedStatsForMatch(record, player);
+            current.goalieStats = addAggregateGoalieStats(current.goalieStats, sourceStats);
             rows.set(key, current);
             return;
         }
