@@ -2962,6 +2962,13 @@
     .match-sheet-goalie-table th:first-child, .match-sheet-goalie-table td:first-child { width: 210px; text-align: left; }
     .match-sheet-goalie-table th { font-size: 11px; color: #aab3c1; }
     .match-sheet-goalie-table input { box-sizing: border-box; width: 100%; min-width: 0; background: #0f1318; border: 1px solid #303641; border-radius: 5px; color: #e8edf5; padding: 7px 2px; text-align: center; }
+    .match-aggregate-goalie-title { padding: 11px 12px 6px; color: #bfdbfe; font-size: 12px; font-weight: 1000; letter-spacing: .08em; text-transform: uppercase; }
+    .match-aggregate .match-aggregate-goalie-table { min-width: 0; font-size: 10px; }
+    .match-aggregate .match-aggregate-goalie-table th,
+    .match-aggregate .match-aggregate-goalie-table td { padding: 5px 2px; }
+    .match-aggregate .match-aggregate-goalie-table th:first-child,
+    .match-aggregate .match-aggregate-goalie-table td:first-child { width: 24%; }
+    .match-aggregate .match-aggregate-goalie-table input { height: 28px; padding: 4px 1px; font-size: 10px; }
     .match-sheet-log-item,
     .match-sheet-goalie-row {
         min-height: 34px;
@@ -4852,9 +4859,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.96" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.9.97" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.9.96</span>
+            <span class="version-tooltip">v0.9.97</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -12695,7 +12702,8 @@ const MATCH_GOALIE_COLUMNS = [
     ['goalsAgainst', 'ПШ', 'Пропущенные шайбы'], ['saves', 'ОБ', 'Отражённые броски'],
     ['savePercent', '%ОБ', 'Процент отражённых бросков'], ['gaa', 'КН', 'Коэффициент надёжности'],
     ['goals', 'Ш', 'Шайбы'], ['assists', 'А', 'Передачи'], ['shutouts', 'И«0»', 'Игры на ноль'],
-    ['pim', 'Штр', 'Штрафные минуты'], ['ice', 'ВП', 'Время на площадке']
+    ['pim', 'Штр', 'Штрафные минуты'], ['ice', 'ВП', 'Время на площадке'],
+    ['zoneP', 'Зона П', 'Зона П']
 ];
 
 function normalizeMatchGoalieStats(value) {
@@ -13562,10 +13570,10 @@ function matchSheetPdfGoalies(record) {
         .filter(player => player.role === 'goalie' && !excluded.has(String(player.id)))
         .sort(rosterSort)
         .slice(0, 2)
-        .map(player => ({
-            player,
-            stats: normalizeMatchGoalieStats(record.sheet?.players?.[player.id]?.goalieStats)
-        }));
+        .map(player => {
+            const state = normalizeMatchSheetPlayer(record.sheet?.players?.[player.id]);
+            return { player, stats: state.goalieStats, highlights: state.highlights };
+        });
 }
 
 function renderMatchSheetGoaliesPdfPage(record, pageNumber = 2, totalPages = 2) {
@@ -13579,10 +13587,11 @@ function renderMatchSheetGoaliesPdfPage(record, pageNumber = 2, totalPages = 2) 
     const ctx = canvas.getContext('2d');
     const goalies = matchSheetPdfGoalies(record);
     const columns = [
-        { label: 'ВРАТАРЬ / №', weight: 520, value: goalie => `${goalie.player.number ? `№${goalie.player.number}  ` : ''}${goalie.player.name || '—'}`, align: 'left' },
+        { label: 'ВРАТАРЬ / №', weight: 490, value: goalie => `${goalie.player.number ? `№${goalie.player.number}  ` : ''}${goalie.player.name || '—'}`, align: 'left' },
         ...MATCH_GOALIE_COLUMNS.map(([key, label]) => ({
             label,
-            weight: key === 'ice' ? 150 : key === 'savePercent' || key === 'gaa' ? 135 : 118,
+            key,
+            weight: key === 'ice' || key === 'zoneP' ? 135 : key === 'savePercent' || key === 'gaa' ? 120 : 102,
             value: goalie => goalie.stats[key] || '—'
         }))
     ];
@@ -13629,7 +13638,7 @@ function renderMatchSheetGoaliesPdfPage(record, pageNumber = 2, totalPages = 2) 
         const fill = rowIndex % 2 ? '#f4f7fb' : '#ffffff';
         columns.forEach((column, index) => {
             drawMatchSheetPdfCell(ctx, cellX, y, column.width, 72, column.value(goalie), {
-                fill, align: column.align || 'center', pad: index === 0 ? 14 : 5,
+                fill: index === 0 ? fill : matchSheetPdfHighlightFill({ highlights: goalie.highlights }, `goalieStats.${column.key}`, fill), align: column.align || 'center', pad: index === 0 ? 14 : 5,
                 font: index === 0 ? '700 19px Arial, sans-serif' : '700 18px Arial, sans-serif', color: '#172033'
             });
             cellX += column.width;
@@ -14139,7 +14148,7 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
     matchSheetHeader(table);
     const tbody = document.createElement('tbody');
     const columnsCount = 13;
-    ['defense', 'forward', 'goalie'].forEach(role => {
+    ['defense', 'forward'].forEach(role => {
         const roleRows = rows.filter(total => total.player.role === role);
         if (!roleRows.length) return;
         const roleRow = document.createElement('tr');
@@ -14180,7 +14189,44 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
     });
     table.appendChild(tbody);
     wrap.appendChild(table);
-    target.append(head, tools, wrap);
+    const goalieRows = rows.filter(total => total.player.role === 'goalie');
+    const goalieBlock = document.createElement('div');
+    if (goalieRows.length) {
+        const goalieTitle = document.createElement('div');
+        goalieTitle.className = 'match-aggregate-goalie-title';
+        goalieTitle.textContent = 'Вратари';
+        const goalieTable = document.createElement('table');
+        goalieTable.className = 'match-sheet-goalie-table match-aggregate-goalie-table';
+        const goalieHead = goalieTable.createTHead().insertRow();
+        [['name', 'Вратарь / №', 'Вратарь'], ...MATCH_GOALIE_COLUMNS].forEach(([, label, title]) => {
+            const th = document.createElement('th');
+            th.textContent = label; th.title = title; th.scope = 'col';
+            goalieHead.appendChild(th);
+        });
+        const goalieBody = goalieTable.createTBody();
+        goalieRows.forEach(total => {
+            const row = goalieBody.insertRow();
+            const identity = row.insertCell();
+            identity.textContent = `${total.player.number ? `№${total.player.number} ` : ''}${total.player.name || 'Вратарь'}`;
+            const stats = normalizeMatchGoalieStats(total.goalieStats);
+            MATCH_GOALIE_COLUMNS.forEach(([key, , title]) => {
+                const field = `goalieStats.${key}`;
+                const input = document.createElement('input');
+                input.type = 'text'; input.inputMode = key === 'ice' ? 'text' : 'decimal';
+                input.className = `match-aggregate-edit${total.highlights?.[field] ? ` match-aggregate-highlight-${total.highlights[field]}` : ''}`;
+                input.value = stats[key]; input.placeholder = '—';
+                input.dataset.matchAggregateField = field;
+                input.dataset.matchAggregateGoalieField = key;
+                input.dataset.matchAggregatePlayer = matchArchivePlayerKey(total.player);
+                input.setAttribute('aria-label', `${total.player.name}: ${title}`);
+                row.insertCell().appendChild(input);
+            });
+            goalieBody.appendChild(row);
+        });
+        goalieTable.appendChild(goalieBody);
+        goalieBlock.append(goalieTitle, goalieTable);
+    }
+    target.append(head, tools, wrap, goalieBlock);
     const pdf = document.createElement('button');
     pdf.type = 'button';
     pdf.className = 'matches-action';
@@ -17317,7 +17363,16 @@ document.getElementById('matchAggregate').addEventListener('change', e => {
     const bucket = matchAggregateEditBucket(lastMatchAggregateRecords);
     const playerKey = input.dataset.matchAggregatePlayer;
     const values = bucket.values[playerKey] || {};
-    if (input.dataset.matchAggregateField === 'faceoffs') {
+    const goalieField = input.dataset.matchAggregateGoalieField;
+    if (goalieField) {
+        const original = aggregateMatchRecords(lastMatchAggregateRecords)
+            .find(row => matchArchivePlayerKey(row.player) === playerKey)?.goalieStats || {};
+        values.goalieStats = normalizeMatchGoalieStats({
+            ...original,
+            ...(values.goalieStats || {}),
+            [goalieField]: input.value
+        });
+    } else if (input.dataset.matchAggregateField === 'faceoffs') {
         const pair = String(input.value || '').match(/^(\d+)\s*\/\s*(\d+)$/);
         values.faceoffWins = pair ? Number(pair[1]) : 0;
         values.faceoffLosses = pair ? Number(pair[2]) : 0;
