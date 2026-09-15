@@ -14241,6 +14241,7 @@ function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
 function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
     const record = matchSheetPdfRecord(sourceRecord);
     const players = archivedMatchPlayers(record);
+    const isAggregatePdf = options.title === 'СВОДНАЯ СТАТИСТИКА';
     const rowsPerPage = 22;
     const pageCount = Math.max(1, Math.ceil(players.length / rowsPerPage));
     const pageWidth = 2480;
@@ -14310,7 +14311,9 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
                     fill: index === 0 ? fill : matchSheetPdfHighlightFill(state, column.field, fill),
                     align: column.align || 'center',
                     pad: index === 0 ? 14 : 5,
-                    font: index === 0 ? '700 20px Arial, sans-serif' : '700 18px Arial, sans-serif',
+                    font: index === 0
+                        ? `700 ${isAggregatePdf ? 21 : 20}px Arial, sans-serif`
+                        : `700 ${isAggregatePdf ? 21 : 18}px Arial, sans-serif`,
                     color: '#172033'
                 });
                 cellX += column.width;
