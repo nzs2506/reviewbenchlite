@@ -7,6 +7,7 @@ const JSON_HEADERS = {
 
 const MAX_RECORDS_PER_WRITE = 500;
 const MAX_STATE_BYTES = 2400000;
+const MAX_MATCH_PDF_BYTES = 12 * 1024 * 1024;
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
 const DEFAULT_LOGIN_USER = 'Shaidullin.a';
 const STATE_KEYS = [
@@ -109,6 +110,14 @@ function recordKey(team, id) {
 
 function stateKey(team, key) {
   return `team:${team}:state:${key}`;
+}
+
+function matchPdfKey(team, id) {
+  return `team:${team}:match-pdf:${id}`;
+}
+
+function cleanMatchPdfId(value) {
+  return String(value || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 120);
 }
 
 function cleanStateKey(value) {
@@ -561,6 +570,30 @@ async function putState(request, env, team) {
   return json({ ok: true, key, updatedAt: state.updatedAt });
 }
 
+async function getMatchPdf(env, team, id) {
+  const stored = await env.BENCHREVIEW_KV.get(matchPdfKey(team, id), 'json');
+  return stored ? json({ ok: true, file: stored }) : json({ ok: false, error: 'not found' }, 404);
+}
+
+async function putMatchPdf(request, env, team, id) {
+  const body = await request.json().catch(() => ({}));
+  const data = String(body?.data || '');
+  const byteLength = Math.floor(data.length * 0.75);
+  if (!data || byteLength > MAX_MATCH_PDF_BYTES) {
+    return json({ ok: false, error: 'pdf is missing or too large' }, 413);
+  }
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(data)) return json({ ok: false, error: 'invalid pdf encoding' }, 400);
+  const file = {
+    id,
+    fileName: String(body.fileName || `match-sheet-${id}.pdf`).replace(/[\\/]/g, '-').slice(0, 180),
+    mimeType: 'application/pdf',
+    savedAt: new Date().toISOString(),
+    data
+  };
+  await env.BENCHREVIEW_KV.put(matchPdfKey(team, id), JSON.stringify(file));
+  return json({ ok: true, id, fileName: file.fileName, savedAt: file.savedAt });
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response(null, { headers: JSON_HEADERS });
@@ -612,6 +645,9 @@ export default {
     if (url.pathname === '/api/state' && (request.method === 'PUT' || request.method === 'POST')) {
       return putState(request, env, team);
     }
+    const pdfMatch = /^\/api\/match-pdfs\/([A-Za-z0-9_-]+)$/.exec(url.pathname);
+    if (pdfMatch && request.method === 'GET') return getMatchPdf(env, team, pdfMatch[1]);
+    if (pdfMatch && (request.method === 'PUT' || request.method === 'POST')) return putMatchPdf(request, env, team, pdfMatch[1]);
     return json({ ok: false, error: 'not found' }, 404);
   }
 };

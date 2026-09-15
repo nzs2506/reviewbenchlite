@@ -5277,9 +5277,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.8" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.9" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.8</span>
+            <span class="version-tooltip">v0.10.9</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -6409,6 +6409,7 @@ const DROPBOX_BACKUP_PREFIX = 'latest';
 const DROPBOX_BACKUP_ROOT = '/latest';
 const DROPBOX_BACKUP_RECORD_DIR = `${DROPBOX_BACKUP_ROOT}/records`;
 const DROPBOX_BACKUP_SCREEN_DIR = `${DROPBOX_BACKUP_ROOT}/screens`;
+const DROPBOX_MATCH_PDF_DIR = `${DROPBOX_BACKUP_ROOT}/matches`;
 const DROPBOX_DAILY_BACKUP_MS = 24 * 60 * 60 * 1000;
 const BENCHREVIEW_DB_NAME = 'benchreview-lite.storage';
 const BENCHREVIEW_DB_VERSION = 1;
@@ -10017,6 +10018,7 @@ async function dropboxEnsureBackupFolders(accessToken) {
     await dropboxCreateFolder(accessToken, DROPBOX_BACKUP_ROOT);
     await dropboxCreateFolder(accessToken, DROPBOX_BACKUP_RECORD_DIR);
     await dropboxCreateFolder(accessToken, DROPBOX_BACKUP_SCREEN_DIR);
+    await dropboxCreateFolder(accessToken, DROPBOX_MATCH_PDF_DIR);
 }
 async function dropboxUpload(accessToken, path, body, mode = 'overwrite') {
     const uploadBody = body instanceof Blob ? body : new Blob([body]);
@@ -10777,17 +10779,20 @@ async function refreshMatchArchiveFromCloud() {
     }
 }
 async function pushCloudStateKey(key) {
-    if (!CLOUD_STATE_KEYS.includes(key)) return;
+    if (!CLOUD_STATE_KEYS.includes(key)) return false;
     const url = cloudStateUrl(`/api/state?key=${encodeURIComponent(key)}`);
-    if (!url || !benchAuthToken) return;
+    if (!url || !benchAuthToken) return false;
     try {
-        await authFetch(url, {
+        const response = await authFetch(url, {
             method: 'PUT',
             mode: 'cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ value: cloudStateValue(key) })
         });
-    } catch (_) {}
+        return response.ok;
+    } catch (_) {
+        return false;
+    }
 }
 function scheduleCloudStatePush(key) {
     if (!cloudStateReady || cloudStateHydrating || !CLOUD_STATE_KEYS.includes(key)) return;
@@ -12466,53 +12471,36 @@ async function importKhlMatchStats(matchId) {
     try {
         const data = await fetchKhlMatchStats(match);
         matchSheetState.matchScore = matchSheetScoreFromKhl(data, match);
-        let imported = 0;
-        let created = 0;
-        (Array.isArray(data.players) ? data.players : []).forEach(entry => {
-            let player = findRosterPlayerForKhl(entry);
-            if (!player && cleanStatName(entry.name)) {
-                player = defaultRosterPlayer(entry.role, entry.name, entry.number);
-                rosterPlayers.push(player);
-                created += 1;
-            }
-            if (!player) return;
-            if (player.role === 'goalie') {
-                const sheet = matchSheetPlayerState(player.id);
-                const importedGoalie = { ...(entry.goalieStats || {}) };
-                if (entry.goalieGames !== undefined) importedGoalie.games = entry.goalieGames;
-                if (entry.goaliePim !== undefined) importedGoalie.pim = entry.goaliePim;
-                if (entry.goalieIceMinutes !== undefined) importedGoalie.ice = formatIceMinutesValue(entry.goalieIceMinutes);
-                sheet.goalieStats = normalizeMatchGoalieStats({ ...sheet.goalieStats, ...importedGoalie });
-                if (addToSeasonTotals) {
+        // An opened saved match is authoritative. KHL responses are useful to
+        // fill its gaps, but some protocol payloads omit fields and represent
+        // them as zero. Applying the old import directly here could therefore
+        // replace a valid saved sheet with zeroes. The shared importer protects
+        // manual fields and established KHL values, while still filling empty
+        // PIM and faceoff columns.
+        const restored = applyKhlStatsToMatchSheet(data, matchSheetState);
+        const imported = restored.imported;
+        const created = restored.created;
+        if (addToSeasonTotals) {
+            (Array.isArray(data.players) ? data.players : []).forEach(entry => {
+                const player = findRosterPlayerForKhl(entry);
+                if (!player) return;
+                if (player.role === 'goalie') {
                     player.goalieGames += Math.max(0, Math.round(safeStatNumber(entry.goalieGames)));
                     player.goaliePim += Math.max(0, Math.round(safeStatNumber(entry.goaliePim)));
                     player.goalieIce = addKhlIceTime(player.goalieIce, entry.goalieIceMinutes);
+                    return;
                 }
-            } else {
-                const sheet = matchSheetPlayerState(player.id);
-                const netPlusMinus = Math.round(safeStatNumber(entry.plusMinus ?? entry.plus_minus ?? entry.pm));
-                const explicitPlus = entry.plus ?? entry.pluses ?? entry.plus_count;
-                const explicitMinus = entry.minus ?? entry.minuses ?? entry.minus_count;
-                sheet.games = Math.max(0, Math.round(safeStatNumber(entry.games || 1)));
-                if (explicitPlus !== undefined) sheet.plus = Math.max(0, Math.round(safeStatNumber(explicitPlus)));
-                if (explicitMinus !== undefined) sheet.minus = Math.max(0, Math.round(safeStatNumber(explicitMinus)));
-                sheet.goals = [Math.max(0, Math.round(safeStatNumber(entry.goals))), 0, 0];
-                sheet.shots = [Math.max(0, Math.round(safeStatNumber(entry.shots))), 0, 0];
-                sheet.penalties = [Math.max(0, Math.round(safeStatNumber(entry.pim))), 0, 0];
-                if (addToSeasonTotals) {
-                    player.games += Math.max(0, Math.round(safeStatNumber(entry.games)));
-                    player.goals += Math.max(0, Math.round(safeStatNumber(entry.goals)));
-                    player.assists += Math.max(0, Math.round(safeStatNumber(entry.assists)));
-                    player.shots += Math.max(0, Math.round(safeStatNumber(entry.shots)));
-                    player.faceoffs += Math.max(0, Math.round(safeStatNumber(entry.faceoffs)));
-                    player.faceoffWins += Math.max(0, Math.round(safeStatNumber(entry.faceoffWins)));
-                    player.shifts += Math.max(0, Math.round(safeStatNumber(entry.shifts)));
-                    player.pim += Math.max(0, Math.round(safeStatNumber(entry.pim)));
-                    player.toi = addKhlIceTime(player.toi, entry.toiMinutes);
-                }
-            }
-            imported += 1;
-        });
+                player.games += Math.max(0, Math.round(safeStatNumber(entry.games)));
+                player.goals += Math.max(0, Math.round(safeStatNumber(entry.goals)));
+                player.assists += Math.max(0, Math.round(safeStatNumber(entry.assists)));
+                player.shots += Math.max(0, Math.round(safeStatNumber(entry.shots)));
+                player.faceoffs += Math.max(0, Math.round(safeStatNumber(entry.faceoffs)));
+                player.faceoffWins += Math.max(0, Math.round(safeStatNumber(entry.faceoffWins)));
+                player.shifts += Math.max(0, Math.round(safeStatNumber(entry.shifts)));
+                player.pim += Math.max(0, Math.round(safeStatNumber(entry.pim)));
+                player.toi = addKhlIceTime(player.toi, entry.toiMinutes);
+            });
+        }
         if (addToSeasonTotals) match.statsImportedAt = new Date().toISOString();
         matchSheetState.khlStatsImportedAt = new Date().toISOString();
         match.updatedAt = new Date().toISOString();
@@ -12560,7 +12548,7 @@ function matchSheetArchiveSnapshot(id, createdAt) {
     });
 }
 
-function saveMatchSheetToArchive() {
+async function saveMatchSheetToArchive() {
     const existing = matchSheetState.archiveId
         ? matchSheetArchive.find(record => record.id === matchSheetState.archiveId)
         : matchSheetArchive.find(record => record.date === matchSheetState.date
@@ -12579,11 +12567,16 @@ function saveMatchSheetToArchive() {
     persistMatchSheet();
     renderMatchSheet();
     const button = document.getElementById('btnMatchSheetSave');
+    if (button) button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Сохраняю резерв…</span>';
+    const result = await saveMatchSheetBackupCopies(record);
     if (button) {
-        button.innerHTML = '<i class="fa-solid fa-check"></i><span>Матч сохранен</span>';
+        const label = result.dropbox
+            ? 'Матч и PDF сохранены'
+            : 'Матч сохранен · Dropbox не подключён';
+        button.innerHTML = `<i class="fa-solid fa-${result.dropbox ? 'check' : 'triangle-exclamation'}"></i><span>${label}</span>`;
         window.setTimeout(() => {
             button.innerHTML = '<i class="fa-solid fa-floppy-disk"></i><span>Сохранить матч</span>';
-        }, 1400);
+        }, 2600);
     }
 }
 
@@ -14546,12 +14539,74 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
     return pages;
 }
 
+function matchSheetPdfFileName(record) {
+    const normalized = matchSheetPdfRecord(record);
+    const name = `match-sheet-${normalized.opponent || 'match'}-${normalized.date || todayInputValue()}`;
+    return `${safeFileStamp(name)}.pdf`;
+}
+
+function buildMatchSheetPdfBlob(record = null) {
+    const normalized = matchSheetPdfRecord(record);
+    return buildPdfFromJpegs(renderMatchSheetPdfPages(normalized));
+}
+
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Не удалось подготовить PDF для резервной копии'));
+        reader.onload = () => resolve(String(reader.result || '').split(',').pop() || '');
+        reader.readAsDataURL(blob);
+    });
+}
+
+async function saveMatchSheetPdfToCloud(record, pdfBlob) {
+    const url = cloudStateUrl(`/api/match-pdfs/${encodeURIComponent(record.id)}`);
+    if (!url || !benchAuthToken) throw new Error('Нет подключения к Cloudflare');
+    const response = await authFetch(url, {
+        method: 'PUT',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            fileName: matchSheetPdfFileName(record),
+            data: await blobToBase64(pdfBlob)
+        })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.ok) throw new Error(data.error || 'Cloudflare не принял PDF');
+    return data;
+}
+
+async function saveMatchSheetPdfToDropbox(record, pdfBlob) {
+    if (!dropboxReadConnection()) return false;
+    const accessToken = await dropboxAccessToken();
+    await dropboxEnsureBackupFolders(accessToken);
+    await dropboxUpload(accessToken, dropboxJoin(DROPBOX_MATCH_PDF_DIR, matchSheetPdfFileName(record)), pdfBlob);
+    return true;
+}
+
+// A saved match is a single source of truth: JSON goes to the match archive
+// first, and the exact same generated PDF is then copied to both backups.
+// The Matches page only reads this archive and never creates another version.
+async function saveMatchSheetBackupCopies(record) {
+    const archiveSaved = await pushCloudStateKey('matchArchive');
+    if (!archiveSaved) return { cloud: false, dropbox: false };
+    const pdfBlob = buildMatchSheetPdfBlob(record);
+    const [cloud, dropbox] = await Promise.allSettled([
+        saveMatchSheetPdfToCloud(record, pdfBlob),
+        saveMatchSheetPdfToDropbox(record, pdfBlob)
+    ]);
+    if (cloud.status === 'rejected') console.warn('Cloudflare match PDF backup failed', cloud.reason);
+    if (dropbox.status === 'rejected') {
+        console.warn('Dropbox match PDF backup failed', dropbox.reason);
+        localStorage.setItem(DROPBOX_LAST_ERROR_STORAGE_KEY, String(dropbox.reason?.message || dropbox.reason || 'Dropbox match PDF backup failed').slice(0, 700));
+    }
+    return { cloud: cloud.status === 'fulfilled', dropbox: dropbox.status === 'fulfilled' && dropbox.value === true };
+}
+
 function exportMatchSheetPdf(record = null) {
     try {
         const normalized = matchSheetPdfRecord(record);
-        const pages = renderMatchSheetPdfPages(normalized);
-        const name = `match-sheet-${normalized.opponent || 'match'}-${normalized.date || todayInputValue()}`;
-        downloadBlob(`${safeFileStamp(name)}.pdf`, buildPdfFromJpegs(pages));
+        downloadBlob(matchSheetPdfFileName(normalized), buildMatchSheetPdfBlob(normalized));
     } catch (err) {
         alert('Не удалось сохранить матчевый лист: ' + err.message);
     }
