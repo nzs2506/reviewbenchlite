@@ -3051,6 +3051,42 @@
     .match-aggregate-tools { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; padding: 0 12px 10px; }
     .match-aggregate-tools span { color: #aab7ca; font-size: 11px; font-weight: 800; }
     .match-aggregate-remove { width: 24px; height: 26px; border: 1px solid #5b3035; border-radius: 5px; background: #24161a; color: #fca5a5; cursor: pointer; }
+    .match-aggregate-player {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        min-width: 0;
+    }
+    .match-aggregate-player span {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        color: var(--tx);
+        font-family: var(--ui-font);
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+    .match-aggregate-player .match-aggregate-remove {
+        flex: 0 0 30px;
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        display: grid;
+        place-items: center;
+        margin-left: auto;
+        font-size: 14px;
+    }
+    .match-aggregate .match-aggregate-goalie-table td:first-child,
+    #seasonMatchAggregate .match-aggregate-goalie-table td:first-child {
+        color: var(--tx);
+        font-family: var(--ui-font);
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+    }
     .match-archive-card {
         border: 1px solid #2b3039;
         border-radius: 9px;
@@ -5112,6 +5148,7 @@
     #seasonMatchAggregate .match-sheet-table tbody tr { cursor: default; }
     #seasonMatchAggregate .match-aggregate-role-row td { padding: 8px 12px !important; }
     #seasonMatchAggregate .match-aggregate-tools { padding: 0 var(--s4) var(--s3); }
+    #seasonMatchAggregate .match-aggregate-player span { font-size: 15px; }
 
     /* Goalie uses the same dark visual language as the rest of the product. */
     .goalie-view { background: var(--bg); color: var(--tx); }
@@ -5155,6 +5192,68 @@
         .stats-tab { flex: 0 0 auto; height: 38px; font-size: 10px; }
         .match-archive-selection { padding: var(--s3); }
     }
+    /* Make roster and match-sheet values easier to scan without pill backgrounds. */
+    .stats-table {
+        min-width: 960px;
+        font-size: 15px;
+    }
+    .stats-table th,
+    .stats-table td { padding: 8px 7px; }
+    .stats-input,
+    .stats-derived {
+        font-size: 15px;
+        font-weight: 700;
+    }
+    .stats-input {
+        height: 32px;
+        border-color: #303642;
+        border-radius: 5px;
+        background: transparent;
+    }
+    .stats-input.name {
+        width: 225px;
+        font-size: 16px;
+        font-weight: 700;
+    }
+    .stats-input.number { width: 60px; }
+    .stats-input.time { width: 84px; }
+    .stats-remove {
+        width: 34px;
+        height: 32px;
+    }
+    .live-player-name { font-size: 12px; }
+    .live-player-meta { font-size: 14px; }
+
+    .match-sheet-table { font-size: 15px; }
+    .match-sheet-table th,
+    .match-sheet-table td {
+        height: 51px;
+        padding: 6px 4px;
+    }
+    body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table .match-sheet-player-head,
+    body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table .match-sheet-player-cell {
+        width: max(var(--ms-player-col, 240px), 315px);
+        min-width: max(var(--ms-player-col, 240px), 315px);
+        max-width: max(var(--ms-player-col, 240px), 315px);
+    }
+    .match-sheet-player {
+        grid-template-columns: 24px 44px minmax(0, 1fr);
+        gap: 11px;
+    }
+    .match-sheet-player b {
+        width: 42px;
+        height: 34px;
+        font-size: 16px;
+    }
+    .match-sheet-player span,
+    .match-sheet-value,
+    .match-sheet-rating { font-size: 16px; }
+    .match-sheet-faceoff { font-size: 15px; }
+    .match-sheet-rating {
+        height: 34px;
+        font-size: 16px;
+    }
+    .match-archive-detail .match-sheet-table { font-size: 15px; }
 </style>
 </head>
 <body data-view="field">
@@ -5299,7 +5398,6 @@
                         <button class="stats-tab" type="button" data-stats-page="roster">Статистика</button>
                         <button class="stats-tab" type="button" data-stats-page="lineup">Состав</button>
                         <button class="stats-tab" type="button" data-stats-page="sheet">Матчевый лист</button>
-                        <button class="stats-tab active" type="button" data-stats-page="matches">Матчи</button>
                     </div>
                 </div>
             </div>
@@ -13998,20 +14096,20 @@ function renderMatchSheetGoaliesPdfPage(record, pageNumber = 2, totalPages = 2) 
 function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
     const record = matchSheetPdfRecord(sourceRecord);
     const players = archivedMatchPlayers(record);
-    const rowsPerPage = 22;
+    const rowsPerPage = 19;
     const pageCount = Math.max(1, Math.ceil(players.length / rowsPerPage));
     const pageWidth = 2480;
     const pageHeight = 1754;
-    const margin = 80;
+    const margin = 56;
     const tableWidth = pageWidth - margin * 2;
     const titleHeight = 182;
     const groupHeaderHeight = 58;
     const subHeaderHeight = 46;
-    const rowHeight = 60;
+    const rowHeight = 72;
     const columns = {
-        player: 380,
+        player: 430,
         faceoff: 300,
-        period: 86,
+        period: 84,
         blocks: 110,
         plusMinus: 100,
         rating: 130
@@ -14059,26 +14157,26 @@ function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
         const tableTop = titleHeight;
         let x = margin;
         drawMatchSheetPdfCell(ctx, x, tableTop, columns.player, groupHeaderHeight + subHeaderHeight, '№ / ФИО', {
-            fill: '#14213b', color: '#ffffff', align: 'left', pad: 16, font: '800 22px Arial, sans-serif', stroke: '#ffffff'
+            fill: '#14213b', color: '#ffffff', align: 'left', pad: 16, font: '800 24px Arial, sans-serif', stroke: '#ffffff'
         });
         x += columns.player;
         drawMatchSheetPdfCell(ctx, x, tableTop, columns.faceoff, groupHeaderHeight, 'ВБРАСЫВАНИЯ', {
-            fill: '#14213b', color: '#ffffff', font: '800 19px Arial, sans-serif', stroke: '#ffffff'
+            fill: '#14213b', color: '#ffffff', font: '800 21px Arial, sans-serif', stroke: '#ffffff'
         });
         for (let period = 1; period <= 3; period++) {
             drawMatchSheetPdfCell(ctx, x + (period - 1) * columns.faceoff / 3, tableTop + groupHeaderHeight, columns.faceoff / 3, subHeaderHeight, String(period), {
-                fill: '#e6edf7', color: '#14213b', font: '800 18px Arial, sans-serif', stroke: '#ffffff'
+                fill: '#e6edf7', color: '#14213b', font: '800 21px Arial, sans-serif', stroke: '#ffffff'
             });
         }
         x += columns.faceoff;
         periodGroups.forEach(group => {
             const groupWidth = columns.period * 3;
             drawMatchSheetPdfCell(ctx, x, tableTop, groupWidth, groupHeaderHeight, group.label, {
-                fill: '#14213b', color: '#ffffff', font: '800 17px Arial, sans-serif', stroke: '#ffffff'
+                fill: '#14213b', color: '#ffffff', font: '800 19px Arial, sans-serif', stroke: '#ffffff'
             });
             for (let period = 1; period <= 3; period++) {
                 drawMatchSheetPdfCell(ctx, x + (period - 1) * columns.period, tableTop + groupHeaderHeight, columns.period, subHeaderHeight, String(period), {
-                    fill: '#e6edf7', color: '#14213b', font: '800 18px Arial, sans-serif', stroke: '#ffffff'
+                    fill: '#e6edf7', color: '#14213b', font: '800 21px Arial, sans-serif', stroke: '#ffffff'
                 });
             }
             x += groupWidth;
@@ -14089,7 +14187,7 @@ function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
             ['ОЦЕНКА', columns.rating]
         ].forEach(([label, width]) => {
             drawMatchSheetPdfCell(ctx, x, tableTop, width, groupHeaderHeight + subHeaderHeight, label, {
-                fill: '#14213b', color: '#ffffff', font: '800 18px Arial, sans-serif', stroke: '#ffffff'
+                fill: '#14213b', color: '#ffffff', font: '800 20px Arial, sans-serif', stroke: '#ffffff'
             });
             x += width;
         });
@@ -14101,31 +14199,31 @@ function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
             const fill = rowIndex % 2 ? '#f4f7fb' : '#ffffff';
             let cellX = margin;
             drawMatchSheetPdfCell(ctx, cellX, y, columns.player, rowHeight, `${player.number ? `№${player.number}  ` : ''}${player.name || rosterRoleLabel(player.role)}`, {
-                fill, align: 'left', pad: 15, font: '700 21px Arial, sans-serif', color: '#172033'
+                fill, align: 'left', pad: 15, font: '700 28px Arial, sans-serif', color: player.role === 'defense' ? '#a3321d' : '#172033'
             });
             cellX += columns.player;
             [0, 1, 2].forEach(period => {
                 drawMatchSheetPdfCell(ctx, cellX, y, columns.faceoff / 3, rowHeight, `+${state.faceoffWins[period]} / -${state.faceoffLosses[period]}`, {
-                    fill, font: '700 18px Arial, sans-serif', color: '#1859a9'
+                    fill, font: '700 22px Arial, sans-serif', color: '#1859a9'
                 });
                 cellX += columns.faceoff / 3;
             });
             periodGroups.forEach(group => {
                 [0, 1, 2].forEach(period => {
                     drawMatchSheetPdfCell(ctx, cellX, y, columns.period, rowHeight, state[group.field][period], {
-                        fill, font: '700 19px Arial, sans-serif'
+                        fill, font: '700 22px Arial, sans-serif'
                     });
                     cellX += columns.period;
                 });
             });
-            drawMatchSheetPdfCell(ctx, cellX, y, columns.blocks, rowHeight, state.blocks.reduce((sum, value) => sum + value, 0), { fill, font: '700 19px Arial, sans-serif' });
+            drawMatchSheetPdfCell(ctx, cellX, y, columns.blocks, rowHeight, state.blocks.reduce((sum, value) => sum + value, 0), { fill, font: '700 22px Arial, sans-serif' });
             cellX += columns.blocks;
             const plusMinus = matchSheetPlusMinus(state);
             drawMatchSheetPdfCell(ctx, cellX, y, columns.plusMinus, rowHeight, plusMinus > 0 ? `+${plusMinus}` : plusMinus, {
-                fill, font: '800 21px Arial, sans-serif', color: plusMinus < 0 ? '#b42318' : '#172033'
+                fill, font: '800 25px Arial, sans-serif', color: plusMinus < 0 ? '#b42318' : '#172033'
             });
             cellX += columns.plusMinus;
-            drawMatchSheetPdfCell(ctx, cellX, y, columns.rating, rowHeight, state.rating || '—', { fill, font: '700 19px Arial, sans-serif' });
+            drawMatchSheetPdfCell(ctx, cellX, y, columns.rating, rowHeight, state.rating || '—', { fill, font: '700 22px Arial, sans-serif' });
         });
 
         const footerY = pageHeight - 64;
@@ -14507,7 +14605,10 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
         remove.type = 'button'; remove.className = 'match-aggregate-remove'; remove.title = 'Убрать из этой выборки';
         remove.dataset.matchAggregateRemove = matchArchivePlayerKey(total.player);
         remove.innerHTML = '<i class="fa-regular fa-trash-can"></i>';
-        identity.append(name, remove);
+        const identityWrap = document.createElement('div');
+        identityWrap.className = 'match-aggregate-player';
+        identityWrap.append(name, remove);
+        identity.appendChild(identityWrap);
         row.appendChild(identity);
         [
             ['games', total.games], ['plus', total.plus], ['minus', total.minus], ['powerPlay', total.powerPlay], ['shortHanded', total.shortHanded],
@@ -15886,12 +15987,12 @@ function drawGoalieReportStat(ctx, x, y, width, label, value, accent = '#14213b'
     ctx.lineWidth = 2;
     ctx.strokeRect(x, y, width, 118);
     ctx.fillStyle = '#667085';
-    ctx.font = '700 20px Arial, sans-serif';
+    ctx.font = '700 22px Arial, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillText(label.toUpperCase(), x + 22, y + 32);
     ctx.fillStyle = accent;
-    ctx.font = '800 42px Arial, sans-serif';
+    ctx.font = '800 48px Arial, sans-serif';
     ctx.fillText(String(value), x + 22, y + 79);
 }
 
@@ -15972,7 +16073,7 @@ function renderGoalieReportPdfPages(match) {
             ctx.font = '900 54px Arial, sans-serif';
             ctx.textAlign = 'left';
             ctx.fillText(String(zone), x + 24, y + 48);
-            ctx.font = '800 28px Arial, sans-serif';
+            ctx.font = '800 31px Arial, sans-serif';
             ctx.fillStyle = '#1d4ed8';
             ctx.fillText(`Броски: ${data.shots}`, x + 34, y + 130);
             ctx.fillStyle = '#b42318';
@@ -15993,10 +16094,10 @@ function renderGoalieReportPdfPages(match) {
         ctx.stroke();
 
         ctx.fillStyle = '#111827';
-        ctx.font = '800 38px Arial, sans-serif';
+        ctx.font = '800 44px Arial, sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText(goalie.name || 'Вратарь', 1600, 280);
-        ctx.font = '700 21px Arial, sans-serif';
+        ctx.font = '700 24px Arial, sans-serif';
         ctx.fillStyle = '#667085';
         ctx.fillText(`Время на льду: ${stats.ice}`, 1600, 328);
         const statWidth = 355;
