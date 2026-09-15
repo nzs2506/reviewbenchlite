@@ -5277,9 +5277,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.4" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.5" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.4</span>
+            <span class="version-tooltip">v0.10.5</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5409,6 +5409,7 @@
                 <div class="match-archive-selection" id="matchArchiveSelection" hidden>
                     <span class="match-archive-selection-copy" id="matchArchiveSelectionCopy"></span>
                     <div class="match-archive-selection-actions">
+                        <button class="match-archive-action" type="button" id="btnRestoreArchiveKhl" title="Вернуть в сохранённые листы статистику, загруженную из КХЛ">Восстановить KHL</button>
                         <button class="match-archive-action" type="button" id="btnMatchArchiveSelectAll">Выбрать все</button>
                         <button class="match-archive-action" type="button" id="btnMatchArchiveSelectNone">Снять выбор</button>
                     </div>
@@ -10654,6 +10655,44 @@ function normalizeCloudList(value, options = {}) {
 function mergeCloudLists(localValue, remoteValue, options = {}) {
     return normalizeCloudList([...(Array.isArray(remoteValue) ? remoteValue : []), ...(Array.isArray(localValue) ? localValue : [])], options);
 }
+function matchArchiveRestoreKey(record) {
+    const date = String(record?.date || record?.sheet?.date || '').slice(0, 10);
+    const opponent = matchSheetOpponentKey(record?.opponent || record?.sheet?.opponent || '');
+    return date && opponent ? `${date}|${opponent}` : String(record?.id || '');
+}
+function matchArchiveDataScore(record) {
+    const sheet = record?.sheet || {};
+    let score = (sheet.events || []).length * 6;
+    Object.values(sheet.players || {}).forEach(value => {
+        const player = normalizeMatchSheetPlayer(value);
+        score += player.games + player.plus + player.minus;
+        MATCH_SHEET_PERIOD_FIELDS.forEach(field => { score += player[field].reduce((sum, stat) => sum + safeStatNumber(stat), 0); });
+        ['powerPlay', 'shortHanded', 'opponentPenaltyTotal', 'assists', 'faceoffsTotal', 'mmPoints'].forEach(field => {
+            if (String(player[field] || '').trim()) score += 2;
+        });
+        Object.values(player.goalieStats || {}).forEach(stat => { if (String(stat || '').trim()) score += 2; });
+    });
+    return score;
+}
+function mergeMatchArchives(localValue, remoteValue) {
+    const candidates = [...(Array.isArray(remoteValue) ? remoteValue : []), ...(Array.isArray(localValue) ? localValue : [])]
+        .filter(value => value && typeof value === 'object')
+        .map(normalizeMatchArchiveRecord);
+    const byMatch = new Map();
+    candidates.forEach(record => {
+        const key = matchArchiveRestoreKey(record) || record.id;
+        const previous = byMatch.get(key);
+        if (!previous) { byMatch.set(key, record); return; }
+        const previousScore = matchArchiveDataScore(previous);
+        const nextScore = matchArchiveDataScore(record);
+        const previousTime = Date.parse(previous.updatedAt || previous.createdAt || 0) || 0;
+        const nextTime = Date.parse(record.updatedAt || record.createdAt || 0) || 0;
+        // A fresh but almost empty browser copy must not overwrite the rich
+        // archive that was saved after importing the KHL protocol.
+        if (nextScore > previousScore || (nextScore === previousScore && nextTime > previousTime)) byMatch.set(key, record);
+    });
+    return [...byMatch.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
+}
 function meaningfulMatchSheetState(state) {
     if (!state || typeof state !== 'object') return false;
     return Boolean(
@@ -10741,7 +10780,7 @@ function applyRemoteCloudState(states) {
     goalieSavedMatches = mergeCloudLists(goalieSavedMatches, remote('goalieMatches'));
     rosterRemovedKeys = [...new Set([...(Array.isArray(remote('rosterRemoved')) ? remote('rosterRemoved') : []), ...rosterRemovedKeys].map(String).filter(Boolean))].slice(-500);
     rosterPlayers = normalizeCloudRoster([...(Array.isArray(remote('roster')) ? remote('roster') : []), ...rosterPlayers]);
-    matchSheetArchive = mergeCloudLists(matchSheetArchive, remote('matchArchive')).map(normalizeMatchArchiveRecord);
+    matchSheetArchive = mergeMatchArchives(matchSheetArchive, remote('matchArchive'));
     admiralMatches = mergeCloudLists(admiralMatches, remote('matches')).map(normalizeAdmiralMatch).filter(Boolean).sort(admiralMatchSort);
     // Открытый матчевый лист намеренно не синхронизируется: это состояние
     // конкретной вкладки. Между устройствами синхронизируется matchArchive —
@@ -11547,6 +11586,7 @@ function normalizeMatchArchiveRecord(value) {
             opponent: String(sheet.opponent || value?.opponent || '').slice(0, 50),
             date: String(sheet.date || value?.date || todayInputValue()),
             matchScore: normalizeMatchSheetScore(sheet.matchScore),
+            khlStatsImportedAt: String(sheet.khlStatsImportedAt || ''),
             players,
             events: Array.isArray(sheet.events) ? sheet.events.slice(-150) : [],
             order: Array.isArray(sheet.order) ? sheet.order.map(String) : [],
@@ -12183,6 +12223,100 @@ function matchSheetPlayerHasData(value) {
         || Object.values(state.goalieStats || {}).some(v => /[1-9]/.test(String(v)));
 }
 
+// KHL is the base layer of a match sheet.  Manual columns (БОЛ, МЕН, ШТР +,
+// ПАС, ВБР and the notes/highlights) live alongside it and must never be
+// cleared when a sheet is restored from the protocol.
+function applyKhlStatsToMatchSheet(data, sheet = matchSheetState) {
+    let imported = 0;
+    let created = 0;
+    (Array.isArray(data?.players) ? data.players : []).forEach(entry => {
+        let player = findRosterPlayerForKhl(entry);
+        if (!player && cleanStatName(entry.name)) {
+            player = defaultRosterPlayer(entry.role, entry.name, entry.number);
+            rosterPlayers.push(player);
+            created += 1;
+        }
+        if (!player) return;
+        const state = sheet.players[player.id] = normalizeMatchSheetPlayer(sheet.players[player.id]);
+        if (player.role === 'goalie') {
+            const incoming = { ...(entry.goalieStats || {}) };
+            if (entry.goalieGames !== undefined) incoming.games = entry.goalieGames;
+            if (entry.goaliePim !== undefined) incoming.pim = entry.goaliePim;
+            if (entry.goalieIceMinutes !== undefined) incoming.ice = formatIceMinutesValue(entry.goalieIceMinutes);
+            // A non-empty manual goalie entry is deliberately retained. Empty
+            // protocol fields are not allowed to erase it on a retry either.
+            const previous = normalizeMatchGoalieStats(state.goalieStats);
+            const normalizedIncoming = normalizeMatchGoalieStats(incoming);
+            Object.keys(normalizedIncoming).forEach(key => {
+                if (String(normalizedIncoming[key] || '').trim() && !String(previous[key] || '').trim()) previous[key] = normalizedIncoming[key];
+                else if (String(normalizedIncoming[key] || '').trim() && ['games', 'shotsAgainst', 'goalsAgainst', 'saves', 'savePct', 'gaa', 'shutouts', 'pim', 'ice'].includes(key)) previous[key] = normalizedIncoming[key];
+            });
+            state.goalieStats = normalizeMatchGoalieStats(previous);
+        } else {
+            const positive = value => Math.max(0, Math.round(safeStatNumber(value)));
+            const replaceBase = (field, value) => { state[field] = positive(value); };
+            replaceBase('games', entry.games || 1);
+            if (entry.plus !== undefined || entry.pluses !== undefined || entry.plus_count !== undefined) {
+                replaceBase('plus', entry.plus ?? entry.pluses ?? entry.plus_count);
+            }
+            if (entry.minus !== undefined || entry.minuses !== undefined || entry.minus_count !== undefined) {
+                replaceBase('minus', entry.minus ?? entry.minuses ?? entry.minus_count);
+            }
+            state.goals[0] = positive(entry.goals);
+            state.shots[0] = positive(entry.shots);
+            state.penalties[0] = positive(entry.pim);
+        }
+        imported += 1;
+    });
+    sheet.khlStatsImportedAt = new Date().toISOString();
+    return { imported, created };
+}
+
+async function restoreArchivedKhlStatistics() {
+    const saved = matchSheetArchive.slice();
+    const targets = saved.map(record => ({ record, match: admiralMatches.find(match => matchArchiveBelongsToKhlMatch(record, match) && match.final) }))
+        .filter(item => item.match);
+    if (!targets.length) {
+        await showConfirm('Среди сохранённых матчей пока нет завершённых матчей КХЛ для восстановления.', { title: 'Восстановление KHL', okLabel: 'Понятно', cancelLabel: 'Закрыть' });
+        return;
+    }
+    const button = document.getElementById('btnRestoreArchiveKhl');
+    if (button) { button.disabled = true; button.textContent = 'Восстанавливаю…'; }
+    let restored = 0;
+    let players = 0;
+    const failed = [];
+    try {
+        for (const item of targets) {
+            try {
+                const data = await fetchKhlMatchStats(item.match, true);
+                const record = normalizeMatchArchiveRecord(item.record);
+                record.sheet.matchScore = matchSheetScoreFromKhl(data, item.match) || record.sheet.matchScore;
+                const result = applyKhlStatsToMatchSheet(data, record.sheet);
+                record.updatedAt = new Date().toISOString();
+                matchSheetArchive = matchSheetArchive.map(current => current.id === record.id ? record : current);
+                restored += 1;
+                players += result.imported;
+            } catch (err) {
+                failed.push(item.record.opponent || item.record.date || 'матч');
+            }
+        }
+        if (restored) {
+            persistMatchSheetArchive();
+            persistRosterPlayers();
+            renderMatchesPage();
+            renderStatsPage();
+        }
+        await showConfirm(
+            failed.length
+                ? `Восстановлено матчей: ${restored}, игроков: ${players}. Не удалось получить: ${failed.join(', ')}.`
+                : `Восстановлено матчей: ${restored}, игроков: ${players}. Ручные поля сохранены.`,
+            { title: 'Статистика KHL восстановлена', okLabel: 'Понятно', cancelLabel: 'Закрыть' }
+        );
+    } finally {
+        if (button) { button.disabled = false; button.textContent = 'Восстановить KHL'; }
+    }
+}
+
 async function openKhlMatchSheet(match) {
     if (!match) return false;
     matchSheetInitialMatchResolved = true;
@@ -12252,7 +12386,6 @@ async function importKhlMatchStats(matchId) {
     const savedRecord = matchSheetArchive.find(record => record.date === String(match.date || '').slice(0, 10)
         && matchSheetOpponentKey(record.opponent) === matchSheetOpponentKey(match.opponent));
     if (!await openKhlMatchSheet(match)) return;
-    if (savedRecord) return;
     if (!match.final) {
         // Будущий матч открывается пустым: дату и соперника уже записала openKhlMatchSheet.
         return;
@@ -12309,9 +12442,14 @@ async function importKhlMatchStats(matchId) {
             imported += 1;
         });
         if (addToSeasonTotals) match.statsImportedAt = new Date().toISOString();
+        matchSheetState.khlStatsImportedAt = new Date().toISOString();
         match.updatedAt = new Date().toISOString();
         persistRosterPlayers();
-        persistMatchSheet();
+        // If the sheet was already saved, update that same archive record in
+        // place. Previously this path returned early, which is why a later
+        // device could leave a sheet with only manually entered values.
+        if (savedRecord || matchSheetState.archiveId) saveMatchSheetToArchive();
+        else persistMatchSheet();
         persistAdmiralMatches();
         renderStatsRoster();
         renderMatchesPage();
@@ -17786,6 +17924,7 @@ document.getElementById('btnMatchArchiveSelectNone').addEventListener('click', (
     selectedMatchArchiveIds.clear();
     renderMatchArchive();
 });
+document.getElementById('btnRestoreArchiveKhl').addEventListener('click', restoreArchivedKhlStatistics);
 document.getElementById('btnKhlMatchSelectAll').addEventListener('click', () => {
     selectedKhlMatchIds = new Set(admiralMatches.map(match => match.id));
     renderAdmiralMatches();
