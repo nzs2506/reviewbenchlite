@@ -5277,9 +5277,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.10" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.11" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.10</span>
+            <span class="version-tooltip">v0.10.11</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -14289,12 +14289,12 @@ function renderMatchSheetGoaliesPdfPage(record, pageNumber = 2, totalPages = 2) 
     });
     rows.forEach((goalie, rowIndex) => {
         let cellX = margin;
-        const y = tableTop + headerHeight + rowIndex * 84;
+        const y = tableTop + headerHeight + rowIndex * 96;
         const fill = rowIndex % 2 ? '#f4f7fb' : '#ffffff';
         columns.forEach((column, index) => {
-            drawMatchSheetPdfCell(ctx, cellX, y, column.width, 84, column.value(goalie), {
+            drawMatchSheetPdfCell(ctx, cellX, y, column.width, 96, column.value(goalie), {
                 fill: index === 0 ? fill : matchSheetPdfHighlightFill({ highlights: goalie.highlights }, `goalieStats.${column.key}`, fill), align: column.align || 'center', pad: index === 0 ? 14 : 5,
-                font: index === 0 ? '700 23px Arial, sans-serif' : '700 22px Arial, sans-serif', color: '#172033'
+                font: index === 0 ? '700 25px Arial, sans-serif' : '700 25px Arial, sans-serif', color: '#172033'
             });
             cellX += column.width;
         });
@@ -14460,9 +14460,9 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
     const record = matchSheetPdfRecord(sourceRecord);
     const players = archivedMatchPlayers(record);
     const isAggregatePdf = options.title === 'СВОДНАЯ СТАТИСТИКА';
-    // Taller cells improve legibility in printed reports. Nineteen rows still
+    // Taller cells improve legibility in printed reports. Seventeen rows still
     // leave enough space for the footer on A4.
-    const rowsPerPage = 19;
+    const rowsPerPage = 17;
     const pageCount = Math.max(1, Math.ceil(players.length / rowsPerPage));
     const pageWidth = 2480;
     const pageHeight = 1754;
@@ -14470,21 +14470,21 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
     const tableWidth = pageWidth - margin * 2;
     const titleHeight = 180;
     const headerHeight = 76;
-    const rowHeight = 72;
+    const rowHeight = 82;
     const definitions = [
-        { field: 'player', label: '№ / ФАМИЛИЯ', weight: 420, value: (player, state) => `${player.number ? `№${player.number}  ` : ''}${player.name || rosterRoleLabel(player.role)}`, align: 'left' },
-        { field: 'games', label: 'ИГР', weight: 110, value: (_, state) => state.games },
-        { field: 'plus', label: '+', weight: 90, value: (_, state) => state.plus },
-        { field: 'minus', label: '−', weight: 90, value: (_, state) => state.minus },
-        { field: 'powerPlay', label: 'БОЛ', weight: 170, value: (_, state) => state.powerPlay || '—' },
-        { field: 'shortHanded', label: 'МЕН', weight: 170, value: (_, state) => state.shortHanded || '—' },
-        { field: 'penaltyTotal', label: 'ШТР −', weight: 150, value: (_, state) => matchSheetTotalValue(state, 'penaltyTotal') },
-        { field: 'opponentPenaltyTotal', label: 'ШТР +', weight: 150, value: (_, state) => matchSheetTotalValue(state, 'opponentPenaltyTotal') || '—' },
-        { field: 'goalsTotal', label: 'ГОЛ', weight: 110, value: (_, state) => matchSheetTotalValue(state, 'goalsTotal') },
-        { field: 'assists', label: 'ПАС', weight: 110, value: (_, state) => state.assists || '—' },
-        { field: 'shotsTotal', label: 'БР', weight: 110, value: (_, state) => matchSheetTotalValue(state, 'shotsTotal') },
-        { field: 'faceoffsTotal', label: 'ВБР', weight: 190, value: (_, state) => matchSheetTotalValue(state, 'faceoffsTotal') || '—' },
-        { field: 'mmPoints', label: 'ОЧКИ В ММ', weight: 250, value: (_, state) => state.mmPoints || '—' }
+        { field: 'player', label: '№ / ФАМИЛИЯ', weight: 445, value: (player, state) => `${player.number ? `№${player.number}  ` : ''}${player.name || rosterRoleLabel(player.role)}`, align: 'left' },
+        { field: 'games', label: 'ИГР', weight: 126, value: (_, state) => state.games },
+        { field: 'plus', label: '+', weight: 104, value: (_, state) => state.plus },
+        { field: 'minus', label: '−', weight: 104, value: (_, state) => state.minus },
+        { field: 'powerPlay', label: 'БОЛ', weight: 156, value: (_, state) => state.powerPlay || '—' },
+        { field: 'shortHanded', label: 'МЕН', weight: 156, value: (_, state) => state.shortHanded || '—' },
+        { field: 'penaltyTotal', label: 'ШТР −', weight: 138, value: (_, state) => matchSheetTotalValue(state, 'penaltyTotal') },
+        { field: 'opponentPenaltyTotal', label: 'ШТР +', weight: 138, value: (_, state) => matchSheetTotalValue(state, 'opponentPenaltyTotal') || '—' },
+        { field: 'goalsTotal', label: 'ГОЛ', weight: 126, value: (_, state) => matchSheetTotalValue(state, 'goalsTotal') },
+        { field: 'assists', label: 'ПАС', weight: 126, value: (_, state) => state.assists || '—' },
+        { field: 'shotsTotal', label: 'БР', weight: 126, value: (_, state) => matchSheetTotalValue(state, 'shotsTotal') },
+        { field: 'faceoffsTotal', label: 'ВБР', weight: 174, value: (_, state) => matchSheetTotalValue(state, 'faceoffsTotal') || '—' },
+        { field: 'mmPoints', label: 'ОЧКИ В ММ', weight: 230, value: (_, state) => state.mmPoints || '—' }
     ];
     const weightTotal = definitions.reduce((sum, item) => sum + item.weight, 0);
     definitions.forEach(item => { item.width = item.weight / weightTotal * tableWidth; });
@@ -14532,8 +14532,8 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
                     align: column.align || 'center',
                     pad: index === 0 ? 14 : 5,
                     font: index === 0
-                        ? `700 ${isAggregatePdf ? 25 : 24}px Arial, sans-serif`
-                        : `700 ${isAggregatePdf ? 25 : 22}px Arial, sans-serif`,
+                        ? `700 ${isAggregatePdf ? 27 : 26}px Arial, sans-serif`
+                        : `700 ${isAggregatePdf ? 29 : 25}px Arial, sans-serif`,
                     color: '#172033'
                 });
                 cellX += column.width;
