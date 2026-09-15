@@ -12568,12 +12568,21 @@ async function saveMatchSheetToArchive() {
     renderMatchSheet();
     const button = document.getElementById('btnMatchSheetSave');
     if (button) button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Сохраняю резерв…</span>';
-    const result = await saveMatchSheetBackupCopies(record);
+    let result = { cloud: false, dropbox: false };
+    try {
+        result = await saveMatchSheetBackupCopies(record);
+    } catch (err) {
+        console.warn('Match-sheet backup failed', err);
+    }
     if (button) {
-        const label = result.dropbox
+        const label = result.cloud && result.dropbox
             ? 'Матч и PDF сохранены'
-            : 'Матч сохранен · Dropbox не подключён';
-        button.innerHTML = `<i class="fa-solid fa-${result.dropbox ? 'check' : 'triangle-exclamation'}"></i><span>${label}</span>`;
+            : result.cloud
+                ? 'Матч сохранён · PDF в Cloudflare'
+                : result.dropbox
+                    ? 'Матч сохранён · PDF в Dropbox'
+                    : 'Матч сохранён · резерв не создан';
+        button.innerHTML = `<i class="fa-solid fa-${result.cloud && result.dropbox ? 'check' : 'triangle-exclamation'}"></i><span>${label}</span>`;
         window.setTimeout(() => {
             button.innerHTML = '<i class="fa-solid fa-floppy-disk"></i><span>Сохранить матч</span>';
         }, 2600);
