@@ -12293,16 +12293,28 @@ function applyKhlStatsToMatchSheet(data, sheet = matchSheetState) {
             state.goalieStats = normalizeMatchGoalieStats(previous);
         } else {
             const positive = value => Math.max(0, Math.round(safeStatNumber(value)));
-            const replaceBase = (field, value) => { state[field] = positive(value); };
-            replaceBase('games', entry.games || 1);
-            if (entry.plus !== undefined || entry.pluses !== undefined || entry.plus_count !== undefined) {
-                replaceBase('plus', entry.plus ?? entry.pluses ?? entry.plus_count);
+            // A saved sheet can already contain a confirmed KHL import even if
+            // its old schema marker is missing.  Some cache responses expose
+            // incomplete plus/minus data as zero; re-importing must never turn
+            // an established match sheet into a different one.  Import the
+            // whole base only for a genuinely empty player row.  Existing rows
+            // are merely supplemented below with absent PIM/faceoffs.
+            const hasSavedBase = state.games > 0
+                || state.goals.some(positive)
+                || state.shots.some(positive)
+                || state.plus > 0
+                || state.minus > 0;
+            if (!hasSavedBase) {
+                state.games = positive(entry.games || 1);
+                if (entry.plus !== undefined || entry.pluses !== undefined || entry.plus_count !== undefined) {
+                    state.plus = positive(entry.plus ?? entry.pluses ?? entry.plus_count);
+                }
+                if (entry.minus !== undefined || entry.minuses !== undefined || entry.minus_count !== undefined) {
+                    state.minus = positive(entry.minus ?? entry.minuses ?? entry.minus_count);
+                }
+                state.goals[0] = positive(entry.goals);
+                state.shots[0] = positive(entry.shots);
             }
-            if (entry.minus !== undefined || entry.minuses !== undefined || entry.minus_count !== undefined) {
-                replaceBase('minus', entry.minus ?? entry.minuses ?? entry.minus_count);
-            }
-            state.goals[0] = positive(entry.goals);
-            state.shots[0] = positive(entry.shots);
             // The previous recovery path only restored games/goals/shots.  KHL
             // also supplies penalty minutes and the won/lost faceoff split.
             // Add them only when that base column is empty, so a coach's manual
