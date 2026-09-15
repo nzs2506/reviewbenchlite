@@ -5277,9 +5277,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.5" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.6" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.5</span>
+            <span class="version-tooltip">v0.10.6</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -10816,6 +10816,9 @@ async function initCloudStateStorage() {
     renderGoaliePage();
     renderStatsPage();
     renderMatchesPage();
+    // Some KHL schedule feeds keep an already played game marked as upcoming.
+    // Repair archived sheets by date after sync instead of trusting that flag.
+    window.setTimeout(() => restoreArchivedKhlStatistics({ silent: true, onlyMissing: true }), 900);
     ensureAdmiralScheduleFresh();
 }
 function loadTrainingRecords() {
@@ -12223,6 +12226,11 @@ function matchSheetPlayerHasData(value) {
         || Object.values(state.goalieStats || {}).some(v => /[1-9]/.test(String(v)));
 }
 
+function khlMatchCanHaveStats(match) {
+    const date = String(match?.date || match?.startsAt || '').slice(0, 10);
+    return Boolean(match?.final) || Boolean(date && date <= todayInputValue());
+}
+
 // KHL is the base layer of a match sheet.  Manual columns (БОЛ, МЕН, ШТР +,
 // ПАС, ВБР and the notes/highlights) live alongside it and must never be
 // cleared when a sheet is restored from the protocol.
@@ -12272,12 +12280,13 @@ function applyKhlStatsToMatchSheet(data, sheet = matchSheetState) {
     return { imported, created };
 }
 
-async function restoreArchivedKhlStatistics() {
+async function restoreArchivedKhlStatistics(options = {}) {
     const saved = matchSheetArchive.slice();
-    const targets = saved.map(record => ({ record, match: admiralMatches.find(match => matchArchiveBelongsToKhlMatch(record, match) && match.final) }))
+    const targets = saved.map(record => ({ record, match: admiralMatches.find(match => matchArchiveBelongsToKhlMatch(record, match) && khlMatchCanHaveStats(match)) }))
+        .filter(item => !options.onlyMissing || !String(item.record?.sheet?.khlStatsImportedAt || '').trim())
         .filter(item => item.match);
     if (!targets.length) {
-        await showConfirm('Среди сохранённых матчей пока нет завершённых матчей КХЛ для восстановления.', { title: 'Восстановление KHL', okLabel: 'Понятно', cancelLabel: 'Закрыть' });
+        if (!options.silent) await showConfirm('Среди сохранённых матчей пока нет матчей КХЛ, которые нужно восстановить.', { title: 'Восстановление KHL', okLabel: 'Понятно', cancelLabel: 'Закрыть' });
         return;
     }
     const button = document.getElementById('btnRestoreArchiveKhl');
@@ -12306,12 +12315,14 @@ async function restoreArchivedKhlStatistics() {
             renderMatchesPage();
             renderStatsPage();
         }
-        await showConfirm(
-            failed.length
-                ? `Восстановлено матчей: ${restored}, игроков: ${players}. Не удалось получить: ${failed.join(', ')}.`
-                : `Восстановлено матчей: ${restored}, игроков: ${players}. Ручные поля сохранены.`,
-            { title: 'Статистика KHL восстановлена', okLabel: 'Понятно', cancelLabel: 'Закрыть' }
-        );
+        if (!options.silent) {
+            await showConfirm(
+                failed.length
+                    ? `Восстановлено матчей: ${restored}, игроков: ${players}. Не удалось получить: ${failed.join(', ')}.`
+                    : `Восстановлено матчей: ${restored}, игроков: ${players}. Ручные поля сохранены.`,
+                { title: 'Статистика KHL восстановлена', okLabel: 'Понятно', cancelLabel: 'Закрыть' }
+            );
+        }
     } finally {
         if (button) { button.disabled = false; button.textContent = 'Восстановить KHL'; }
     }
@@ -12386,7 +12397,7 @@ async function importKhlMatchStats(matchId) {
     const savedRecord = matchSheetArchive.find(record => record.date === String(match.date || '').slice(0, 10)
         && matchSheetOpponentKey(record.opponent) === matchSheetOpponentKey(match.opponent));
     if (!await openKhlMatchSheet(match)) return;
-    if (!match.final) {
+    if (!khlMatchCanHaveStats(match)) {
         // Будущий матч открывается пустым: дату и соперника уже записала openKhlMatchSheet.
         return;
     }
