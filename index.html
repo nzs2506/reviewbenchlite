@@ -5277,9 +5277,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.11" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.12" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.11</span>
+            <span class="version-tooltip">v0.10.12</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -14246,7 +14246,7 @@ function renderMatchSheetGoaliesPdfPage(record, pageNumber = 2, totalPages = 2) 
         ...MATCH_GOALIE_COLUMNS.map(([key, label]) => ({
             label,
             key,
-            weight: key === 'ice' || key === 'zoneP' ? 135 : key === 'savePercent' || key === 'gaa' ? 120 : 102,
+            weight: key === 'ice' || key === 'zoneP' ? 118 : key === 'savePercent' || key === 'gaa' ? 105 : 90,
             value: goalie => goalie.stats[key] || '—'
         }))
     ];
@@ -14294,7 +14294,7 @@ function renderMatchSheetGoaliesPdfPage(record, pageNumber = 2, totalPages = 2) 
         columns.forEach((column, index) => {
             drawMatchSheetPdfCell(ctx, cellX, y, column.width, 96, column.value(goalie), {
                 fill: index === 0 ? fill : matchSheetPdfHighlightFill({ highlights: goalie.highlights }, `goalieStats.${column.key}`, fill), align: column.align || 'center', pad: index === 0 ? 14 : 5,
-                font: index === 0 ? '700 25px Arial, sans-serif' : '700 25px Arial, sans-serif', color: '#172033'
+                font: index === 0 ? '700 25px Arial, sans-serif' : '700 29px Arial, sans-serif', color: '#172033'
             });
             cellX += column.width;
         });
@@ -14473,18 +14473,18 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
     const rowHeight = 82;
     const definitions = [
         { field: 'player', label: '№ / ФАМИЛИЯ', weight: 445, value: (player, state) => `${player.number ? `№${player.number}  ` : ''}${player.name || rosterRoleLabel(player.role)}`, align: 'left' },
-        { field: 'games', label: 'ИГР', weight: 126, value: (_, state) => state.games },
-        { field: 'plus', label: '+', weight: 104, value: (_, state) => state.plus },
-        { field: 'minus', label: '−', weight: 104, value: (_, state) => state.minus },
-        { field: 'powerPlay', label: 'БОЛ', weight: 156, value: (_, state) => state.powerPlay || '—' },
-        { field: 'shortHanded', label: 'МЕН', weight: 156, value: (_, state) => state.shortHanded || '—' },
-        { field: 'penaltyTotal', label: 'ШТР −', weight: 138, value: (_, state) => matchSheetTotalValue(state, 'penaltyTotal') },
-        { field: 'opponentPenaltyTotal', label: 'ШТР +', weight: 138, value: (_, state) => matchSheetTotalValue(state, 'opponentPenaltyTotal') || '—' },
-        { field: 'goalsTotal', label: 'ГОЛ', weight: 126, value: (_, state) => matchSheetTotalValue(state, 'goalsTotal') },
-        { field: 'assists', label: 'ПАС', weight: 126, value: (_, state) => state.assists || '—' },
-        { field: 'shotsTotal', label: 'БР', weight: 126, value: (_, state) => matchSheetTotalValue(state, 'shotsTotal') },
-        { field: 'faceoffsTotal', label: 'ВБР', weight: 174, value: (_, state) => matchSheetTotalValue(state, 'faceoffsTotal') || '—' },
-        { field: 'mmPoints', label: 'ОЧКИ В ММ', weight: 230, value: (_, state) => state.mmPoints || '—' }
+        { field: 'games', label: 'ИГР', weight: 107, value: (_, state) => state.games },
+        { field: 'plus', label: '+', weight: 88, value: (_, state) => state.plus },
+        { field: 'minus', label: '−', weight: 88, value: (_, state) => state.minus },
+        { field: 'powerPlay', label: 'БОЛ', weight: 133, value: (_, state) => state.powerPlay || '—' },
+        { field: 'shortHanded', label: 'МЕН', weight: 133, value: (_, state) => state.shortHanded || '—' },
+        { field: 'penaltyTotal', label: 'ШТР −', weight: 117, value: (_, state) => matchSheetTotalValue(state, 'penaltyTotal') },
+        { field: 'opponentPenaltyTotal', label: 'ШТР +', weight: 117, value: (_, state) => matchSheetTotalValue(state, 'opponentPenaltyTotal') || '—' },
+        { field: 'goalsTotal', label: 'ГОЛ', weight: 107, value: (_, state) => matchSheetTotalValue(state, 'goalsTotal') },
+        { field: 'assists', label: 'ПАС', weight: 107, value: (_, state) => state.assists || '—' },
+        { field: 'shotsTotal', label: 'БР', weight: 107, value: (_, state) => matchSheetTotalValue(state, 'shotsTotal') },
+        { field: 'faceoffsTotal', label: 'ВБР', weight: 148, value: (_, state) => matchSheetTotalValue(state, 'faceoffsTotal') || '—' },
+        { field: 'mmPoints', label: 'ОЧКИ В ММ', weight: 196, value: (_, state) => state.mmPoints || '—' }
     ];
     const weightTotal = definitions.reduce((sum, item) => sum + item.weight, 0);
     definitions.forEach(item => { item.width = item.weight / weightTotal * tableWidth; });
@@ -14533,7 +14533,7 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
                     pad: index === 0 ? 14 : 5,
                     font: index === 0
                         ? `700 ${isAggregatePdf ? 27 : 26}px Arial, sans-serif`
-                        : `700 ${isAggregatePdf ? 29 : 25}px Arial, sans-serif`,
+                        : `700 ${isAggregatePdf ? 33 : 29}px Arial, sans-serif`,
                     color: '#172033'
                 });
                 cellX += column.width;
