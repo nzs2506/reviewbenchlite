@@ -5277,9 +5277,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.7" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.8" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.7</span>
+            <span class="version-tooltip">v0.10.8</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -11618,6 +11618,9 @@ function normalizeMatchArchiveRecord(value) {
             date: String(sheet.date || value?.date || todayInputValue()),
             matchScore: normalizeMatchSheetScore(sheet.matchScore),
             khlStatsImportedAt: String(sheet.khlStatsImportedAt || ''),
+            // Version 2 additionally contains the KHL faceoff split and PIM
+            // values restored into saved sheets.
+            khlStatsVersion: Math.max(0, Math.round(safeStatNumber(sheet.khlStatsVersion))),
             players,
             events: Array.isArray(sheet.events) ? sheet.events.slice(-150) : [],
             order: Array.isArray(sheet.order) ? sheet.order.map(String) : [],
@@ -12300,18 +12303,35 @@ function applyKhlStatsToMatchSheet(data, sheet = matchSheetState) {
             }
             state.goals[0] = positive(entry.goals);
             state.shots[0] = positive(entry.shots);
-            state.penalties[0] = positive(entry.pim);
+            // The previous recovery path only restored games/goals/shots.  KHL
+            // also supplies penalty minutes and the won/lost faceoff split.
+            // Add them only when that base column is empty, so a coach's manual
+            // match-sheet entry is not overwritten by a later recovery.
+            const currentPim = state.penalties.reduce((sum, value) => sum + positive(value), 0);
+            if (!currentPim) state.penalties[0] = positive(entry.pim);
+            const faceoffs = positive(entry.faceoffs);
+            const faceoffWins = Math.min(faceoffs, positive(entry.faceoffWins));
+            const currentFaceoffs = state.faceoffWins.reduce((sum, value) => sum + positive(value), 0)
+                + state.faceoffLosses.reduce((sum, value) => sum + positive(value), 0);
+            if (!currentFaceoffs && faceoffs) {
+                state.faceoffWins[0] = faceoffWins;
+                state.faceoffLosses[0] = Math.max(0, faceoffs - faceoffWins);
+                state.faceoffsTotal = '';
+            }
         }
         imported += 1;
     });
     sheet.khlStatsImportedAt = new Date().toISOString();
+    sheet.khlStatsVersion = 2;
     return { imported, created };
 }
 
 async function restoreArchivedKhlStatistics(options = {}) {
     const saved = matchSheetArchive.slice();
     const targets = saved.map(record => ({ record, match: admiralMatches.find(match => matchArchiveBelongsToKhlMatch(record, match) && khlMatchCanHaveStats(match)) }))
-        .filter(item => !options.onlyMissing || !String(item.record?.sheet?.khlStatsImportedAt || '').trim())
+        .filter(item => !options.onlyMissing
+            || !String(item.record?.sheet?.khlStatsImportedAt || '').trim()
+            || safeStatNumber(item.record?.sheet?.khlStatsVersion) < 2)
         .filter(item => item.match);
     if (!targets.length) {
         if (!options.silent) await showConfirm('Среди сохранённых матчей пока нет матчей КХЛ, которые нужно восстановить.', { title: 'Восстановление KHL', okLabel: 'Понятно', cancelLabel: 'Закрыть' });
