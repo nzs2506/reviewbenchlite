@@ -5277,9 +5277,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.6" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.7" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.6</span>
+            <span class="version-tooltip">v0.10.7</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -10748,6 +10748,34 @@ async function fetchRemoteCloudState() {
         return null;
     }
 }
+// A saved match is shared data.  Before opening it, pull just the archive once
+// more: a tab can be restored from IndexedDB before the full cloud bootstrap
+// finishes, and must never show its older empty draft instead of the saved
+// match sheet from another computer.
+async function refreshMatchArchiveFromCloud() {
+    const url = cloudStateUrl('/api/state?key=matchArchive');
+    if (!url || !benchAuthToken) return false;
+    try {
+        const response = await authFetch(url, { method: 'GET', mode: 'cors', cache: 'no-store' });
+        if (!response.ok) return false;
+        const data = await response.json();
+        const remoteArchive = data?.state?.value;
+        if (!Array.isArray(remoteArchive)) return false;
+        const merged = mergeMatchArchives(matchSheetArchive, remoteArchive);
+        const changed = JSON.stringify(merged) !== JSON.stringify(matchSheetArchive);
+        matchSheetArchive = merged;
+        if (changed) {
+            // Local cache only.  Do not re-upload while merely reading a saved
+            // cloud record — especially important after an offline empty draft.
+            persistMatchSheetArchive({ pushRemote: false });
+            renderMatchArchive();
+            renderMatchesPage();
+        }
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
 async function pushCloudStateKey(key) {
     if (!CLOUD_STATE_KEYS.includes(key)) return;
     const url = cloudStateUrl(`/api/state?key=${encodeURIComponent(key)}`);
@@ -12330,6 +12358,7 @@ async function restoreArchivedKhlStatistics(options = {}) {
 
 async function openKhlMatchSheet(match) {
     if (!match) return false;
+    await refreshMatchArchiveFromCloud();
     matchSheetInitialMatchResolved = true;
     const opponent = String(match.opponent || (match.isHome ? match.awayName : match.homeName) || 'Соперник').trim();
     const date = String(match.date || (match.startsAt ? match.startsAt.slice(0, 10) : todayInputValue())).slice(0, 10);
@@ -12527,7 +12556,13 @@ function saveMatchSheetToArchive() {
 }
 
 async function openArchivedMatchSheet(id) {
-    const record = matchSheetArchive.find(item => item.id === id);
+    const requestedRecord = matchSheetArchive.find(item => item.id === id);
+    await refreshMatchArchiveFromCloud();
+    // A browser can still hold an old record id while the cloud copy of the
+    // same date/opponent has a newer id.  Date + opponent is the stable match
+    // identity, so retain the user's click in that case.
+    const record = matchSheetArchive.find(item => item.id === id)
+        || matchSheetArchive.find(item => requestedRecord && matchArchiveRestoreKey(item) === matchArchiveRestoreKey(requestedRecord));
     if (!record) return;
     if (matchSheetState.events.length && matchSheetState.archiveId !== id) {
         const confirmed = await showConfirm('Текущий матчевый лист будет заменен выбранным сохраненным листом.', {
