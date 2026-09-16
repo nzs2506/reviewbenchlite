@@ -5277,9 +5277,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.12" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.13" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.12</span>
+            <span class="version-tooltip">v0.10.13</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -6522,6 +6522,10 @@ let matchSheetArchiveExpandedId = '';
 let selectedMatchArchiveIds = new Set();
 let selectedKhlMatchIds = new Set();
 let matchSheetIsDraft = false;
+// The open sheet belongs to one browser tab.  Keep a lightweight edit revision
+// so merely opening an archived match does not look like unsaved coach input.
+let matchSheetEditRevision = 0;
+let matchSheetSavedRevision = 0;
 let matchEventEditingId = '';
 let matchSheetNativeFullscreen = false;
 let matchSheetPointerDrag = null;
@@ -10836,7 +10840,9 @@ async function initCloudStateStorage() {
     persistGoalieMatches({ pushRemote: false });
     persistRosterRemovedKeys({ pushRemote: false });
     persistRosterPlayers({ pushRemote: false });
-    persistMatchSheet({ pushRemote: false });
+    // Cloud bootstrap does not modify the tab-local sheet and must not make it
+    // look like an edit that needs saving.
+    persistMatchSheet({ pushRemote: false, track: false });
     persistMatchSheetArchive({ pushRemote: false });
     persistAdmiralMatches({ pushRemote: false });
     syncRosterGoaliesFromMatches();
@@ -11591,9 +11597,19 @@ function loadMatchSheet() {
     } catch (_) {
         matchSheetState = { version: MATCH_SHEET_SCHEMA_VERSION, archiveId: '', opponent: '', date: '', matchScore: null, players: {}, events: [], order: [], excludedPlayerIds: [], sortDirection: 'manual' };
     }
+    markMatchSheetClean();
+}
+
+function markMatchSheetClean() {
+    matchSheetSavedRevision = matchSheetEditRevision;
+}
+
+function matchSheetHasUnsavedChanges() {
+    return matchSheetEditRevision !== matchSheetSavedRevision;
 }
 
 function persistMatchSheet(options = {}) {
+    if (options.track !== false) matchSheetEditRevision += 1;
     try {
         sessionStorage.setItem(MATCH_SHEET_TAB_STORAGE_KEY, JSON.stringify(matchSheetState));
     } catch (_) {}
@@ -11840,6 +11856,8 @@ function maybeResolveNearestMatchSheet() {
     matchSheetState.date = String(nearest.date || '').slice(0, 10);
     matchSheetState.opponent = String(nearest.opponent || '').trim();
     matchSheetIsDraft = true;
+    // Choosing the closest scheduled match is navigation, not an edit.
+    markMatchSheetClean();
     return true;
 }
 
@@ -11889,9 +11907,7 @@ async function openNearestMatchSheet() {
         await ensureAdmiralScheduleFresh(); // при входе обновит календарь, иначе тихо использует localStorage
         const match = nearestAdmiralMatch();
         if (!match) throw new Error('Ближайший матч не найден. Обновите календарь КХЛ на странице «Матчи».');
-        if (!matchSheetIsRelatedToMatch(match)
-            && Object.values(matchSheetState.players || {}).some(matchSheetPlayerHasData)
-            && !matchSheetIsDraft) {
+        if (!matchSheetIsRelatedToMatch(match) && matchSheetHasUnsavedChanges()) {
             if (!await showConfirm('Перейти к ближайшему матчу? Несохранённые изменения текущего листа будут потеряны.', { title: 'Ближайший матч', okLabel: 'Перейти', cancelLabel: 'Остаться' })) return;
         }
         matchSheetInitialMatchResolved = true;
@@ -12404,9 +12420,7 @@ async function openKhlMatchSheet(match) {
     const isSameMatch = currentDate === date && matchSheetOpponentKey(currentOpponent) === matchSheetOpponentKey(opponent);
     const savedRecord = matchSheetArchive.find(record => record.date === date
         && matchSheetOpponentKey(record.opponent) === matchSheetOpponentKey(opponent));
-    const hasEnteredData = matchSheetState.events.length
-        || Object.values(matchSheetState.players || {}).some(matchSheetPlayerHasData);
-    if (hasEnteredData && !isSameMatch) {
+    if (!isSameMatch && matchSheetHasUnsavedChanges()) {
         const decision = await showConfirm(
             `Сохранить данные по матчу «${currentOpponent || 'без соперника'}» от ${currentDate || 'без даты'}?`,
             {
@@ -12428,6 +12442,7 @@ async function openKhlMatchSheet(match) {
         matchSheetSelectedPlayerIds.clear();
         matchSheetPeriod = 1;
         persistMatchSheet();
+        markMatchSheetClean();
         setView('stats');
         setStatsPage('sheet');
         return true;
@@ -12452,6 +12467,8 @@ async function openKhlMatchSheet(match) {
     }
     matchSheetIsDraft = true;
     persistMatchSheet();
+    // Opening a future/empty KHL match has no entered statistics yet.
+    markMatchSheetClean();
     setView('stats');
     setStatsPage('sheet');
     return true;
@@ -12565,6 +12582,7 @@ async function saveMatchSheetToArchive() {
     matchSheetState.archiveId = id;
     matchSheetIsDraft = false;
     persistMatchSheet();
+    markMatchSheetClean();
     renderMatchSheet();
     const button = document.getElementById('btnMatchSheetSave');
     if (button) button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Сохраняю резерв…</span>';
@@ -12598,7 +12616,7 @@ async function openArchivedMatchSheet(id) {
     const record = matchSheetArchive.find(item => item.id === id)
         || matchSheetArchive.find(item => requestedRecord && matchArchiveRestoreKey(item) === matchArchiveRestoreKey(requestedRecord));
     if (!record) return;
-    if (matchSheetState.events.length && matchSheetState.archiveId !== id) {
+    if (matchSheetHasUnsavedChanges() && matchSheetState.archiveId !== id) {
         const confirmed = await showConfirm('Текущий матчевый лист будет заменен выбранным сохраненным листом.', {
             title: 'Открыть матчевый лист',
             okLabel: 'Открыть'
@@ -12616,6 +12634,7 @@ async function openArchivedMatchSheet(id) {
     matchSheetSelectedPlayerIds.clear();
     matchSheetPeriod = 1;
     persistMatchSheet();
+    markMatchSheetClean();
     setStatsPage('sheet');
 }
 
