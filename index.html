@@ -5325,9 +5325,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.14" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.15" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.14</span>
+            <span class="version-tooltip">v0.10.15</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5392,6 +5392,9 @@
                     </button>
                     <button class="training-action dropbox" id="btnDropboxBackup" type="button" title="Резервная копия в Dropbox">
                         <i class="fa-brands fa-dropbox"></i>Dropbox
+                    </button>
+                    <button class="training-action" id="btnSberDiskBackup" type="button" title="Проверить резервное копирование в СберДиск">
+                        <i class="fa-solid fa-hard-drive"></i>СберДиск
                     </button>
                     <button class="training-action block" id="btnCreateBlock" type="button">
                         <i class="fa-solid fa-layer-group"></i>Создать блок
@@ -6452,6 +6455,7 @@ const DROPBOX_APP_KEY_STORAGE_KEY = 'benchreview-lite.dropbox.app-key.v1';
 const DROPBOX_BACKUP_LOG_STORAGE_KEY = 'benchreview-lite.dropbox.backups.v1';
 const DROPBOX_DAILY_BACKUP_STORAGE_KEY = 'benchreview-lite.dropbox.daily-last.v1';
 const DROPBOX_LAST_ERROR_STORAGE_KEY = 'benchreview-lite.dropbox.last-error.v1';
+const SBERDISK_LAST_ERROR_STORAGE_KEY = 'benchreview-lite.sberdisk.last-error.v1';
 window.BENCHREVIEW_DROPBOX_APP_KEY = window.BENCHREVIEW_DROPBOX_APP_KEY || 'lgey122v75qit4a';
 const DROPBOX_BACKUP_PREFIX = 'latest';
 const DROPBOX_BACKUP_ROOT = '/latest';
@@ -6459,6 +6463,12 @@ const DROPBOX_BACKUP_RECORD_DIR = `${DROPBOX_BACKUP_ROOT}/records`;
 const DROPBOX_BACKUP_SCREEN_DIR = `${DROPBOX_BACKUP_ROOT}/screens`;
 const DROPBOX_MATCH_PDF_DIR = `${DROPBOX_BACKUP_ROOT}/matches`;
 const DROPBOX_DAILY_BACKUP_MS = 24 * 60 * 60 * 1000;
+// SberDisk currently exposes its browser upload endpoint with credentialed CORS
+// for this GitHub Pages origin.  Deliberately keep no login, password or cookie:
+// the browser attaches its own current SberDisk session only when the user is signed in.
+const SBERDISK_UPLOAD_API_URL = 'https://upload.sberdisk.ru';
+const SBERDISK_BACKUP_ROOT = '/BenchReviewLiteBackup/latest';
+const SBERDISK_MATCH_PDF_DIR = `${SBERDISK_BACKUP_ROOT}/matches`;
 const BENCHREVIEW_DB_NAME = 'benchreview-lite.storage';
 const BENCHREVIEW_DB_VERSION = 1;
 const BENCHREVIEW_DB_STORE = 'records';
@@ -10120,6 +10130,87 @@ async function dropboxUploadTracked(accessToken, path, body, stats, mode = 'over
         return false;
     }
 }
+
+function sberDiskHeaders(extra = {}) {
+    return Object.assign({
+        Language: 'ru',
+        Platform: 'web',
+        TimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Moscow'
+    }, extra);
+}
+
+async function sberDiskReadResponse(response, fallback) {
+    const raw = await response.text().catch(() => '');
+    let data = {};
+    try { data = raw ? JSON.parse(raw) : {}; } catch (_) { data = { raw }; }
+    if (response.ok) return data;
+    if (response.status === 401 || response.status === 403) {
+        throw new Error('Требуется вход в СберДиск в этом браузере');
+    }
+    const detail = String(data?.message || data?.error || data?.description || raw || '').trim();
+    throw new Error(detail ? `${fallback}: ${detail}` : `${fallback} (${response.status})`);
+}
+
+async function sberDiskCreateUploadSession(filePath, blob) {
+    const response = await fetch(`${SBERDISK_UPLOAD_API_URL}/upload/session`, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'include',
+        headers: sberDiskHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+            autoRename: true,
+            category: 'Autoload',
+            createsFolders: true,
+            filePath,
+            fileType: blob.type || 'application/pdf',
+            size: blob.size
+        })
+    });
+    const data = await sberDiskReadResponse(response, 'СберДиск не создал сессию загрузки');
+    const sessionId = String(data?.sessionId || data?.session_id || '').trim();
+    if (!sessionId) throw new Error('СберДиск не вернул идентификатор загрузки');
+    return sessionId;
+}
+
+async function sberDiskUpload(filePath, body, fileName) {
+    const targetPath = String(filePath || '/').replace(/\/+$/, '') || '/';
+    const targetFile = `${targetPath}/${fileName}`.replace(/\/+/g, '/');
+    const blob = body instanceof Blob ? body : new Blob([body], { type: 'application/json;charset=utf-8' });
+    const sessionId = await sberDiskCreateUploadSession(targetFile, blob);
+    const form = new FormData();
+    form.append('file', blob, fileName);
+    // The native web client sends the containing folder here; the file name is
+    // already reserved in the upload session above.
+    form.append('path', targetPath);
+    const response = await fetch(`${SBERDISK_UPLOAD_API_URL}/upload/file/${encodeURIComponent(sessionId)}`, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'include',
+        headers: sberDiskHeaders(),
+        body: form
+    });
+    return sberDiskReadResponse(response, 'СберДиск не принял файл');
+}
+
+async function testSberDiskBackup() {
+    const button = document.getElementById('btnSberDiskBackup');
+    if (button) button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>Проверяю…';
+    try {
+        await sberDiskUpload(SBERDISK_BACKUP_ROOT, textJsonBlob({
+            kind: 'benchreview-lite-sberdisk-connection-test',
+            createdAt: new Date().toISOString(),
+            source: window.location.origin
+        }), 'connection-test.json');
+        localStorage.removeItem(SBERDISK_LAST_ERROR_STORAGE_KEY);
+        alert('СберДиск подключён. Тестовый файл сохранён в папке BenchReviewLiteBackup.');
+    } catch (err) {
+        const message = String(err?.message || err || 'Не удалось подключить СберДиск');
+        localStorage.setItem(SBERDISK_LAST_ERROR_STORAGE_KEY, message.slice(0, 700));
+        alert('СберДиск: ' + message);
+    } finally {
+        if (button) button.innerHTML = '<i class="fa-solid fa-hard-drive"></i>СберДиск';
+    }
+}
 function textJsonBlob(value) {
     return new Blob([JSON.stringify(value, null, 2)], { type: 'application/json;charset=utf-8' });
 }
@@ -12634,21 +12725,22 @@ async function saveMatchSheetToArchive() {
     renderMatchSheet();
     const button = document.getElementById('btnMatchSheetSave');
     if (button) button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Сохраняю резерв…</span>';
-    let result = { cloud: false, dropbox: false };
+    let result = { cloud: false, dropbox: false, sberDisk: false };
     try {
         result = await saveMatchSheetBackupCopies(record);
     } catch (err) {
         console.warn('Match-sheet backup failed', err);
     }
     if (button) {
-        const label = result.cloud && result.dropbox
-            ? 'Матч и PDF сохранены'
-            : result.cloud
-                ? 'Матч сохранён · PDF в Cloudflare'
-                : result.dropbox
-                    ? 'Матч сохранён · PDF в Dropbox'
-                    : 'Матч сохранён · резерв не создан';
-        button.innerHTML = `<i class="fa-solid fa-${result.cloud && result.dropbox ? 'check' : 'triangle-exclamation'}"></i><span>${label}</span>`;
+        const storedIn = [
+            result.cloud ? 'Cloudflare' : '',
+            result.dropbox ? 'Dropbox' : '',
+            result.sberDisk ? 'СберДиск' : ''
+        ].filter(Boolean);
+        const label = storedIn.length
+            ? `Матч сохранён · PDF: ${storedIn.join(', ')}`
+            : 'Матч сохранён · резерв не создан';
+        button.innerHTML = `<i class="fa-solid fa-${storedIn.length ? 'check' : 'triangle-exclamation'}"></i><span>${label}</span>`;
         window.setTimeout(() => {
             button.innerHTML = '<i class="fa-solid fa-floppy-disk"></i><span>Сохранить матч</span>';
         }, 2600);
@@ -14662,23 +14754,38 @@ async function saveMatchSheetPdfToDropbox(record, pdfBlob) {
     return true;
 }
 
+async function saveMatchSheetPdfToSberDisk(record, pdfBlob) {
+    await sberDiskUpload(SBERDISK_MATCH_PDF_DIR, pdfBlob, matchSheetPdfFileName(record));
+    localStorage.removeItem(SBERDISK_LAST_ERROR_STORAGE_KEY);
+    return true;
+}
+
 // A saved match is a single source of truth: JSON goes to the match archive
 // first, and the exact same generated PDF is then copied to both backups.
 // The Matches page only reads this archive and never creates another version.
 async function saveMatchSheetBackupCopies(record) {
     const archiveSaved = await pushCloudStateKey('matchArchive');
-    if (!archiveSaved) return { cloud: false, dropbox: false };
+    if (!archiveSaved) return { cloud: false, dropbox: false, sberDisk: false };
     const pdfBlob = buildMatchSheetPdfBlob(record);
-    const [cloud, dropbox] = await Promise.allSettled([
+    const [cloud, dropbox, sberDisk] = await Promise.allSettled([
         saveMatchSheetPdfToCloud(record, pdfBlob),
-        saveMatchSheetPdfToDropbox(record, pdfBlob)
+        saveMatchSheetPdfToDropbox(record, pdfBlob),
+        saveMatchSheetPdfToSberDisk(record, pdfBlob)
     ]);
     if (cloud.status === 'rejected') console.warn('Cloudflare match PDF backup failed', cloud.reason);
     if (dropbox.status === 'rejected') {
         console.warn('Dropbox match PDF backup failed', dropbox.reason);
         localStorage.setItem(DROPBOX_LAST_ERROR_STORAGE_KEY, String(dropbox.reason?.message || dropbox.reason || 'Dropbox match PDF backup failed').slice(0, 700));
     }
-    return { cloud: cloud.status === 'fulfilled', dropbox: dropbox.status === 'fulfilled' && dropbox.value === true };
+    if (sberDisk.status === 'rejected') {
+        console.warn('SberDisk match PDF backup failed', sberDisk.reason);
+        localStorage.setItem(SBERDISK_LAST_ERROR_STORAGE_KEY, String(sberDisk.reason?.message || sberDisk.reason || 'SberDisk match PDF backup failed').slice(0, 700));
+    }
+    return {
+        cloud: cloud.status === 'fulfilled',
+        dropbox: dropbox.status === 'fulfilled' && dropbox.value === true,
+        sberDisk: sberDisk.status === 'fulfilled' && sberDisk.value === true
+    };
 }
 
 function exportMatchSheetPdf(record = null) {
@@ -17746,6 +17853,7 @@ document.getElementById('btnCreateBlock').addEventListener('click', createTraini
 document.getElementById('btnAddSelectedToBlock').addEventListener('click', addSelectedTrainingsToBlock);
 document.getElementById('btnDeleteSelectedTrainings').addEventListener('click', deleteSelectedTrainingRecords);
 document.getElementById('btnDropboxBackup').addEventListener('click', handleDropboxBackupClick);
+document.getElementById('btnSberDiskBackup').addEventListener('click', testSberDiskBackup);
 document.getElementById('btnTrainingSort').addEventListener('click', toggleTrainingSort);
 document.getElementById('trainingSearch').addEventListener('input', renderTrainingList);
 document.querySelectorAll('.training-label-choice').forEach(btn => {
