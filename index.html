@@ -5254,6 +5254,54 @@
         font-size: 16px;
     }
     .match-archive-detail .match-sheet-table { font-size: 15px; }
+
+    /* Рабочие таблицы: значения читаются без тёмных плашек внутри каждой
+       ячейки. Рамка появляется только при фокусе, а цветовые отметки остаются
+       заметными и в браузере, и в PDF. */
+    .stats-table { font-size: 16px; }
+    .stats-input,
+    .stats-derived { font-size: 16px; }
+    .stats-input.name { font-size: 17px; }
+    .match-sheet-table th,
+    .match-sheet-table td { height: 55px; }
+    .match-sheet-player span { font-size: 17px; }
+    .match-sheet-player b { font-size: 18px; }
+    .match-sheet-value,
+    .match-sheet-faceoff,
+    .match-sheet-rating,
+    .match-sheet-total-input,
+    .match-aggregate-edit { font-size: 18px; font-weight: 800; }
+    .match-sheet-total-input,
+    .match-sheet-goalie-table input,
+    .match-aggregate-edit {
+        border-color: transparent;
+        background: transparent;
+        box-shadow: none;
+    }
+    .match-sheet-total-input {
+        width: 100%;
+        min-width: 0;
+        height: 36px;
+        padding-inline: 1px;
+    }
+    .match-sheet-goalie-table input {
+        font-size: 16px;
+        font-weight: 800;
+    }
+    .match-sheet-total-input:hover,
+    .match-sheet-goalie-table input:hover,
+    .match-aggregate-edit:hover { border-color: transparent; }
+    .match-sheet-total-input:focus,
+    .match-sheet-goalie-table input:focus,
+    .match-aggregate-edit:focus {
+        border-color: var(--accent);
+        background: transparent;
+        outline: 0;
+    }
+    .match-sheet-total-input.match-sheet-highlight-green,
+    .match-aggregate-edit.match-aggregate-highlight-green { background: rgba(34,197,94,.20); border-color: #22c55e; color: #dcfce7; }
+    .match-sheet-total-input.match-sheet-highlight-red,
+    .match-aggregate-edit.match-aggregate-highlight-red { background: rgba(239,68,68,.20); border-color: #ef4444; color: #fee2e2; }
 </style>
 </head>
 <body data-view="field">
@@ -5277,9 +5325,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.13" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.14" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.13</span>
+            <span class="version-tooltip">v0.10.14</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
