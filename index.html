@@ -5325,9 +5325,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.16" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.17" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.16</span>
+            <span class="version-tooltip">v0.10.17</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -13185,15 +13185,23 @@ function matchSheetHeader(table, options = {}) {
     table.appendChild(thead);
 }
 
+function matchSheetFaceoffDisplay(value, fallback = '0-0') {
+    const raw = String(value ?? '').trim();
+    // Accept the old slash notation when reading already saved sheets, but
+    // always display the hockey split in its new, more readable win-loss form.
+    const pair = raw.match(/^(\d+)\s*(?:\/|-|–|—)\s*(\d+)$/);
+    return pair ? `${Number(pair[1])}-${Number(pair[2])}` : (raw || fallback);
+}
+
 function matchSheetFaceoffValue(state) {
     const wins = (state.faceoffWins || []).reduce((sum, value) => sum + safeStatNumber(value), 0);
     const losses = (state.faceoffLosses || []).reduce((sum, value) => sum + safeStatNumber(value), 0);
-    return wins || losses ? `${wins}/${losses}` : String(state.faceoffsTotal || '0/0');
+    return wins || losses ? `${wins}-${losses}` : matchSheetFaceoffDisplay(state.faceoffsTotal, '0-0');
 }
 
 function matchSheetFaceoffPair(state) {
     const visible = matchSheetFaceoffValue(state);
-    const pair = visible.match(/^(\d+)\s*\/\s*(\d+)$/);
+    const pair = visible.match(/^(\d+)\s*(?:\/|-|–|—)\s*(\d+)$/);
     return pair ? { wins: Number(pair[1]), losses: Number(pair[2]) } : { wins: safeStatNumber(visible), losses: 0 };
 }
 
@@ -14594,7 +14602,7 @@ function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
             });
             cellX += columns.player;
             [0, 1, 2].forEach(period => {
-                drawMatchSheetPdfCell(ctx, cellX, y, columns.faceoff / 3, rowHeight, `+${state.faceoffWins[period]} / -${state.faceoffLosses[period]}`, {
+                drawMatchSheetPdfCell(ctx, cellX, y, columns.faceoff / 3, rowHeight, `${state.faceoffWins[period]}-${state.faceoffLosses[period]}`, {
                     fill, font: '700 22px Arial, sans-serif', color: '#1859a9'
                 });
                 cellX += columns.faceoff / 3;
@@ -14633,17 +14641,17 @@ function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
     const record = matchSheetPdfRecord(sourceRecord);
     const players = archivedMatchPlayers(record);
     const isAggregatePdf = options.title === 'СВОДНАЯ СТАТИСТИКА';
-    // Taller cells improve legibility in printed reports. Seventeen rows still
-    // leave enough space for the footer on A4.
-    const rowsPerPage = 17;
+    // Keep the large print font, but use the free vertical space above/below
+    // the table more efficiently: one match-sheet page holds 20 skaters.
+    const rowsPerPage = 20;
     const pageCount = Math.max(1, Math.ceil(players.length / rowsPerPage));
     const pageWidth = 2480;
     const pageHeight = 1754;
-    const margin = 70;
+    const margin = 56;
     const tableWidth = pageWidth - margin * 2;
-    const titleHeight = 180;
-    const headerHeight = 76;
-    const rowHeight = 82;
+    const titleHeight = 174;
+    const headerHeight = 64;
+    const rowHeight = 70;
     const definitions = [
         { field: 'player', label: '№ / ФАМИЛИЯ', weight: 445, value: (player, state) => `${player.number ? `№${player.number}  ` : ''}${player.name || rosterRoleLabel(player.role)}`, align: 'left' },
         { field: 'games', label: 'ИГР', weight: 107, value: (_, state) => state.games },
@@ -15086,7 +15094,7 @@ function renderMatchArchiveAggregate(records, selectedIds = selectedMatchArchive
         [
             ['games', total.games], ['plus', total.plus], ['minus', total.minus], ['powerPlay', total.powerPlay], ['shortHanded', total.shortHanded],
             ['penaltyTotal', total.penaltyTotal], ['opponentPenaltyTotal', total.opponentPenaltyTotal], ['goalsTotal', total.goalsTotal], ['assists', total.assists],
-            ['shotsTotal', total.shotsTotal], ['faceoffs', `${total.faceoffWins}/${total.faceoffLosses}`], ['mmPoints', total.mmPoints]
+            ['shotsTotal', total.shotsTotal], ['faceoffs', `${total.faceoffWins}-${total.faceoffLosses}`], ['mmPoints', total.mmPoints]
         ].forEach(([field, value]) => {
             const cell = document.createElement('td');
             const input = document.createElement('input');
@@ -18288,7 +18296,7 @@ document.getElementById('matchAggregate').addEventListener('change', e => {
             [goalieField]: input.value
         });
     } else if (input.dataset.matchAggregateField === 'faceoffs') {
-        const pair = String(input.value || '').match(/^(\d+)\s*\/\s*(\d+)$/);
+        const pair = String(input.value || '').match(/^(\d+)\s*(?:\/|-|–|—)\s*(\d+)$/);
         values.faceoffWins = pair ? Number(pair[1]) : 0;
         values.faceoffLosses = pair ? Number(pair[2]) : 0;
     } else if (['powerPlay', 'shortHanded'].includes(input.dataset.matchAggregateField)) {
