@@ -5325,9 +5325,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.15" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.16" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.15</span>
+            <span class="version-tooltip">v0.10.16</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -10893,15 +10893,27 @@ async function fetchRemoteCloudState() {
         return null;
     }
 }
-// A saved match is shared data.  Before opening it, pull just the archive once
-// more: a tab can be restored from IndexedDB before the full cloud bootstrap
-// finishes, and must never show its older empty draft instead of the saved
-// match sheet from another computer.
+// A saved match is shared data.  Refresh the archive in the background before
+// opening it when possible.  This must never be a prerequisite for navigation:
+// a slow Worker used to make the match selector look completely unresponsive.
+// The local archive/session copy is the immediately available source of truth;
+// the cloud refresh only merges newer copies for the next open.
+const MATCH_ARCHIVE_REFRESH_TIMEOUT_MS = 1800;
 async function refreshMatchArchiveFromCloud() {
     const url = cloudStateUrl('/api/state?key=matchArchive');
     if (!url || !benchAuthToken) return false;
     try {
-        const response = await authFetch(url, { method: 'GET', mode: 'cors', cache: 'no-store' });
+        const controller = typeof AbortController === 'function' ? new AbortController() : null;
+        const timeout = controller ? window.setTimeout(() => controller.abort(), MATCH_ARCHIVE_REFRESH_TIMEOUT_MS) : null;
+        let response;
+        try {
+            response = await authFetch(url, {
+                method: 'GET', mode: 'cors', cache: 'no-store',
+                ...(controller ? { signal: controller.signal } : {})
+            });
+        } finally {
+            if (timeout) window.clearTimeout(timeout);
+        }
         if (!response.ok) return false;
         const data = await response.json();
         const remoteArchive = data?.state?.value;
@@ -12550,7 +12562,9 @@ async function restoreArchivedKhlStatistics(options = {}) {
 
 async function openKhlMatchSheet(match) {
     if (!match) return false;
-    await refreshMatchArchiveFromCloud();
+    // Do not await the network here.  Switching a sheet must work offline and
+    // must remain instant even if Cloudflare/Dropbox is temporarily slow.
+    void refreshMatchArchiveFromCloud();
     matchSheetInitialMatchResolved = true;
     const opponent = String(match.opponent || (match.isHome ? match.awayName : match.homeName) || 'Соперник').trim();
     const date = String(match.date || (match.startsAt ? match.startsAt.slice(0, 10) : todayInputValue())).slice(0, 10);
@@ -12749,12 +12763,12 @@ async function saveMatchSheetToArchive() {
 
 async function openArchivedMatchSheet(id) {
     const requestedRecord = matchSheetArchive.find(item => item.id === id);
-    await refreshMatchArchiveFromCloud();
-    // A browser can still hold an old record id while the cloud copy of the
-    // same date/opponent has a newer id.  Date + opponent is the stable match
-    // identity, so retain the user's click in that case.
-    const record = matchSheetArchive.find(item => item.id === id)
-        || matchSheetArchive.find(item => requestedRecord && matchArchiveRestoreKey(item) === matchArchiveRestoreKey(requestedRecord));
+    // Open from the archive visible to the coach immediately.  The background
+    // refresh is deliberately non-blocking; otherwise one slow request makes
+    // the whole "Открыть" button appear dead.
+    void refreshMatchArchiveFromCloud();
+    const record = requestedRecord
+        || matchSheetArchive.find(item => item.id === id);
     if (!record) return;
     if (matchSheetHasUnsavedChanges() && matchSheetState.archiveId !== id) {
         const confirmed = await showConfirm('Текущий матчевый лист будет заменен выбранным сохраненным листом.', {
