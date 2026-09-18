@@ -2,6 +2,16 @@
 
 use tauri::Manager;
 
+#[tauri::command]
+fn set_page_zoom(window: tauri::WebviewWindow, zoom: f64) -> Result<(), String> {
+    // Keep the desktop UI readable while still allowing a compact table view.
+    // This is native WebKit zoom, not CSS scaling, so the complete webview
+    // changes size together (like a browser page).
+    window
+        .set_zoom(zoom.clamp(0.55, 1.25))
+        .map_err(|error| error.to_string())
+}
+
 fn create_local_workspace(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let root = app.path().document_dir()?.join("BenchReview Lite");
     for folder in [
@@ -28,6 +38,7 @@ fn main() {
             }
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![set_page_zoom])
         .run(tauri::generate_context!())
         .expect("failed to run BenchReview Lite");
 }
