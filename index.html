@@ -2454,6 +2454,7 @@
     .match-sheet-sort,
     .match-sheet-roster-toggle,
     .match-sheet-save,
+    .match-sheet-sync,
     .match-sheet-pdf,
     .match-sheet-fullscreen,
     .match-sheet-undo {
@@ -2482,6 +2483,8 @@
         color: #fff;
     }
     .match-sheet-save:hover { border-color: #60a5fa; background: #1d4ed8; }
+    .match-sheet-sync { border-color: #276749; background: #14532d; color: #dcfce7; }
+    .match-sheet-sync:hover { border-color: #4ade80; background: #166534; }
     .match-sheet-pdf:hover { border-color: #ef4444; color: #fecaca; }
     .match-sheet-fullscreen:hover { border-color: #3b82f6; color: #fff; }
     .match-sheet-undo:hover:not(:disabled) { border-color: #3b82f6; color: #fff; }
@@ -2736,7 +2739,8 @@
     body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table th,
     body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table td {
         min-width: 0;
-        padding: 5px 2px;
+        padding: calc(4px * var(--stats-ui-scale, .92)) 2px;
+        font-size: calc(11px * var(--stats-ui-scale, .92));
     }
     body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table .match-sheet-player-head,
     body[data-view="stats"][data-stats-page="sheet"] .match-sheet-table .match-sheet-player-cell {
@@ -4659,7 +4663,7 @@
     .match-sheet-log-item,
     .match-sheet-goalie-row { font-size: 12px; font-weight: 600; }
     .match-sheet-action {
-        font-size: 11px;
+        font-size: calc(11px * var(--stats-ui-scale, .92));
         font-weight: 700;
     }
     .match-sheet-reset,
@@ -5325,9 +5329,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.20" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.21" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.20</span>
+            <span class="version-tooltip">v0.10.21</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -5393,6 +5397,9 @@
                     <button class="training-action dropbox" id="btnDropboxBackup" type="button" title="Резервная копия в Dropbox">
                         <i class="fa-brands fa-dropbox"></i>Dropbox
                     </button>
+                    <button class="training-action primary" id="btnTrainingSync" type="button" title="Отправить локальные тренировки и упражнения в облако и Dropbox">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>Синхронизировать
+                    </button>
                     <button class="training-action" id="btnSberDiskBackup" type="button" title="Проверить резервное копирование в СберДиск">
                         <i class="fa-solid fa-hard-drive"></i>СберДиск
                     </button>
@@ -5442,6 +5449,7 @@
                 <div class="matches-actions">
                     <button class="matches-action primary" id="btnFetchAdmiralMatches" type="button"><i class="fa-solid fa-rotate"></i> Обновить KHL</button>
                     <button class="matches-action" id="btnSyncAdmiralCalendar" type="button"><i class="fa-regular fa-calendar-plus"></i> В календарь</button>
+                    <button class="matches-action" id="btnMatchesSync" type="button"><i class="fa-solid fa-cloud-arrow-up"></i> Синхронизировать</button>
                 </div>
                 <div class="matches-tabs" aria-label="Разделы статистики">
                     <div class="stats-tabs">
@@ -5793,6 +5801,7 @@
                     <span class="match-sheet-position-order">Защитники → нападающие · по номерам</span>
                     <button class="match-sheet-roster-toggle" id="btnMatchSheetRoster" type="button"><i class="fa-solid fa-users"></i><span>Состав</span></button>
                     <button class="match-sheet-save" id="btnMatchSheetSave" type="button"><i class="fa-solid fa-floppy-disk"></i><span>Сохранить матч</span></button>
+                    <button class="match-sheet-sync" id="btnMatchSheetSync" type="button" title="Отправить сохранённый матч в Cloudflare и Dropbox"><i class="fa-solid fa-cloud-arrow-up"></i><span>Синхронизировать</span></button>
                     <button class="match-sheet-pdf" id="btnMatchSheetPdf" type="button" title="Скачать матчевый лист"><i class="fa-regular fa-file-pdf"></i><span>PDF</span></button>
                     <button class="match-sheet-fullscreen" id="btnMatchSheetFullscreen" type="button" title="На весь экран"><i class="fa-solid fa-expand"></i><span>На весь экран</span></button>
                     <button class="match-sheet-reset" id="btnMatchSheetReset" type="button"><i class="fa-regular fa-trash-can"></i>Новый лист</button>
@@ -5801,6 +5810,10 @@
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0">
                     <button class="matches-action primary" id="btnMatchSheetKhl" type="button">Обновить с КХЛ</button>
                     <button class="matches-action" id="btnMatchSheetNearest" type="button">Ближайший матч</button>
+                    <span class="match-sheet-palette" aria-label="Масштаб статистики">
+                        <button type="button" id="btnStatsZoomOut" title="Уменьшить статистику"><i class="fa-solid fa-minus"></i></button>
+                        <button type="button" id="btnStatsZoomIn" title="Увеличить статистику"><i class="fa-solid fa-plus"></i></button>
+                    </span>
                     <span id="matchSheetKhlInfo" role="status" style="font-size:12px;color:#aab3c1"></span>
                 </div>
                 <div class="match-sheet-entry">
@@ -10757,15 +10770,17 @@ async function fetchRemoteTrainingRecord(id) {
 async function pushRemoteTrainingRecords() {
     const url = trainingSyncApiUrl('/api/trainings?team=default');
     const richRecords = normalizeTrainingRecords(trainingRecords).filter(record => record.canvas || record.screen);
-    if (!url || !benchAuthToken || !richRecords.length) return;
+    if (!url || !benchAuthToken) return false;
+    if (!richRecords.length) return true;
     try {
-        await authFetch(url, {
+        const response = await authFetch(url, {
             method: 'PUT',
             mode: 'cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ records: richRecords })
         });
-    } catch (_) {}
+        return response.ok;
+    } catch (_) { return false; }
 }
 async function deleteRemoteTrainingRecord(id) {
     const url = trainingSyncApiUrl(`/api/trainings?team=default&id=${encodeURIComponent(id)}`);
@@ -10961,6 +10976,48 @@ function scheduleCloudStatePush(key) {
 }
 async function pushAllCloudState() {
     await Promise.all(CLOUD_STATE_KEYS.map(key => pushCloudStateKey(key)));
+}
+
+async function synchronizeBenchReview(button) {
+    const original = button?.innerHTML || '';
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Синхронизация…';
+    }
+    try {
+        const stateResults = await Promise.all(CLOUD_STATE_KEYS.map(key => pushCloudStateKey(key)));
+        const trainingsSaved = await pushRemoteTrainingRecords();
+        let dropboxSaved = false;
+        if (dropboxReadConnection()) {
+            const backup = await backupBoardToDropbox('manual-sync');
+            dropboxSaved = backup.failed === 0;
+        }
+        const cloudSaved = stateResults.every(Boolean) && (trainingRecords.length === 0 || trainingsSaved);
+        const targets = [cloudSaved ? 'Cloudflare' : '', dropboxSaved ? 'Dropbox' : ''].filter(Boolean);
+        if (!targets.length) throw new Error('не удалось подключиться к Cloudflare или Dropbox');
+        if (button) button.innerHTML = `<i class="fa-solid fa-check"></i> ${targets.join(' + ')}`;
+    } catch (error) {
+        console.warn('Manual sync failed', error);
+        if (button) button.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Ошибка синхронизации';
+    } finally {
+        if (button) {
+            window.setTimeout(() => {
+                button.disabled = false;
+                button.innerHTML = original;
+            }, 2600);
+        }
+    }
+}
+
+function applyStatsUiScale(value) {
+    const scale = Math.min(1.12, Math.max(.76, Number(value) || .92));
+    document.documentElement.style.setProperty('--stats-ui-scale', String(scale));
+    try { localStorage.setItem('benchreview-lite.stats-ui-scale.v1', String(scale)); } catch (_) {}
+}
+
+function changeStatsUiScale(delta) {
+    const current = Number(getComputedStyle(document.documentElement).getPropertyValue('--stats-ui-scale')) || .92;
+    applyStatsUiScale(Math.round((current + delta) * 100) / 100);
 }
 function applyRemoteCloudState(states) {
     const remote = key => states?.[key]?.value;
@@ -12744,7 +12801,7 @@ function matchSheetArchiveSnapshot(id, createdAt) {
     });
 }
 
-async function saveMatchSheetToArchive() {
+async function saveMatchSheetToArchive(options = {}) {
     const existing = matchSheetState.archiveId
         ? matchSheetArchive.find(record => record.id === matchSheetState.archiveId)
         : matchSheetArchive.find(record => record.date === matchSheetState.date
@@ -12753,17 +12810,28 @@ async function saveMatchSheetToArchive() {
     const record = matchSheetArchiveSnapshot(id, existing?.createdAt || new Date().toISOString());
     if (existing) matchSheetArchive = matchSheetArchive.map(item => item.id === id ? record : item);
     else matchSheetArchive.unshift(record);
-    persistMatchSheetArchive();
+    persistMatchSheetArchive({ pushRemote: false });
     renderMatchArchive();
     // Saving must never turn the visible sheet into a blank draft. Keep all values
     // in place and link this working copy to the saved archive record, so the next
     // press of «Сохранить матч» updates the same match.
     matchSheetState.archiveId = id;
     matchSheetIsDraft = false;
-    persistMatchSheet();
+    persistMatchSheet({ pushRemote: false });
     markMatchSheetClean();
     renderMatchSheet();
-    const button = document.getElementById('btnMatchSheetSave');
+    const button = options.button || document.getElementById('btnMatchSheetSave');
+    if (!options.sync) {
+        if (button) {
+            button.innerHTML = '<i class="fa-solid fa-check"></i><span>Матч сохранён локально</span>';
+            window.setTimeout(() => {
+                button.innerHTML = options.button
+                    ? '<i class="fa-solid fa-cloud-arrow-up"></i><span>Синхронизировать</span>'
+                    : '<i class="fa-solid fa-floppy-disk"></i><span>Сохранить матч</span>';
+            }, 2200);
+        }
+        return record;
+    }
     if (button) button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Сохраняю резерв…</span>';
     let result = { cloud: false, dropbox: false, sberDisk: false };
     try {
@@ -12782,9 +12850,16 @@ async function saveMatchSheetToArchive() {
             : 'Матч сохранён · резерв не создан';
         button.innerHTML = `<i class="fa-solid fa-${storedIn.length ? 'check' : 'triangle-exclamation'}"></i><span>${label}</span>`;
         window.setTimeout(() => {
-            button.innerHTML = '<i class="fa-solid fa-floppy-disk"></i><span>Сохранить матч</span>';
+            button.innerHTML = options.button
+                ? '<i class="fa-solid fa-cloud-arrow-up"></i><span>Синхронизировать</span>'
+                : '<i class="fa-solid fa-floppy-disk"></i><span>Сохранить матч</span>';
         }, 2600);
     }
+    return record;
+}
+
+async function synchronizeCurrentMatchSheet(button) {
+    await saveMatchSheetToArchive({ sync: true, button });
 }
 
 async function openArchivedMatchSheet(id) {
@@ -17205,7 +17280,7 @@ function saveTrainingEdit() {
         canvas: canvas.toJSON(EXTRA_PROPS)
     };
     trainingRecords.unshift(record);
-    persistTrainingRecords();
+    persistTrainingRecords({ pushRemote: false, dropboxBackup: false });
     renderTrainingList();
     activeTrainingId = record.id;
     activeTrainingTitle = title;
@@ -17913,6 +17988,7 @@ document.getElementById('btnCreateBlock').addEventListener('click', createTraini
 document.getElementById('btnAddSelectedToBlock').addEventListener('click', addSelectedTrainingsToBlock);
 document.getElementById('btnDeleteSelectedTrainings').addEventListener('click', deleteSelectedTrainingRecords);
 document.getElementById('btnDropboxBackup').addEventListener('click', handleDropboxBackupClick);
+document.getElementById('btnTrainingSync').addEventListener('click', e => synchronizeBenchReview(e.currentTarget));
 document.getElementById('btnSberDiskBackup').addEventListener('click', testSberDiskBackup);
 document.getElementById('btnTrainingSort').addEventListener('click', toggleTrainingSort);
 document.getElementById('trainingSearch').addEventListener('input', renderTrainingList);
@@ -18134,7 +18210,10 @@ document.getElementById('btnMatchSheetReset').addEventListener('click', resetMat
 document.getElementById('btnMatchSheetSort')?.addEventListener('click', sortMatchSheetByNumber);
 document.getElementById('btnMatchSheetRoster').addEventListener('click', toggleMatchSheetRosterPanel);
 document.getElementById('btnMatchSheetSave').addEventListener('click', saveMatchSheetToArchive);
+document.getElementById('btnMatchSheetSync').addEventListener('click', e => synchronizeCurrentMatchSheet(e.currentTarget));
 document.getElementById('btnMatchSheetPdf').addEventListener('click', () => exportMatchSheetPdf());
+document.getElementById('btnStatsZoomOut').addEventListener('click', () => changeStatsUiScale(-.04));
+document.getElementById('btnStatsZoomIn').addEventListener('click', () => changeStatsUiScale(.04));
 document.getElementById('btnMatchSheetAddPlayer').addEventListener('click', addMatchSheetRosterPlayer);
 document.getElementById('matchSheetAddName').addEventListener('keydown', e => {
     if (e.key === 'Enter') addMatchSheetRosterPlayer();
@@ -18395,6 +18474,7 @@ document.getElementById('btnKhlMatchExport').addEventListener('click', () => {
 });
 document.getElementById('btnFetchAdmiralMatches').addEventListener('click', refreshAdmiralMatches);
 document.getElementById('btnSyncAdmiralCalendar').addEventListener('click', syncAdmiralMatchesToCalendar);
+document.getElementById('btnMatchesSync').addEventListener('click', e => synchronizeBenchReview(e.currentTarget));
 document.getElementById('btnBackToTrainings').addEventListener('click', () => setView('trainings'));
 document.getElementById('btnCalendarPrev').addEventListener('click', () => {
     calendarCursor.setMonth(calendarCursor.getMonth() - 1);
@@ -18503,6 +18583,7 @@ function bootBenchReviewApp() {
     if (appBooted) return;
     appBooted = true;
     updateEditorZoomStep();
+    applyStatsUiScale(localStorage.getItem('benchreview-lite.stats-ui-scale.v1') || .92);
     loadTrainingRecords();
     loadTrainingBlocks();
     loadPlannedTrainings();

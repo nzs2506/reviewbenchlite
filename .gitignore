@@ -6,3 +6,6 @@ assets/fonts/Hyper-Oxide-*.woff2
 .wrangler/
 .DS_Store
 Thumbs.db
+node_modules/
+desktop/dist/
+desktop/src-tauri/target/

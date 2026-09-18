@@ -1,0 +1,14 @@
+{
+  "name": "benchreview-lite-desktop",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "desktop:prepare": "node scripts/prepare-desktop.mjs",
+    "desktop:dev": "npm run desktop:prepare && cd desktop && ../node_modules/.bin/tauri dev",
+    "desktop:build": "npm run desktop:prepare && cd desktop && ../node_modules/.bin/tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}
