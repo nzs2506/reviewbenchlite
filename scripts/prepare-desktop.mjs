@@ -26,6 +26,13 @@ desktopHtml = desktopHtml.replace('</head>', `
   body.desktop-app[data-view="stats"][data-stats-page="sheet"] .match-sheet-goalie-table {
     zoom: var(--desktop-sheet-zoom, 1);
   }
+  body.desktop-app .desktop-sheet-zoom-value {
+    min-width: 42px;
+    color: #aab3c1;
+    font-size: 12px;
+    font-weight: 800;
+    text-align: center;
+  }
 </style>
 </head>`);
 desktopHtml = desktopHtml.replace('</body>', `
@@ -34,12 +41,25 @@ desktopHtml = desktopHtml.replace('</body>', `
     const storageKey = 'benchreview-lite.desktop-match-sheet-scale.v1';
     const isMatchSheet = () => !document.getElementById('statsSheetPanel')?.hidden;
     const currentScale = () => Number(getComputedStyle(document.body).getPropertyValue('--desktop-sheet-zoom')) || 1;
+    const zoomLabel = () => document.getElementById('desktopSheetZoomValue');
+    const updateLabel = scale => {
+      const label = zoomLabel();
+      if (label) label.textContent = Math.round(scale * 100) + '%';
+    };
     const setScale = value => {
       const scale = Math.min(1.25, Math.max(.55, Math.round(value * 100) / 100));
       document.body.style.setProperty('--desktop-sheet-zoom', String(scale));
+      updateLabel(scale);
       try { localStorage.setItem(storageKey, String(scale)); } catch (_) {}
     };
     const changeScale = delta => setScale(currentScale() + delta);
+    const controls = document.querySelector('[aria-label="Масштаб статистики"]');
+    if (controls && !zoomLabel()) {
+      const label = document.createElement('span');
+      label.id = 'desktopSheetZoomValue';
+      label.className = 'desktop-sheet-zoom-value';
+      controls.insertBefore(label, controls.children[1] || null);
+    }
     // The shared page initializes its own default before this desktop-only
     // block runs. Restore the desktop preference afterwards.
     try { setScale(Number(localStorage.getItem(storageKey)) || 1); } catch (_) { setScale(1); }
@@ -49,7 +69,7 @@ desktopHtml = desktopHtml.replace('</body>', `
       if (!button || !isMatchSheet()) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      changeScale(button.id === 'btnStatsZoomIn' ? .06 : -.06);
+      changeScale(button.id === 'btnStatsZoomIn' ? .10 : -.10);
     }, { capture: true });
 
     window.addEventListener('keydown', event => {
@@ -59,7 +79,7 @@ desktopHtml = desktopHtml.replace('</body>', `
       if (!grow && !shrink) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      changeScale(grow ? .06 : -.06);
+      changeScale(grow ? .10 : -.10);
     }, { capture: true });
   })();
 </script>
