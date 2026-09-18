@@ -5325,9 +5325,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.19" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.20" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.19</span>
+            <span class="version-tooltip">v0.10.20</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -14822,8 +14822,11 @@ async function saveMatchSheetPdfToSberDisk(record, pdfBlob) {
 // The Matches page only reads this archive and never creates another version.
 async function saveMatchSheetBackupCopies(record) {
     const archiveSaved = await pushCloudStateKey('matchArchive');
-    if (!archiveSaved) return { cloud: false, dropbox: false, sberDisk: false };
     const pdfBlob = buildMatchSheetPdfBlob(record);
+    // Each backup is independent.  A lost Cloudflare session must not prevent
+    // the already-generated match PDF from reaching Dropbox or SberDisk.
+    // Otherwise a temporary login issue turned three redundant backups into
+    // zero backups.
     const [cloud, dropbox, sberDisk] = await Promise.allSettled([
         saveMatchSheetPdfToCloud(record, pdfBlob),
         saveMatchSheetPdfToDropbox(record, pdfBlob),
@@ -14839,7 +14842,7 @@ async function saveMatchSheetBackupCopies(record) {
         localStorage.setItem(SBERDISK_LAST_ERROR_STORAGE_KEY, String(sberDisk.reason?.message || sberDisk.reason || 'SberDisk match PDF backup failed').slice(0, 700));
     }
     return {
-        cloud: cloud.status === 'fulfilled',
+        cloud: archiveSaved && cloud.status === 'fulfilled',
         dropbox: dropbox.status === 'fulfilled' && dropbox.value === true,
         sberDisk: sberDisk.status === 'fulfilled' && sberDisk.value === true
     };
