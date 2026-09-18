@@ -5325,9 +5325,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.17" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.18" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.17</span>
+            <span class="version-tooltip">v0.10.18</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -11648,6 +11648,10 @@ function emptyMatchSheetPlayer() {
         opponentPenaltyTotal: '',
         assists: '',
         faceoffsTotal: '',
+        // Locks a manually typed W-L split against a later KHL refresh.
+        // The imported base remains visible for untouched rows.
+        faceoffsManual: false,
+        manualFields: {},
         mmPoints: '',
         plusMinus: 0,
         rating: '',
@@ -11672,10 +11676,32 @@ function normalizeMatchSheetPlayer(value) {
     normalized.games = Math.max(0, Math.round(safeStatNumber(value?.games)));
     normalized.plus = Math.max(0, Math.round(safeStatNumber(value?.plus)));
     normalized.minus = Math.max(0, Math.round(safeStatNumber(value?.minus)));
+    normalized.faceoffsManual = Boolean(value?.faceoffsManual);
+    normalized.manualFields = Object.fromEntries(Object.entries(value?.manualFields || {})
+        .filter(([field, locked]) => typeof field === 'string' && Boolean(locked))
+        .map(([field]) => [field, true]));
     ['powerPlay', 'shortHanded', 'opponentPenaltyTotal', 'assists', 'faceoffsTotal', 'mmPoints'].forEach(field => {
         normalized[field] = value?.[field] === undefined || value?.[field] === null ? '' : String(value[field]).slice(0, 18);
     });
     return normalized;
+}
+
+function matchSheetFieldIsManual(state, field) {
+    return Boolean(state?.manualFields?.[field]);
+}
+
+function markMatchSheetFieldManual(state, field) {
+    if (!state || !field) return;
+    state.manualFields = state.manualFields || {};
+    state.manualFields[field] = true;
+}
+
+function matchSheetEventManualFields(config) {
+    const fields = [];
+    const periodField = ({ goals: 'goalsTotal', shots: 'shotsTotal', penalties: 'penaltyTotal', opponentPenalties: 'opponentPenaltyTotal', faceoffWins: 'faceoffsTotal', faceoffLosses: 'faceoffsTotal' })[config?.field];
+    if (periodField) fields.push(periodField);
+    if (config?.totalField) fields.push(config.totalField);
+    return [...new Set(fields)];
 }
 
 function normalizeMatchSheetScore(value) {
@@ -12135,39 +12161,41 @@ async function refreshCurrentMatchFromKhl() {
                     ['games', 'wins', 'losses', 'shootoutGames', 'shotsAgainst', 'goalsAgainst', 'saves',
                      'savePercent', 'gaa', 'goals', 'assists', 'shutouts', 'pim', 'ice'].forEach(key => {
                         const v = pg[key];
-                        if (v !== null && v !== undefined && v !== '') g[key] = String(v);
+                        if (v !== null && v !== undefined && v !== '' && !matchSheetFieldIsManual(state, `goalieStats.${key}`)) g[key] = String(v);
                     });
                 } else {
                     // Фолбэк: из event_v2 достоверны только И/Штр/ВП; БВ/ПШ/ОБ/%ОБ/КН — расчёт по одному вратарю.
-                    if (num(entry.goalieGames) || (Number(entry.goalieIceMinutes) || 0) > 0) g.games = '1';
-                    if (Number.isFinite(Number(entry.goaliePim))) g.pim = String(num(entry.goaliePim));
-                    if ((Number(entry.goalieIceMinutes) || 0) > 0) g.ice = formatIceMinutesValue(entry.goalieIceMinutes);
+                    if ((num(entry.goalieGames) || (Number(entry.goalieIceMinutes) || 0) > 0) && !matchSheetFieldIsManual(state, 'goalieStats.games')) g.games = '1';
+                    if (Number.isFinite(Number(entry.goaliePim)) && !matchSheetFieldIsManual(state, 'goalieStats.pim')) g.pim = String(num(entry.goaliePim));
+                    if ((Number(entry.goalieIceMinutes) || 0) > 0 && !matchSheetFieldIsManual(state, 'goalieStats.ice')) g.ice = formatIceMinutesValue(entry.goalieIceMinutes);
                     if (data.final && goalieIce.length === 1 && String(goalieIce[0].id || '') === String(entry.id || '') && Number(data.opponentShots) > 0) {
                         const shotsAgainst = num(data.opponentShots);
                         const goalsAgainst = num(data.opponentGoals);
                         const iceMin = Number(entry.goalieIceMinutes) || 0;
-                        g.shotsAgainst = String(shotsAgainst);
-                        g.goalsAgainst = String(goalsAgainst);
-                        g.saves = String(Math.max(0, shotsAgainst - goalsAgainst));
-                        g.savePercent = String(Math.round((1 - goalsAgainst / shotsAgainst) * 1000) / 10);
-                        if (iceMin > 0) g.gaa = String(Math.round((goalsAgainst * 60 / iceMin) * 100) / 100);
+                        if (!matchSheetFieldIsManual(state, 'goalieStats.shotsAgainst')) g.shotsAgainst = String(shotsAgainst);
+                        if (!matchSheetFieldIsManual(state, 'goalieStats.goalsAgainst')) g.goalsAgainst = String(goalsAgainst);
+                        if (!matchSheetFieldIsManual(state, 'goalieStats.saves')) g.saves = String(Math.max(0, shotsAgainst - goalsAgainst));
+                        if (!matchSheetFieldIsManual(state, 'goalieStats.savePercent')) g.savePercent = String(Math.round((1 - goalsAgainst / shotsAgainst) * 1000) / 10);
+                        if (iceMin > 0 && !matchSheetFieldIsManual(state, 'goalieStats.gaa')) g.gaa = String(Math.round((goalsAgainst * 60 / iceMin) * 100) / 100);
                     }
                 }
                 state.goalieStats = normalizeMatchGoalieStats(g);
             } else {
-                state.games = num(entry.games) || state.games;
-                state.goals = [num(entry.goals), 0, 0];
-                state.shots = [num(entry.shots), 0, 0];
-                state.penalties = [num(entry.pim), 0, 0];
-                state.assists = num(entry.assists) ? String(num(entry.assists)) : '';
+                if (!matchSheetFieldIsManual(state, 'games')) state.games = num(entry.games) || state.games;
+                if (!matchSheetFieldIsManual(state, 'goalsTotal')) state.goals = [num(entry.goals), 0, 0];
+                if (!matchSheetFieldIsManual(state, 'shotsTotal')) state.shots = [num(entry.shots), 0, 0];
+                if (!matchSheetFieldIsManual(state, 'penaltyTotal')) state.penalties = [num(entry.pim), 0, 0];
+                if (!matchSheetFieldIsManual(state, 'assists')) state.assists = num(entry.assists) ? String(num(entry.assists)) : '';
                 const fo = num(entry.faceoffs);
                 const fow = Math.min(fo, num(entry.faceoffWins));
-                state.faceoffWins = [fow, 0, 0];
-                state.faceoffLosses = [Math.max(0, fo - fow), 0, 0];
-                state.faceoffsTotal = '';
+                if (!matchSheetFieldIsManual(state, 'faceoffsTotal')) {
+                    state.faceoffWins = [fow, 0, 0];
+                    state.faceoffLosses = [Math.max(0, fo - fow), 0, 0];
+                    state.faceoffsTotal = '';
+                }
                 // + и − по игроку — только из официального протокола (в event_v2 их нет).
-                if (Number.isFinite(Number(entry.plus))) state.plus = num(entry.plus);
-                if (Number.isFinite(Number(entry.minus))) state.minus = num(entry.minus);
+                if (Number.isFinite(Number(entry.plus)) && !matchSheetFieldIsManual(state, 'plus')) state.plus = num(entry.plus);
+                if (Number.isFinite(Number(entry.minus)) && !matchSheetFieldIsManual(state, 'minus')) state.minus = num(entry.minus);
             }
             applied++;
         });
@@ -12459,6 +12487,7 @@ function applyKhlStatsToMatchSheet(data, sheet = matchSheetState) {
             const previous = normalizeMatchGoalieStats(state.goalieStats);
             const normalizedIncoming = normalizeMatchGoalieStats(incoming);
             Object.keys(normalizedIncoming).forEach(key => {
+                if (matchSheetFieldIsManual(state, `goalieStats.${key}`)) return;
                 if (String(normalizedIncoming[key] || '').trim() && !String(previous[key] || '').trim()) previous[key] = normalizedIncoming[key];
                 else if (String(normalizedIncoming[key] || '').trim() && ['games', 'shotsAgainst', 'goalsAgainst', 'saves', 'savePct', 'gaa', 'shutouts', 'pim', 'ice'].includes(key)) previous[key] = normalizedIncoming[key];
             });
@@ -12471,33 +12500,29 @@ function applyKhlStatsToMatchSheet(data, sheet = matchSheetState) {
             // an established match sheet into a different one.  Import the
             // whole base only for a genuinely empty player row.  Existing rows
             // are merely supplemented below with absent PIM/faceoffs.
-            const hasSavedBase = state.games > 0
-                || state.goals.some(positive)
-                || state.shots.some(positive)
-                || state.plus > 0
-                || state.minus > 0;
-            if (!hasSavedBase) {
-                state.games = positive(entry.games || 1);
-                if (entry.plus !== undefined || entry.pluses !== undefined || entry.plus_count !== undefined) {
-                    state.plus = positive(entry.plus ?? entry.pluses ?? entry.plus_count);
-                }
-                if (entry.minus !== undefined || entry.minuses !== undefined || entry.minus_count !== undefined) {
-                    state.minus = positive(entry.minus ?? entry.minuses ?? entry.minus_count);
-                }
-                state.goals[0] = positive(entry.goals);
-                state.shots[0] = positive(entry.shots);
+            // Fill only empty base fields during a recovery.  A coach's value
+            // is explicitly locked even when it is zero, so KHL cannot revive
+            // an earlier value over a manual correction.
+            if (!matchSheetFieldIsManual(state, 'games') && !state.games) state.games = positive(entry.games || 1);
+            if (!matchSheetFieldIsManual(state, 'plus') && !state.plus && (entry.plus !== undefined || entry.pluses !== undefined || entry.plus_count !== undefined)) {
+                state.plus = positive(entry.plus ?? entry.pluses ?? entry.plus_count);
             }
+            if (!matchSheetFieldIsManual(state, 'minus') && !state.minus && (entry.minus !== undefined || entry.minuses !== undefined || entry.minus_count !== undefined)) {
+                state.minus = positive(entry.minus ?? entry.minuses ?? entry.minus_count);
+            }
+            if (!matchSheetFieldIsManual(state, 'goalsTotal') && !state.goals.some(positive)) state.goals[0] = positive(entry.goals);
+            if (!matchSheetFieldIsManual(state, 'shotsTotal') && !state.shots.some(positive)) state.shots[0] = positive(entry.shots);
             // The previous recovery path only restored games/goals/shots.  KHL
             // also supplies penalty minutes and the won/lost faceoff split.
             // Add them only when that base column is empty, so a coach's manual
             // match-sheet entry is not overwritten by a later recovery.
             const currentPim = state.penalties.reduce((sum, value) => sum + positive(value), 0);
-            if (!currentPim) state.penalties[0] = positive(entry.pim);
+            if (!matchSheetFieldIsManual(state, 'penaltyTotal') && !currentPim) state.penalties[0] = positive(entry.pim);
             const faceoffs = positive(entry.faceoffs);
             const faceoffWins = Math.min(faceoffs, positive(entry.faceoffWins));
             const currentFaceoffs = state.faceoffWins.reduce((sum, value) => sum + positive(value), 0)
                 + state.faceoffLosses.reduce((sum, value) => sum + positive(value), 0);
-            if (!currentFaceoffs && faceoffs) {
+            if (!state.faceoffsManual && !matchSheetFieldIsManual(state, 'faceoffsTotal') && !currentFaceoffs && faceoffs) {
                 state.faceoffWins[0] = faceoffWins;
                 state.faceoffLosses[0] = Math.max(0, faceoffs - faceoffWins);
                 state.faceoffsTotal = '';
@@ -13402,6 +13427,7 @@ function applyMatchSheetEvent(event, direction) {
         if (!state) return;
         if (config.field) state[config.field][periodIndex] = Math.max(0, state[config.field][periodIndex] + direction);
         if (config.totalField) state[config.totalField] = String(Math.max(0, safeStatNumber(state[config.totalField]) + direction));
+        if (direction > 0) matchSheetEventManualFields(config).forEach(field => markMatchSheetFieldManual(state, field));
     });
 }
 
@@ -13586,6 +13612,7 @@ function renderMatchSheetGoalies() {
             input.addEventListener('change', () => {
                 const state = matchSheetPlayerState(player.id);
                 state.goalieStats = normalizeMatchGoalieStats({ ...state.goalieStats, [key]: input.value });
+                markMatchSheetFieldManual(state, `goalieStats.${key}`);
                 input.value = state.goalieStats[key];
                 persistMatchSheet();
             });
@@ -18043,7 +18070,19 @@ document.getElementById('matchSheetTable').addEventListener('input', e => {
         if (field === 'penaltyTotal') state.penalties = [value, 0, 0];
         else if (field === 'goalsTotal') state.goals = [value, 0, 0];
         else if (field === 'shotsTotal') state.shots = [value, 0, 0];
+        else if (field === 'faceoffsTotal') {
+            const faceoffText = String(value || '').trim();
+            const pair = faceoffText.match(/^(\d+)\s*(?:\/|-|–|—)\s*(\d+)$/);
+            // A coach's direct correction is authoritative.  Store it in the
+            // same won/lost counters used by the report, not in a side field
+            // that an existing KHL value could hide on the next render.
+            state.faceoffWins = [pair ? Number(pair[1]) : 0, 0, 0];
+            state.faceoffLosses = [pair ? Number(pair[2]) : 0, 0, 0];
+            state.faceoffsTotal = pair ? '' : faceoffText;
+            state.faceoffsManual = true;
+        }
         else state[field] = value;
+        markMatchSheetFieldManual(state, field);
         persistMatchSheet();
         return;
     }
