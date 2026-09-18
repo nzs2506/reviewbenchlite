@@ -32,26 +32,34 @@ desktopHtml = desktopHtml.replace('</body>', `
   (() => {
     const storageKey = 'benchreview-lite.desktop-native-page-zoom.v1';
     const isMatchSheet = () => !document.getElementById('statsSheetPanel')?.hidden;
-    let scale = 1;
+    let appliedScale = 1;
+    let sheetScale = 1;
+    let zoomRequest = 0;
     const zoomLabel = () => document.getElementById('desktopSheetZoomValue');
     const updateLabel = scale => {
       const label = zoomLabel();
       if (label) label.textContent = Math.round(scale * 100) + '%';
     };
-    const setScale = async value => {
+    const setScale = async (value, { persist = false } = {}) => {
       const nextScale = Math.min(1.25, Math.max(.55, Math.round(value * 100) / 100));
       const invoke = window.__TAURI_INTERNALS__?.invoke;
       if (typeof invoke !== 'function') return;
+      const request = ++zoomRequest;
       try {
         await invoke('set_page_zoom', { zoom: nextScale });
-        scale = nextScale;
-        updateLabel(scale);
-        try { localStorage.setItem(storageKey, String(scale)); } catch (_) {}
+        if (request !== zoomRequest) return;
+        appliedScale = nextScale;
+        if (persist) {
+          sheetScale = nextScale;
+          try { localStorage.setItem(storageKey, String(sheetScale)); } catch (_) {}
+        }
+        updateLabel(sheetScale);
       } catch (error) {
         console.warn('Native desktop zoom was not applied:', error);
       }
     };
-    const changeScale = delta => void setScale(scale + delta);
+    const changeScale = delta => void setScale(sheetScale + delta, { persist: true });
+    const syncZoomForCurrentPage = () => void setScale(isMatchSheet() ? sheetScale : 1);
     const controls = document.querySelector('[aria-label="Масштаб статистики"]');
     if (controls && !zoomLabel()) {
       const label = document.createElement('span');
@@ -61,7 +69,17 @@ desktopHtml = desktopHtml.replace('</body>', `
     }
     // The saved value belongs only to the desktop shell. The browser version
     // neither reads nor changes it.
-    try { void setScale(Number(localStorage.getItem(storageKey)) || 1); } catch (_) { void setScale(1); }
+    try { sheetScale = Number(localStorage.getItem(storageKey)) || 1; } catch (_) { sheetScale = 1; }
+    updateLabel(sheetScale);
+    syncZoomForCurrentPage();
+
+    // Native WebKit zoom affects the entire webview. Keep it strictly scoped
+    // to the match sheet: other desktop pages, especially the rink canvas,
+    // always return to their normal 100% layout.
+    const sheetPanel = document.getElementById('statsSheetPanel');
+    const zoomObserver = new MutationObserver(syncZoomForCurrentPage);
+    zoomObserver.observe(document.body, { attributes: true, attributeFilter: ['data-view', 'data-stats-page'] });
+    if (sheetPanel) zoomObserver.observe(sheetPanel, { attributes: true, attributeFilter: ['hidden'] });
 
     document.addEventListener('click', event => {
       const button = event.target.closest('#btnStatsZoomOut, #btnStatsZoomIn');
