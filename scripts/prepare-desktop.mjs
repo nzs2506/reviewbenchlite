@@ -35,6 +35,10 @@ desktopHtml = desktopHtml.replace('</head>', `
   body.desktop-app[data-view="stats"][data-stats-page="sheet"] .match-sheet-faceoff {
     font-size: calc(13px * var(--stats-ui-scale, .92));
   }
+  body.desktop-app[data-view="stats"][data-stats-page="sheet"] .match-sheet-goalie-table td,
+  body.desktop-app[data-view="stats"][data-stats-page="sheet"] .match-sheet-goalie-table input {
+    font-size: calc(14px * var(--stats-ui-scale, .92));
+  }
 </style>
 </head>`);
 desktopHtml = desktopHtml.replace('</body>', `
