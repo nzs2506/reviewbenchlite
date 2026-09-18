@@ -5325,9 +5325,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.18" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.19" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.18</span>
+            <span class="version-tooltip">v0.10.19</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -6516,6 +6516,7 @@ const ADMIRAL_ROSTER_SUPPLEMENTS = [
     { number: '25', name: 'Олсон Кайл', role: 'forward', birthDate: '1999-03-22' },
     { number: '45', name: 'Мухтаров Дмитрий', role: 'forward', birthDate: '2006-05-04' },
     { number: '72', name: 'Булавчук Оскар', role: 'forward', birthDate: '2003-11-10' },
+    { number: '70', name: 'Янченко Иван', role: 'forward', birthDate: '2004-02-27' },
     { number: '97', name: 'Волков Александр С.', role: 'forward' },
     { number: '41', name: 'Дарьин Александр', role: 'forward' },
     { number: '17', name: 'Завгородний Дмитрий', role: 'forward' },
@@ -11823,7 +11824,7 @@ function normalizeMatchArchiveRecord(value) {
             events: Array.isArray(sheet.events) ? sheet.events.slice(-150) : [],
             order: Array.isArray(sheet.order) ? sheet.order.map(String) : [],
             excludedPlayerIds: Array.isArray(sheet.excludedPlayerIds) ? sheet.excludedPlayerIds.map(String) : [],
-            sortDirection: ['asc', 'desc'].includes(sheet.sortDirection) ? sheet.sortDirection : 'manual'
+            sortDirection: ['asc', 'desc', 'position'].includes(sheet.sortDirection) ? sheet.sortDirection : 'manual'
         }
     };
 }
@@ -14439,6 +14440,13 @@ function matchSheetPdfGoalies(record) {
         });
 }
 
+// The report must be stable even when an old saved sheet contains a temporary
+// drag order.  Its hockey order is always: defenders by number, then forwards
+// by number.  Goalies are rendered on their own last page.
+function matchSheetPdfSkaters(record) {
+    return archivedMatchPlayers(record).sort(matchSheetPositionSort);
+}
+
 function renderMatchSheetGoaliesPdfPage(record, pageNumber = 2, totalPages = 2) {
     const pageWidth = 2480;
     const pageHeight = 1754;
@@ -14521,7 +14529,7 @@ function renderMatchSheetGoaliesPdfPage(record, pageNumber = 2, totalPages = 2) 
 
 function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
     const record = matchSheetPdfRecord(sourceRecord);
-    const players = archivedMatchPlayers(record);
+    const players = matchSheetPdfSkaters(record);
     const rowsPerPage = 19;
     const pageCount = Math.max(1, Math.ceil(players.length / rowsPerPage));
     const pageWidth = 2480;
@@ -14666,7 +14674,7 @@ function renderLegacyMatchSheetPdfPages(sourceRecord = null) {
 
 function renderMatchSheetPdfPages(sourceRecord = null, options = {}) {
     const record = matchSheetPdfRecord(sourceRecord);
-    const players = archivedMatchPlayers(record);
+    const players = matchSheetPdfSkaters(record);
     const isAggregatePdf = options.title === 'СВОДНАЯ СТАТИСТИКА';
     // Keep the large print font, but use the free vertical space above/below
     // the table more efficiently: one match-sheet page holds 20 skaters.
