@@ -11057,8 +11057,10 @@ async function initCloudStateStorage() {
     syncRosterGoaliesFromMatches();
     cloudStateHydrating = false;
     cloudStateReady = true;
-    await pushAllCloudState();
-    scheduleDropboxBoardBackup('cloud-state-sync');
+    // Cloud bootstrap is deliberately read-only.  In particular, merely
+    // opening the web app must not make an older local copy win a conflict and
+    // overwrite the shared archive.  Cloudflare and Dropbox receive data only
+    // after an explicit «Сохранить» or «Синхронизировать» action.
     renderTrainingList();
     renderCalendar();
     renderGoaliePage();
