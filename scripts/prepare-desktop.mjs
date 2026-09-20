@@ -25,6 +25,44 @@ desktopHtml = desktopHtml.replace('</head>', `
     font-weight: 800;
     text-align: center;
   }
+
+  /* Keep the delete action visually centred in its own lane, rather than
+     pressed against the frozen player column's edge. */
+  body.desktop-app .match-sheet-player-cell-inner {
+    grid-template-columns: 18px minmax(0, 1fr) 64px;
+  }
+  body.desktop-app .match-sheet-row-remove {
+    justify-self: center;
+  }
+
+  /* Every statistics section uses the same header grid. The tab strip stays
+     anchored to the top-right corner even when a page has a different title,
+     action row, or a vertical scrollbar. */
+  @media (min-width: 900px) {
+    body.desktop-app .stats-view,
+    body.desktop-app .matches-view {
+      scrollbar-gutter: stable;
+    }
+    body.desktop-app .stats-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) max-content;
+      align-items: start;
+      min-height: 42px;
+    }
+    body.desktop-app .stats-head .stats-tabs {
+      justify-self: end;
+      align-self: start;
+    }
+    body.desktop-app .matches-head {
+      grid-template-columns: minmax(0, 1fr) auto max-content;
+      align-items: start;
+      min-height: 42px;
+    }
+    body.desktop-app .matches-tabs {
+      justify-self: end;
+      align-self: start;
+    }
+  }
 </style>
 </head>`);
 desktopHtml = desktopHtml.replace('</body>', `

@@ -11064,9 +11064,9 @@ async function initCloudStateStorage() {
     renderGoaliePage();
     renderStatsPage();
     renderMatchesPage();
-    // Some KHL schedule feeds keep an already played game marked as upcoming.
-    // Repair archived sheets by date after sync instead of trusting that flag.
-    window.setTimeout(() => restoreArchivedKhlStatistics({ silent: true, onlyMissing: true }), 900);
+    // Never import or repair KHL statistics in the background.  Opening the
+    // application must be read-only for saved match sheets: a coach decides
+    // explicitly when to use «Обновить с КХЛ» or «Восстановить KHL».
     ensureAdmiralScheduleFresh();
 }
 function loadTrainingRecords() {
