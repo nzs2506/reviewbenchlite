@@ -12669,7 +12669,7 @@ async function openKhlMatchSheet(match) {
             }
         );
         if (decision === false) return false;
-        if (decision === true) saveMatchSheetToArchive();
+        if (decision === true) await saveCurrentMatchSheet();
     }
     // The match card is the entry point to the saved sheet.  A saved match must be
     // reopened as it was recorded, not replaced with a fresh KHL import.
@@ -12862,6 +12862,19 @@ async function saveMatchSheetToArchive(options = {}) {
 
 async function synchronizeCurrentMatchSheet(button) {
     await saveMatchSheetToArchive({ sync: true, button });
+}
+
+// In the browser, «Сохранить матч» is also the durable save point: the coach
+// must not have to remember a second action before closing the tab or moving
+// to another device. The desktop app deliberately keeps its separate local
+// save / cloud-sync workflow, since its primary store is the Mac filesystem.
+function matchSheetSaveNeedsCloudBackup() {
+    return !document.body.classList.contains('desktop-app');
+}
+
+async function saveCurrentMatchSheet(button) {
+    const sync = matchSheetSaveNeedsCloudBackup();
+    await saveMatchSheetToArchive(sync ? { sync: true, button } : {});
 }
 
 async function openArchivedMatchSheet(id) {
@@ -18211,7 +18224,7 @@ document.getElementById('btnMatchSheetUndo').addEventListener('click', undoMatch
 document.getElementById('btnMatchSheetReset').addEventListener('click', resetMatchSheet);
 document.getElementById('btnMatchSheetSort')?.addEventListener('click', sortMatchSheetByNumber);
 document.getElementById('btnMatchSheetRoster').addEventListener('click', toggleMatchSheetRosterPanel);
-document.getElementById('btnMatchSheetSave').addEventListener('click', saveMatchSheetToArchive);
+document.getElementById('btnMatchSheetSave').addEventListener('click', e => saveCurrentMatchSheet(e.currentTarget));
 document.getElementById('btnMatchSheetSync').addEventListener('click', e => synchronizeCurrentMatchSheet(e.currentTarget));
 document.getElementById('btnMatchSheetPdf').addEventListener('click', () => exportMatchSheetPdf());
 document.getElementById('btnStatsZoomOut').addEventListener('click', () => changeStatsUiScale(-.04));
