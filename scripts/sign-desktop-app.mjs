@@ -11,6 +11,9 @@ await access(appPath);
 // Tauri's unsigned bundle may retain a linker-only signature. Re-signing the
 // whole bundle ad hoc seals its nested resources and prevents macOS from
 // reporting that the app is damaged after a ZIP transfer.
+// Builds on newer macOS versions can inherit FinderInfo/provenance extended
+// attributes. Those attributes make codesign reject an otherwise valid bundle.
+await run('xattr', ['-cr', appPath]);
 await run('codesign', ['--force', '--deep', '--sign', '-', appPath]);
 await run('codesign', ['--verify', '--deep', '--strict', '--verbose=2', appPath]);
 console.log(`Desktop app signature verified: ${appPath}`);
