@@ -125,6 +125,43 @@ function cleanStateKey(value) {
   return STATE_KEYS.includes(key) ? key : '';
 }
 
+// Match sheets are saved from more than one device.  A later explicit save is
+// authoritative, even when the coach intentionally clears a value.  Merge by
+// match identity on the server so a stale full-archive upload cannot replace a
+// newer sheet that another device has already synchronized.
+function matchArchiveIdentity(record, index) {
+  const sheet = record?.sheet || {};
+  const date = String(record?.date || sheet.date || '').slice(0, 10);
+  const opponent = String(record?.opponent || sheet.opponent || '')
+    .trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+  return date && opponent ? `${date}|${opponent}` : String(record?.id || `row-${index}`);
+}
+
+function matchArchiveSavedAt(record) {
+  return Date.parse(record?.updatedAt || record?.createdAt || '') || 0;
+}
+
+function mergeMatchArchiveState(existingValue, incomingValue) {
+  const merged = new Map();
+  const append = (records, incoming) => {
+    (Array.isArray(records) ? records : []).forEach((record, index) => {
+      if (!record || typeof record !== 'object') return;
+      const key = matchArchiveIdentity(record, index);
+      const previous = merged.get(key);
+      // At an identical timestamp, retain the record already stored in KV.
+      // This makes a delayed duplicate request harmless and never lets a
+      // browser's stale list displace the shared copy by accident.
+      if (!previous || (incoming && matchArchiveSavedAt(record) > matchArchiveSavedAt(previous))) {
+        merged.set(key, record);
+      }
+    });
+  };
+  append(existingValue, false);
+  append(incomingValue, true);
+  return [...merged.values()].sort((a, b) => String(b.date || '').localeCompare(String(a.date || ''))
+    || matchArchiveSavedAt(b) - matchArchiveSavedAt(a));
+}
+
 function khlProxyUrl(params = {}) {
   const source = new URL('https://lscluster.hockeytech.com/feed/');
   Object.entries({
@@ -561,9 +598,14 @@ async function putState(request, env, team) {
   } catch (_) {
     return json({ ok: false, error: 'invalid json' }, 400);
   }
+  const existing = key === 'matchArchive'
+    ? await env.BENCHREVIEW_KV.get(stateKey(team, key), 'json')
+    : null;
   const state = {
     key,
-    value: body.value === undefined ? null : body.value,
+    value: key === 'matchArchive'
+      ? mergeMatchArchiveState(existing?.value, body.value)
+      : (body.value === undefined ? null : body.value),
     updatedAt: new Date().toISOString()
   };
   await env.BENCHREVIEW_KV.put(stateKey(team, key), JSON.stringify(state));

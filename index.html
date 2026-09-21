@@ -10844,13 +10844,16 @@ function mergeMatchArchives(localValue, remoteValue) {
         const key = matchArchiveRestoreKey(record) || record.id;
         const previous = byMatch.get(key);
         if (!previous) { byMatch.set(key, record); return; }
-        const previousScore = matchArchiveDataScore(previous);
-        const nextScore = matchArchiveDataScore(record);
         const previousTime = Date.parse(previous.updatedAt || previous.createdAt || 0) || 0;
         const nextTime = Date.parse(record.updatedAt || record.createdAt || 0) || 0;
-        // A fresh but almost empty browser copy must not overwrite the rich
-        // archive that was saved after importing the KHL protocol.
-        if (nextScore > previousScore || (nextScore === previousScore && nextTime > previousTime)) byMatch.set(key, record);
+        // A deliberate later save is authoritative, even when it contains
+        // fewer values (for example, a coach intentionally corrected a field
+        // to zero). Completeness is only a deterministic tie-breaker for two
+        // copies saved at the exact same moment.
+        if (nextTime > previousTime
+            || (nextTime === previousTime && matchArchiveDataScore(record) >= matchArchiveDataScore(previous))) {
+            byMatch.set(key, record);
+        }
     });
     return [...byMatch.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
 }

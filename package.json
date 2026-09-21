@@ -6,7 +6,7 @@
   "scripts": {
     "desktop:prepare": "node scripts/prepare-desktop.mjs",
     "desktop:dev": "npm run desktop:prepare && cd desktop && ../node_modules/.bin/tauri dev",
-    "desktop:build": "npm run desktop:prepare && cd desktop && ../node_modules/.bin/tauri build"
+    "desktop:build": "npm run desktop:prepare && cd desktop && ../node_modules/.bin/tauri build && cd .. && node scripts/sign-desktop-app.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0"
