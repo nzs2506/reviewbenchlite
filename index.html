@@ -2411,6 +2411,14 @@
         letter-spacing: .12em;
         text-transform: uppercase;
     }
+    .match-sheet-match-picker {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(110px, .48fr);
+        gap: 9px;
+        min-width: 0;
+    }
+    .match-sheet-match-picker .match-sheet-field { min-width: 0; }
+    .match-sheet-match-picker select { width: 100%; min-width: 0; }
     .match-sheet-field input,
     .match-sheet-field select {
         height: 36px;
@@ -5788,11 +5796,16 @@
 
             <section class="stats-panel match-sheet-panel" id="statsSheetPanel" hidden>
                 <div class="match-sheet-topbar">
+                    <div class="match-sheet-match-picker">
                     <label class="match-sheet-field">Матч месяца
                         <select id="matchSheetMatchSelect" aria-label="Выбрать матч месяца">
                             <option value="manual">Ручной ввод</option>
                         </select>
                     </label>
+                    <label class="match-sheet-field">Месяц
+                        <select id="matchSheetMonthSelect" aria-label="Месяц матчей"></select>
+                    </label>
+                    </div>
                     <label class="match-sheet-field">Соперник
                         <input id="matchSheetOpponent" type="text" maxlength="50" placeholder="Название команды">
                     </label>
@@ -10731,15 +10744,19 @@ function startCloudSync() {
     initTrainingRecordStorage();
     initCloudStateStorage();
 }
-async function fetchRemoteTrainingRecords() {
+async function fetchRemoteTrainingRecords({ strict = false } = {}) {
     const url = trainingSyncApiUrl('/api/trainings?team=default');
-    if (!url || !benchAuthToken) return [];
+    if (!url || !benchAuthToken) {
+        if (strict) throw new Error('Нет подключения к облаку тренировок');
+        return [];
+    }
     try {
         const response = await authFetch(url, { method: 'GET', mode: 'cors' });
-        if (!response.ok) return [];
+        if (!response.ok) throw new Error('Не удалось загрузить тренировки');
         const data = await response.json();
         return normalizeTrainingRecords(data.records || []);
     } catch (_) {
+        if (strict) throw _;
         return [];
     }
 }
@@ -10988,17 +11005,69 @@ async function synchronizeBenchReview(button) {
         button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Синхронизация…';
     }
     try {
-        const stateResults = await Promise.all(CLOUD_STATE_KEYS.map(key => pushCloudStateKey(key)));
-        const trainingsSaved = await pushRemoteTrainingRecords();
+        const states = await fetchRemoteCloudState();
+        if (!states) throw new Error('Облако недоступно. Отправка отменена; локальные данные сохранены.');
+        const remoteTrainings = await fetchRemoteTrainingRecords({ strict: true });
+        const localTrainings = structuredClone(trainingRecords);
+        // Keep a recovery copy before applying anything downloaded. Never use
+        // an empty installation as an authoritative cloud snapshot.
+        const local = Object.fromEntries(CLOUD_STATE_KEYS.map(key => [key, structuredClone(cloudStateValue(key))]));
+        localStorage.setItem('benchreview-lite.before-manual-sync.v1', JSON.stringify({ at: new Date().toISOString(), local, trainingRecords: localTrainings }));
+        const uploadKeys = [];
+        for (const key of CLOUD_STATE_KEYS) {
+            const value = local[key];
+            if (!Array.isArray(value) || !value.length) continue;
+            const remote = states[key]?.value;
+            const merged = key === 'matchArchive' ? mergeMatchArchives(value, remote) : value;
+            if (JSON.stringify(merged) === JSON.stringify(remote)) continue;
+            const labels = { blocks: 'Упражнения', planned: 'План тренировок', goalieMatches: 'Матчи вратарей', roster: 'Состав', rosterRemoved: 'Удаления из состава', matchArchive: 'Сохранённые матчи', matches: 'Календарь матчей' };
+            const accepted = await showConfirm(`Раздел «${labels[key]}» отличается на компьютере и в облаке. Отправить локальные данные? Если не уверены, оставьте облачную версию.`, {
+                title: 'Выбор данных для синхронизации', okLabel: 'Отправить локальные', cancelLabel: 'Загрузить облачные'
+            });
+            if (accepted) uploadKeys.push(key);
+        }
+        applyRemoteCloudState(states);
+        // Unconfirmed sections take the cloud version, not seeded defaults or
+        // a completeness-based merge. Local originals remain in the snapshot.
+        const selected = key => uploadKeys.includes(key) ? local[key] : (states[key]?.value ?? local[key]);
+        trainingBlocks = selected('blocks');
+        plannedTrainings = selected('planned');
+        goalieSavedMatches = selected('goalieMatches');
+        rosterPlayers = selected('roster');
+        rosterRemovedKeys = selected('rosterRemoved');
+        admiralMatches = selected('matches');
+        matchSheetArchive = uploadKeys.includes('matchArchive')
+            ? mergeMatchArchives(local.matchArchive, states.matchArchive?.value)
+            : (states.matchArchive?.value ?? local.matchArchive);
+        persistTrainingBlocks({ pushRemote: false, dropboxBackup: false });
+        persistPlannedTrainings({ pushRemote: false, dropboxBackup: false });
+        persistGoalieMatches({ pushRemote: false });
+        persistRosterPlayers({ pushRemote: false });
+        persistRosterRemovedKeys({ pushRemote: false });
+        persistAdmiralMatches({ pushRemote: false });
+        persistMatchSheetArchive({ pushRemote: false });
+        renderTrainingList(); renderStatsPage(); renderMatchesPage(); renderCalendar(); renderGoaliePage();
+        const stateResults = await Promise.all(uploadKeys.map(key => pushCloudStateKey(key)));
+        let uploadTrainings = false;
+        if (localTrainings.some(record => record.canvas || record.screen)
+            && JSON.stringify(localTrainings) !== JSON.stringify(remoteTrainings)) {
+            uploadTrainings = await showConfirm('Отправить локальные записи тренировок в облако? Существующие записи с теми же идентификаторами могут измениться.', {
+                title: 'Записи тренировок', okLabel: 'Отправить локальные', cancelLabel: 'Загрузить облачные'
+            });
+        }
+        trainingRecords = uploadTrainings ? mergeTrainingRecordLists(remoteTrainings, localTrainings) : remoteTrainings;
+        await persistTrainingRecords({ pushRemote: false, dropboxBackup: false });
+        renderTrainingList();
+        const trainingsSaved = !uploadTrainings || await pushRemoteTrainingRecords();
         let dropboxSaved = false;
-        if (dropboxReadConnection()) {
+        if ((uploadKeys.length || uploadTrainings) && stateResults.every(Boolean) && trainingsSaved && dropboxReadConnection()) {
             const backup = await backupBoardToDropbox('manual-sync');
             dropboxSaved = backup.failed === 0;
         }
         const cloudSaved = stateResults.every(Boolean) && (trainingRecords.length === 0 || trainingsSaved);
         const targets = [cloudSaved ? 'Cloudflare' : '', dropboxSaved ? 'Dropbox' : ''].filter(Boolean);
-        if (!targets.length) throw new Error('не удалось подключиться к Cloudflare или Dropbox');
-        if (button) button.innerHTML = `<i class="fa-solid fa-check"></i> ${targets.join(' + ')}`;
+        if (!cloudSaved) throw new Error('Не все данные отправлены в Cloudflare. Локальная копия сохранена.');
+        if (button) button.innerHTML = `<i class="fa-solid fa-check"></i> ${uploadKeys.length || uploadTrainings ? targets.join(' + ') : 'Загружено из облака'}`;
     } catch (error) {
         console.warn('Manual sync failed', error);
         if (button) button.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Ошибка синхронизации';
@@ -12279,11 +12348,31 @@ async function refreshCurrentMatchFromKhl() {
     }
 }
 
+let matchSheetMonthFilter = '';
+let matchSheetMonthReference = '';
 function renderMatchSheetMatchSelect() {
     const select = document.getElementById('matchSheetMatchSelect');
     if (!select) return;
     const reference = /^\d{4}-\d{2}/.test(matchSheetState.date) ? matchSheetState.date : todayInputValue();
-    const month = reference.slice(0, 7);
+    if (!matchSheetMonthFilter || matchSheetMonthReference !== reference) {
+        matchSheetMonthFilter = reference.slice(0, 7);
+        matchSheetMonthReference = reference;
+    }
+    const month = matchSheetMonthFilter;
+    const monthSelect = document.getElementById('matchSheetMonthSelect');
+    const months = [...new Set([month, ...admiralMatches.map(match => String(match.date || '').slice(0, 7)),
+        ...matchSheetArchive.map(record => String(record.date || '').slice(0, 7))])]
+        .filter(value => /^\d{4}-(0[1-9]|1[0-2])$/.test(value)).sort();
+    if (monthSelect) {
+        monthSelect.innerHTML = '';
+        months.forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = new Date(`${value}-01T12:00:00`).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+            monthSelect.appendChild(option);
+        });
+        monthSelect.value = month;
+    }
     const matches = admiralMatches.filter(match => String(match.date || '').slice(0, 7) === month).sort(admiralMatchSort);
     const related = matches.find(matchSheetIsRelatedToMatch);
     select.innerHTML = '';
@@ -12298,7 +12387,16 @@ function renderMatchSheetMatchSelect() {
         option.textContent = `${date} · ${admiralMatchTitle(match)}`;
         select.appendChild(option);
     });
-    select.value = related?.id || 'manual';
+    const archived = matchSheetArchive.filter(record => String(record.date || '').slice(0, 7) === month
+        && !matches.some(match => matchArchiveBelongsToKhlMatch(record, match)));
+    archived.sort((a, b) => String(a.date).localeCompare(String(b.date))).forEach(record => {
+        const option = document.createElement('option');
+        option.value = `archive:${record.id}`;
+        option.textContent = `${String(record.date).split('-').reverse().slice(0, 2).join('.')} · ${record.opponent} (сохранённый)`;
+        select.appendChild(option);
+    });
+    const currentArchive = archived.find(record => record.id === matchSheetState.archiveId);
+    select.value = related?.id || (currentArchive ? `archive:${currentArchive.id}` : 'manual');
 }
 
 function admiralMatchDateLabel(match) {
@@ -12864,7 +12962,39 @@ async function saveMatchSheetToArchive(options = {}) {
 }
 
 async function synchronizeCurrentMatchSheet(button) {
-    await saveMatchSheetToArchive({ sync: true, button });
+    if (button?.disabled) return;
+    if (button) button.disabled = true;
+    try {
+        const states = await fetchRemoteCloudState();
+        if (!states) throw new Error('Облако недоступно. Ничего не отправлено.');
+        const remote = Array.isArray(states.matchArchive?.value) ? states.matchArchive.value : [];
+        const key = matchArchiveRestoreKey({ sheet: matchSheetState });
+        const cloudRecord = remote.find(record => matchArchiveRestoreKey(record) === key);
+        const localRecord = matchSheetArchive.find(record => matchArchiveRestoreKey(record) === key);
+        const edited = matchSheetHasUnsavedChanges();
+        // Synchronizing a clean draft must not create a fresh timestamp and
+        // make its zeroes newer than the real saved match.
+        matchSheetArchive = mergeMatchArchives(matchSheetArchive, remote);
+        persistMatchSheetArchive({ pushRemote: false });
+        if (!edited) {
+            const saved = matchSheetArchive.find(record => matchArchiveRestoreKey(record) === key);
+            if (saved) await openArchivedMatchSheet(saved.id);
+            renderMatchesPage();
+            if (localRecord && (!cloudRecord || Date.parse(localRecord.updatedAt) > Date.parse(cloudRecord.updatedAt))) {
+                const accepted = await showConfirm('Отправить сохранённую на этом компьютере версию матча в облако?', { title: 'Синхронизация матча', okLabel: 'Отправить', cancelLabel: 'Не отправлять' });
+                if (accepted) await saveMatchSheetBackupCopies(localRecord);
+            }
+            return;
+        }
+        const accepted = await showConfirm(`Сохранить и отправить данные матча «${matchSheetState.opponent}» от ${matchSheetState.date}?${cloudRecord ? ' Облачная версия этого матча будет заменена.' : ''}`, {
+            title: 'Подтвердите отправку изменений', okLabel: 'Сохранить и отправить', cancelLabel: 'Отмена'
+        });
+        if (accepted) await saveMatchSheetToArchive({ sync: true, button });
+    } catch (error) {
+        await showConfirm(String(error.message || error), { title: 'Синхронизация не выполнена', okLabel: 'Понятно', cancelLabel: 'Закрыть' });
+    } finally {
+        if (button) button.disabled = false;
+    }
 }
 
 // In the browser, «Сохранить матч» is also the durable save point: the coach
@@ -18218,8 +18348,17 @@ document.getElementById('matchSheetDate').addEventListener('change', e => {
     persistMatchSheet();
     renderMatchSheetMatchSelect();
 });
+document.getElementById('matchSheetMonthSelect').addEventListener('change', e => {
+    matchSheetMonthFilter = e.target.value;
+    renderMatchSheetMatchSelect();
+});
 document.getElementById('matchSheetMatchSelect').addEventListener('change', async e => {
     if (e.target.value === 'manual') return;
+    if (e.target.value.startsWith('archive:')) {
+        await openArchivedMatchSheet(e.target.value.slice(8));
+        renderMatchSheetMatchSelect();
+        return;
+    }
     const match = admiralMatches.find(item => item.id === e.target.value);
     if (match) await openKhlMatchSheet(match);
 });
