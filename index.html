@@ -15131,7 +15131,9 @@ function matchArchivePlayerKey(player) {
 function addMatchSheetManualValue(current, incoming) {
     const read = value => {
         const raw = String(value ?? '').trim();
-        const pair = raw.match(/^(\d+)\s*-\s*(\d+)$/);
+        // Old sheets and pasted values may use slash, en dash or em dash.
+        // Treat all supported separators exactly like the current hyphen UI.
+        const pair = raw.match(/^(\d+)\s*(?:\/|-|–|—)\s*(\d+)$/);
         return pair ? { left: Number(pair[1]), right: Number(pair[2]), pair: true }
             : { left: safeStatNumber(raw), right: 0, pair: false };
     };
@@ -15253,7 +15255,12 @@ function aggregateMatchRecords(selected) {
 }
 
 function matchAggregateSelectionKey(records) {
-    return records.map(record => String(record.id || '')).sort().join('|');
+    // Aggregate edits belong to the exact saved revisions. If a coach opens a
+    // match, corrects it and saves it again, its id stays the same while
+    // updatedAt changes. Keying only by id resurrected an old edited total and
+    // hid the freshly saved correction in both the table and PDF.
+    return records.map(record => `${String(record.id || '')}@${String(record.updatedAt || record.createdAt || '')}`)
+        .sort().join('|');
 }
 
 function loadMatchAggregateEdits() {
