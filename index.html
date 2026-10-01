@@ -3029,6 +3029,9 @@
     .match-sheet-log-empty { color: #707784; font-size: 11px; font-weight: 800; }
     .match-archive-block { margin-top: 14px; }
     .match-archive-count { color: #7f8a9a; font-size: 10px; font-weight: 900; }
+    .match-archive-range { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin: 0 0 10px; }
+    .match-archive-range .match-archive-action[aria-pressed="true"] { border-color: #3b82f6; background: #1d4ed8; color: #fff; }
+    .match-archive-range-status { color: #818b9b; font-size: 10px; font-weight: 800; }
     .match-archive-list { display: grid; gap: 9px; }
     .match-archive-selection {
         display: flex;
@@ -5481,6 +5484,11 @@
                         <button class="match-archive-action" type="button" id="btnMatchArchiveSelectAll">Выбрать все</button>
                         <button class="match-archive-action" type="button" id="btnMatchArchiveSelectNone">Снять выбор</button>
                     </div>
+                </div>
+                <div class="match-archive-range" id="matchArchiveRange" hidden aria-label="Период сохранённых матчей">
+                    <button class="match-archive-action" type="button" id="btnMatchArchiveLastFive" aria-pressed="true">Последние 5</button>
+                    <button class="match-archive-action" type="button" id="btnMatchArchiveShowAll" aria-pressed="false">Показать все</button>
+                    <span class="match-archive-range-status" id="matchArchiveRangeStatus"></span>
                 </div>
                 <div class="match-aggregate" id="matchAggregate" hidden></div>
                 <div class="match-archive-list" id="matchArchiveList"></div>
@@ -15493,26 +15501,40 @@ function exportMatchAggregatePdf(records) {
     }
 }
 
+let matchArchiveRange = 'last-five';
+function visibleMatchArchiveRecords(records) {
+    if (matchArchiveRange === 'all') return records;
+    const today = todayInputValue();
+    return records.filter(record => String(record.date || '').slice(0, 10) <= today).slice(0, 5);
+}
+
 function renderMatchArchive() {
     const target = document.getElementById('matchArchiveList');
     const count = document.getElementById('matchArchiveCount');
     if (!target || !count) return;
     const records = matchSheetArchive.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    const visibleRecords = visibleMatchArchiveRecords(records);
     selectedMatchArchiveIds = new Set([...selectedMatchArchiveIds].filter(id => records.some(record => record.id === id)));
     count.textContent = `${records.length} ${records.length === 1 ? 'матч' : 'матчей'}`;
     target.innerHTML = '';
     const selection = document.getElementById('matchArchiveSelection');
     const selectionCopy = document.getElementById('matchArchiveSelectionCopy');
     if (selection) selection.hidden = !records.length;
+    const range = document.getElementById('matchArchiveRange');
+    if (range) range.hidden = !records.length;
+    document.getElementById('btnMatchArchiveLastFive')?.setAttribute('aria-pressed', String(matchArchiveRange === 'last-five'));
+    document.getElementById('btnMatchArchiveShowAll')?.setAttribute('aria-pressed', String(matchArchiveRange === 'all'));
+    const rangeStatus = document.getElementById('matchArchiveRangeStatus');
+    if (rangeStatus) rangeStatus.textContent = `Показано ${visibleRecords.length} из ${records.length}`;
     if (selectionCopy) selectionCopy.textContent = selectedMatchArchiveIds.size
-        ? `Выбрано матчей: ${selectedMatchArchiveIds.size}. Сводка считает только их.`
+        ? `Выбрано матчей: ${selectedMatchArchiveIds.size}${[...selectedMatchArchiveIds].some(id => !visibleRecords.some(record => record.id === id)) ? ' (включая скрытые текущим фильтром)' : ''}. Сводка считает только их.`
         : 'Отметьте матчи, чтобы получить общую статистику за выбранный отрезок.';
     renderMatchArchiveAggregate(records);
     if (!records.length) {
         target.innerHTML = '<div class="matches-empty">Матчей пока нет</div>';
         return;
     }
-    records.forEach(record => {
+    visibleRecords.forEach(record => {
         const card = document.createElement('article');
         card.className = 'match-archive-card';
         card.classList.toggle('selected', selectedMatchArchiveIds.has(record.id));
@@ -18551,11 +18573,20 @@ document.getElementById('matchesView').addEventListener('change', e => {
     renderMatchArchive();
 });
 document.getElementById('btnMatchArchiveSelectAll').addEventListener('click', () => {
-    selectedMatchArchiveIds = new Set(matchSheetArchive.map(record => record.id));
+    const records = matchSheetArchive.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
+    selectedMatchArchiveIds = new Set(visibleMatchArchiveRecords(records).map(record => record.id));
     renderMatchArchive();
 });
 document.getElementById('btnMatchArchiveSelectNone').addEventListener('click', () => {
     selectedMatchArchiveIds.clear();
+    renderMatchArchive();
+});
+document.getElementById('btnMatchArchiveLastFive').addEventListener('click', () => {
+    matchArchiveRange = 'last-five';
+    renderMatchArchive();
+});
+document.getElementById('btnMatchArchiveShowAll').addEventListener('click', () => {
+    matchArchiveRange = 'all';
     renderMatchArchive();
 });
 document.getElementById('btnRestoreArchiveKhl').addEventListener('click', restoreArchivedKhlStatistics);
