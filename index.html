@@ -12375,7 +12375,8 @@ async function refreshCurrentMatchFromKhl() {
         if (!unchanged()) return;
         if (String(data.gameId || match.gameId) !== String(match.gameId)) throw new Error('КХЛ вернул другой матч; данные не внесены.');
         const cacheAgeMs = data.updatedAt ? Date.now() - Date.parse(data.updatedAt) : Infinity;
-        if (!(cacheAgeMs < 10 * 60 * 1000)) {
+        const allowedCacheAge = data.cachedFallback && data.final ? 24 * 60 * 60 * 1000 : 10 * 60 * 1000;
+        if (!(cacheAgeMs >= 0 && cacheAgeMs < allowedCacheAge)) {
             throw new Error('Cloudflare Worker отдаёт устаревший кэш КХЛ. Нужно задеплоить обновлённый benchreview-worker.js (npx wrangler deploy).');
         }
         // Обновляем карточку матча (счёт, статус, время) и календарь.
@@ -12462,7 +12463,7 @@ async function refreshCurrentMatchFromKhl() {
         const cols = data.protocolOk ? KHL_SHEET_COLUMNS_FULL : KHL_SHEET_COLUMNS_BASE;
         info.textContent = `${timing} · Внесено игроков: ${applied}${missed ? `, не найдено в составе: ${missed}` : ''}`
             + `${protocolRoster.applied ? ` · по ${protocolRoster.source} в листе: ${protocolRoster.kept}, убрано: ${protocolRoster.removed}` : ''}`
-            + `${stamp ? ` · данные КХЛ на ${stamp}` : ''} · колонки: ${cols}. Проверьте и нажмите «Сохранить матч».`;
+            + `${stamp ? ` · данные КХЛ на ${stamp}` : ''}${data.cachedFallback ? ' · свежий запрос недоступен, использована сохранённая копия КХЛ' : ''} · колонки: ${cols}. Проверьте и нажмите «Сохранить матч».`;
     } catch (err) {
         if (unchanged()) { renderMatchSheetKhlInfo(true); info.textContent = `Ошибка: ${String(err.message || err)}`; }
     } finally {
@@ -12656,7 +12657,24 @@ async function refreshAdmiralMatches() {
 async function fetchKhlMatchStats(match, fresh = false) {
     const cloudUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats${fresh ? '?fresh=1' : ''}`);
     if (!cloudUrl || !benchAuthToken) throw new Error('нужно войти в облако для загрузки статистики');
-    let { response, data } = await cloudGetJson(cloudUrl);
+    let result;
+    try {
+        result = await cloudGetJson(cloudUrl);
+    } catch (error) {
+        if (!fresh || !benchAuthToken) throw error;
+        // A completed game's cached result remains useful when KHL is slow.
+        // Do not treat an empty/old cache as a successful import.
+        try {
+            const cachedUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats`);
+            const cached = await cloudGetJson(cachedUrl);
+            const age = Date.now() - Date.parse(cached.data.updatedAt || '');
+            if (cached.response.ok && cached.data.ok && cached.data.final && cached.data.players?.length && age >= 0 && age < 24 * 60 * 60 * 1000) {
+                return { ...cached.data, cachedFallback: true };
+            }
+        } catch (_) {}
+        throw error;
+    }
+    let { response, data } = result;
     if (response.ok && data.ok) return data;
     // Older deployed Workers may surface a truncated upstream KHL JSON as a
     // 502. Retry once without the cached response before reporting failure.
