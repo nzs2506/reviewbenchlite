@@ -5344,9 +5344,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.21" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.22" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.21</span>
+            <span class="version-tooltip">v0.10.22</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -10682,6 +10682,30 @@ async function authFetch(url, options = {}) {
     if (response.status === 401) clearBenchAuth();
     return response;
 }
+// Bound both the connection and JSON body read. Only GET requests are retried.
+async function cloudGetJson(url, timeoutMs = 25000) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const response = await authFetch(url, { method: 'GET', mode: 'cors', cache: 'no-store', signal: controller.signal });
+            if (response.status === 401) throw new Error('Сессия завершилась. Войдите в аккаунт снова; локальные данные сохранены.');
+            if (response.status === 403) throw new Error('Сервер отклонил доступ (403). Локальные данные сохранены.');
+            const data = await response.json();
+            if (attempt === 0 && [502, 503, 504].includes(response.status)) continue;
+            return { response, data };
+        } catch (error) {
+            const transient = controller.signal.aborted || error instanceof TypeError || error instanceof SyntaxError;
+            if (transient && attempt === 0) continue;
+            if (controller.signal.aborted) throw new Error('Сервер не ответил вовремя. Повторите запрос; локальные данные сохранены.');
+            if (error instanceof TypeError) throw new Error('Нет связи с сервером. Проверьте сеть; локальные данные сохранены.');
+            if (error instanceof SyntaxError) throw new Error('Сервер вернул неполный ответ. Повторите запрос; локальные данные сохранены.');
+            throw error;
+        } finally {
+            window.clearTimeout(timer);
+        }
+    }
+}
 async function validateBenchSession() {
     const url = trainingSyncApiUrl('/api/session?team=default');
     if (!url || !benchAuthToken) return false;
@@ -12184,13 +12208,9 @@ async function fetchAdmiralMatchesFromSource(fresh = false) {
     // он остаётся лишь запасным путём для не-браузерных клиентов.
     const cloudUrl = cloudStateUrl(`/api/khl/admiral/matches?season=${ADMIRAL_KHL_SEASON_ID}${fresh ? '&fresh=1' : ''}`);
     if (cloudUrl && benchAuthToken) {
-        try {
-            const response = await authFetch(cloudUrl, { method: 'GET', mode: 'cors' });
-            if (response.ok) {
-                const data = await response.json();
-                if (Array.isArray(data.matches)) return data.matches;
-            }
-        } catch (_) {}
+        const { response, data } = await cloudGetJson(cloudUrl);
+        if (response.ok && Array.isArray(data.matches)) return data.matches;
+        throw new Error(data.error || `Не удалось загрузить календарь (${response.status}).`);
     }
     try {
         const response = await fetch(khlProxyUrl(), { method: 'GET', mode: 'cors' });
@@ -12295,9 +12315,10 @@ function ensureAdmiralScheduleFresh() {
     return admiralScheduleRefreshing;
 }
 
-function renderMatchSheetKhlInfo() {
+function renderMatchSheetKhlInfo(force = false) {
     const info = document.getElementById('matchSheetKhlInfo');
     if (!info) return;
+    if (!force && document.getElementById('btnMatchSheetKhl')?.disabled) return;
     const match = admiralMatches.find(matchSheetIsRelatedToMatch);
     info.textContent = match
         ? `${admiralMatchDateLabel(match)} · ${admiralMatchTimeLabel(match) || 'время уточняется'} МСК · ${admiralMatchTitle(match)} · ${match.homeGoals}:${match.awayGoals} · ${match.final ? 'Завершён' : match.status || 'Ожидается'}`
@@ -12342,12 +12363,14 @@ async function refreshCurrentMatchFromKhl() {
     button.disabled = true;
     info.textContent = 'Запрашиваю данные КХЛ…';
     try {
-        await ensureAdmiralScheduleFresh(); // подтянуть свежий календарь для поиска gameId (при входе)
+        // A known gameId needs no second upstream calendar request before stats.
+        if (!admiralMatches.some(matchSheetIsRelatedToMatch)) await ensureAdmiralScheduleFresh();
         if (!unchanged()) return;
         const matches = admiralMatches.filter(matchSheetIsRelatedToMatch);
         if (!matches.length) throw new Error('В календаре КХЛ нет матча на эту дату с этим соперником. Проверьте дату/соперника.');
         if (matches.length > 1) throw new Error('На эту дату несколько матчей — уточните соперника.');
         const match = matches[0];
+        info.textContent = 'Загружаю статистику игроков КХЛ… Числа в листе пока не обновлены.';
         const data = await fetchKhlMatchStats(match, true);
         if (!unchanged()) return;
         if (String(data.gameId || match.gameId) !== String(match.gameId)) throw new Error('КХЛ вернул другой матч; данные не внесены.');
@@ -12368,7 +12391,7 @@ async function refreshCurrentMatchFromKhl() {
             syncAdmiralMatchesToCalendar();
         }
         matchSheetState.matchScore = matchSheetScoreFromKhl(data, match);
-        renderMatchSheetKhlInfo();
+        renderMatchSheetKhlInfo(true);
         const timing = info.textContent;
         if (data.state && data.state !== 'in_progress' && data.state !== 'finished') {
             info.textContent = `${timing} · данные не вносились — матч ещё не начался.`;
@@ -12441,7 +12464,7 @@ async function refreshCurrentMatchFromKhl() {
             + `${protocolRoster.applied ? ` · по ${protocolRoster.source} в листе: ${protocolRoster.kept}, убрано: ${protocolRoster.removed}` : ''}`
             + `${stamp ? ` · данные КХЛ на ${stamp}` : ''} · колонки: ${cols}. Проверьте и нажмите «Сохранить матч».`;
     } catch (err) {
-        if (unchanged()) { renderMatchSheetKhlInfo(); info.textContent = `Ошибка: ${String(err.message || err)}`; }
+        if (unchanged()) { renderMatchSheetKhlInfo(true); info.textContent = `Ошибка: ${String(err.message || err)}`; }
     } finally {
         button.disabled = false;
     }
@@ -12633,28 +12656,13 @@ async function refreshAdmiralMatches() {
 async function fetchKhlMatchStats(match, fresh = false) {
     const cloudUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats${fresh ? '?fresh=1' : ''}`);
     if (!cloudUrl || !benchAuthToken) throw new Error('нужно войти в облако для загрузки статистики');
-    // The Worker may fail the first DNS/TLS handshake on Safari or mobile networks.
-    // Retrying here avoids losing an otherwise valid match-sheet import to that transient error.
-    let response;
-    for (let attempt = 0; attempt < 2 && !response; attempt++) {
-        try {
-            response = await authFetch(cloudUrl, { method: 'GET', mode: 'cors', cache: 'no-store' });
-        } catch (err) {
-            if (attempt === 1) {
-                throw new Error('Нет связи с сервером статистики. Проверьте интернет и повторите загрузку.');
-            }
-            await new Promise(resolve => window.setTimeout(resolve, 450));
-        }
-    }
-    let data = await response.json().catch(() => ({}));
+    let { response, data } = await cloudGetJson(cloudUrl);
     if (response.ok && data.ok) return data;
     // Older deployed Workers may surface a truncated upstream KHL JSON as a
     // 502. Retry once without the cached response before reporting failure.
     if (response.status === 502 && /JSON|Unterminated string|Unexpected end|неполные данные/i.test(String(data.error || ''))) {
         const retryUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats?fresh=1&retry=${Date.now()}`);
-        await new Promise(resolve => window.setTimeout(resolve, 500));
-        response = await authFetch(retryUrl, { method: 'GET', mode: 'cors', cache: 'no-store' });
-        data = await response.json().catch(() => ({}));
+        ({ response, data } = await cloudGetJson(retryUrl));
         if (response.ok && data.ok) return data;
     }
     throw new Error(data.error || `KHL API ${response.status}`);
@@ -13073,9 +13081,12 @@ async function synchronizeCurrentMatchSheet(button) {
     if (button?.disabled) return;
     if (button) button.disabled = true;
     try {
-        const states = await fetchRemoteCloudState();
-        if (!states) throw new Error('Облако недоступно. Ничего не отправлено.');
-        const remote = Array.isArray(states.matchArchive?.value) ? states.matchArchive.value : [];
+        const url = cloudStateUrl('/api/state?key=matchArchive');
+        if (!url || !benchAuthToken) throw new Error('Сначала войдите в аккаунт. Локальные данные сохранены.');
+        const { response, data } = await cloudGetJson(url);
+        if (!response.ok || data.ok !== true) throw new Error(`Облако ответило ошибкой (${response.status}). Ничего не отправлено.`);
+        if (data.state !== null && !Array.isArray(data.state?.value)) throw new Error('Облако вернуло неверный формат архива. Ничего не отправлено.');
+        const remote = data.state === null ? [] : data.state.value;
         const key = matchArchiveRestoreKey({ sheet: matchSheetState });
         const cloudRecord = remote.find(record => matchArchiveRestoreKey(record) === key);
         const localRecord = matchSheetArchive.find(record => matchArchiveRestoreKey(record) === key);
