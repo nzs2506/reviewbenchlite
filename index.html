@@ -12646,9 +12646,18 @@ async function fetchKhlMatchStats(match, fresh = false) {
             await new Promise(resolve => window.setTimeout(resolve, 450));
         }
     }
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.ok) throw new Error(data.error || `KHL API ${response.status}`);
-    return data;
+    let data = await response.json().catch(() => ({}));
+    if (response.ok && data.ok) return data;
+    // Older deployed Workers may surface a truncated upstream KHL JSON as a
+    // 502. Retry once without the cached response before reporting failure.
+    if (response.status === 502 && /JSON|Unterminated string|Unexpected end|неполные данные/i.test(String(data.error || ''))) {
+        const retryUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats?fresh=1&retry=${Date.now()}`);
+        await new Promise(resolve => window.setTimeout(resolve, 500));
+        response = await authFetch(retryUrl, { method: 'GET', mode: 'cors', cache: 'no-store' });
+        data = await response.json().catch(() => ({}));
+        if (response.ok && data.ok) return data;
+    }
+    throw new Error(data.error || `KHL API ${response.status}`);
 }
 
 function khlStatsNameKey(value) {

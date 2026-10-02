@@ -383,12 +383,27 @@ async function getKhlAdmiralMatchStats(env, gameId, fresh = false) {
   const cleanGameId = String(gameId || '').trim();
   if (!/^\d+$/.test(cleanGameId)) throw new Error('invalid game id');
   const cacheKey = `khl:admiral:${ADMIRAL_KHL_SEASON_ID}:match:${cleanGameId}:stats`;
-  const cached = await env.BENCHREVIEW_KV.get(cacheKey, 'json');
+  // A partially written or truncated cache entry must never prevent a fresh
+  // import or be returned to the match sheet.
+  let cached = null;
+  try { cached = await env.BENCHREVIEW_KV.get(cacheKey, 'json'); } catch (_) {}
   const cacheTtlMs = cached?.final ? 24 * 60 * 60 * 1000 : 45 * 1000;
   if (!fresh && cached?.players?.length && Date.now() - Date.parse(cached.updatedAt || 0) < cacheTtlMs) return cached;
-  const response = await fetch(`${KHL_MOBILE_BASE}/event_v2.json?id=${encodeURIComponent(cleanGameId)}&locale=ru`);
-  if (!response.ok) throw new Error(`KHL match API ${response.status}`);
-  const data = await response.json();
+  let data = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const response = await fetch(`${KHL_MOBILE_BASE}/event_v2.json?id=${encodeURIComponent(cleanGameId)}&locale=ru`, {
+      cache: 'no-store'
+    });
+    if (!response.ok) throw new Error(`KHL match API ${response.status}`);
+    try {
+      data = await response.json();
+      if (!data?.event) throw new Error('KHL response has no match event');
+      break;
+    } catch (err) {
+      if (attempt === 2) throw new Error('КХЛ прислала неполные данные матча. Сохранённые цифры не изменены; повторите загрузку позже.');
+      await new Promise(resolve => setTimeout(resolve, 350 * (attempt + 1)));
+    }
+  }
   const event = data?.event;
   if (!event || String(event.stage_id || '') !== ADMIRAL_KHL_SEASON_ID) throw new Error('match is outside the 2026/27 season');
   if (String(event.id || '') !== cleanGameId) throw new Error('KHL returned a different match');
