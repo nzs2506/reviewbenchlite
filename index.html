@@ -1502,6 +1502,7 @@
         display: grid;
         gap: 18px;
     }
+    .matches-shell { width: min(1720px, 100%); }
     .stats-head {
         display: flex;
         align-items: center;
@@ -3110,16 +3111,18 @@
         overflow: hidden;
     }
     .match-archive-card-head {
-        min-height: 62px;
+        min-height: 76px;
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: center;
         gap: 12px;
-        padding: 10px 12px;
+        padding: 14px 16px;
     }
     .match-archive-card-copy { min-width: 0; display: grid; gap: 5px; }
-    .match-archive-card-copy strong { color: #f5f8ff; font-size: 12px; }
-    .match-archive-card-copy span { color: #818b9b; font-size: 10px; font-weight: 800; }
+    .match-archive-card-copy strong { color: #f5f8ff; font-size: 14px; }
+    .match-archive-card-copy span { color: #818b9b; font-size: 11px; font-weight: 800; }
+    .match-archive-collapse { margin-left: auto; }
+    .match-archive-download-status { color: #bfdbfe; font-size: 11px; font-weight: 800; }
     .match-archive-card-actions { display: flex; align-items: center; gap: 7px; }
     .match-archive-action {
         height: 32px;
@@ -5476,6 +5479,17 @@
                 <div class="stats-block-head">
                     <h3 class="stats-block-title">Сохраненные матчевые листы</h3>
                     <span class="match-archive-count" id="matchArchiveCount">0 матчей</span>
+                    <button class="match-archive-action match-archive-collapse" type="button" id="btnMatchArchiveCollapse" aria-expanded="true">Свернуть список</button>
+                </div>
+                <div id="matchArchiveContent">
+                <div class="match-archive-selection">
+                    <span class="match-archive-selection-copy">Загрузка с сайта меняет только данные на этом компьютере.</span>
+                    <div class="match-archive-selection-actions">
+                        <button class="match-archive-action" type="button" id="btnMatchArchiveDownloadSelected">Скачать выбранные с сайта</button>
+                        <button class="match-archive-action" type="button" id="btnMatchArchiveDownloadAll">Скачать все с сайта</button>
+                        <button class="match-archive-action" type="button" id="btnMatchArchiveUploadSelected">Отправить выбранные на сайт</button>
+                        <button class="match-archive-action" type="button" id="btnMatchArchiveUploadAll">Отправить все на сайт</button>
+                    </div>
                 </div>
                 <div class="match-archive-selection" id="matchArchiveSelection" hidden>
                     <span class="match-archive-selection-copy" id="matchArchiveSelectionCopy"></span>
@@ -5491,7 +5505,9 @@
                     <span class="match-archive-range-status" id="matchArchiveRangeStatus"></span>
                 </div>
                 <div class="match-aggregate" id="matchAggregate" hidden></div>
+                <div class="match-archive-download-status" id="matchArchiveDownloadStatus" role="status" aria-live="polite"></div>
                 <div class="match-archive-list" id="matchArchiveList"></div>
+                </div>
             </section>
             <section class="stats-block">
                 <div class="stats-block-head">
@@ -6613,6 +6629,7 @@ let matchSheetArchive = [];
 let admiralMatches = [];
 let matchSheetArchiveExpandedId = '';
 let selectedMatchArchiveIds = new Set();
+let matchArchiveCollapsed = false;
 let selectedKhlMatchIds = new Set();
 let matchSheetIsDraft = false;
 // The open sheet belongs to one browser tab.  Keep a lightweight edit revision
@@ -10935,6 +10952,80 @@ async function fetchRemoteCloudState() {
         return data.states || {};
     } catch (_) {
         return null;
+    }
+}
+async function fetchRemoteMatchArchiveStrict() {
+    const url = cloudStateUrl('/api/state?key=matchArchive');
+    if (!url || !benchAuthToken) throw new Error('Сначала войдите в аккаунт BenchReview Lite.');
+    const response = await authFetch(url, { method: 'GET', mode: 'cors', cache: 'no-store' });
+    if (!response.ok) throw new Error(`Сайт не ответил (${response.status}). Локальные матчи не изменены.`);
+    const data = await response.json();
+    if (!Array.isArray(data?.state?.value)) throw new Error('В облаке нет списка сохранённых матчей. Локальные данные не изменены.');
+    return data.state.value.map(normalizeMatchArchiveRecord);
+}
+function matchArchiveRecordKey(record) {
+    return matchArchiveRestoreKey(record) || String(record?.id || '');
+}
+function replaceMatchArchiveRecords(baseRecords, incomingRecords) {
+    const byKey = new Map(baseRecords.map(record => [matchArchiveRecordKey(record), record]));
+    incomingRecords.forEach(record => byKey.set(matchArchiveRecordKey(record), record));
+    return [...byKey.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
+}
+async function transferMatchArchive(direction, scope, button) {
+    const status = document.getElementById('matchArchiveDownloadStatus');
+    const original = button.innerHTML;
+    button.disabled = true;
+    button.textContent = 'Подождите…';
+    try {
+        const selected = scope === 'selected' ? new Set(selectedMatchArchiveIds) : null;
+        if (selected && !selected.size) throw new Error('Сначала отметьте нужные матчи в списке.');
+        const remote = await fetchRemoteMatchArchiveStrict();
+        const local = matchSheetArchive.slice();
+        const source = direction === 'download' ? remote : local;
+        const destination = direction === 'download' ? local : remote;
+        const destinationKeys = new Map(destination.map(record => [matchArchiveRecordKey(record), record]));
+        const localSelectedKeys = new Set(local.filter(record => selected?.has(record.id)).map(matchArchiveRecordKey));
+        const incoming = source.filter(record => !selected || (direction === 'download'
+            ? selected.has(record.id) || localSelectedKeys.has(matchArchiveRecordKey(record))
+            : selected.has(record.id)));
+        if (!incoming.length) throw new Error(direction === 'download'
+            ? 'Для выбранных матчей нет сохранённых копий на сайте.'
+            : 'Нет выбранных локальных матчей для отправки.');
+        const changed = incoming.filter(record => JSON.stringify(destinationKeys.get(matchArchiveRecordKey(record))) !== JSON.stringify(record));
+        if (!changed.length) {
+            status.textContent = 'Все выбранные матчи уже совпадают с сайтом.';
+            return;
+        }
+        const title = direction === 'download' ? 'Скачать матчи с сайта' : 'Отправить матчи на сайт';
+        const accepted = await showConfirm(`${title}: ${changed.length} матчей. Совпадающие матчи на ${direction === 'download' ? 'компьютере' : 'сайте'} будут заменены; остальные останутся без изменений. Перед заменой сохраняется резерв обеих версий. Продолжить?`, {
+            title, okLabel: 'Продолжить', cancelLabel: 'Отмена'
+        });
+        if (!accepted) return;
+        await benchDbSet('match-archive.before-transfer.v1', {
+            at: new Date().toISOString(), direction, local, remote
+        });
+        const result = replaceMatchArchiveRecords(destination, incoming);
+        if (direction === 'download') {
+            matchSheetArchive = result;
+            persistMatchSheetArchive({ pushRemote: false });
+            if (JSON.stringify(JSON.parse(localStorage.getItem(MATCH_ARCHIVE_STORAGE_KEY) || 'null')) !== JSON.stringify(result)) {
+                matchSheetArchive = local;
+                throw new Error('Не удалось записать локальные матчи. Исходные данные не изменены.');
+            }
+            renderMatchArchive(); renderMatchesPage(); renderStatsPage();
+            status.textContent = `С сайта скачано ${changed.length} матчей. Открытый матчевый лист обновится при повторном открытии.`;
+        } else {
+            const url = cloudStateUrl('/api/state?key=matchArchive');
+            const response = await authFetch(url, { method: 'PUT', mode: 'cors',
+                headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: result }) });
+            if (!response.ok) throw new Error(`Сайт не принял матчи (${response.status}). Локальные данные не изменены.`);
+            status.textContent = `На сайт отправлено ${changed.length} матчей. Остальные данные на сайте не затронуты.`;
+        }
+    } catch (error) {
+        status.textContent = `Ошибка: ${error.message || error}`;
+    } finally {
+        button.disabled = false;
+        button.innerHTML = original;
     }
 }
 // A saved match is shared data.  Refresh the archive in the background before
@@ -15512,6 +15603,13 @@ function renderMatchArchive() {
     const target = document.getElementById('matchArchiveList');
     const count = document.getElementById('matchArchiveCount');
     if (!target || !count) return;
+    const content = document.getElementById('matchArchiveContent');
+    const collapse = document.getElementById('btnMatchArchiveCollapse');
+    if (content) content.hidden = matchArchiveCollapsed;
+    if (collapse) {
+        collapse.textContent = matchArchiveCollapsed ? 'Развернуть список' : 'Свернуть список';
+        collapse.setAttribute('aria-expanded', String(!matchArchiveCollapsed));
+    }
     const records = matchSheetArchive.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
     const visibleRecords = visibleMatchArchiveRecords(records);
     selectedMatchArchiveIds = new Set([...selectedMatchArchiveIds].filter(id => records.some(record => record.id === id)));
@@ -18589,6 +18687,14 @@ document.getElementById('btnMatchArchiveShowAll').addEventListener('click', () =
     matchArchiveRange = 'all';
     renderMatchArchive();
 });
+document.getElementById('btnMatchArchiveCollapse').addEventListener('click', () => {
+    matchArchiveCollapsed = !matchArchiveCollapsed;
+    renderMatchArchive();
+});
+document.getElementById('btnMatchArchiveDownloadSelected').addEventListener('click', e => transferMatchArchive('download', 'selected', e.currentTarget));
+document.getElementById('btnMatchArchiveDownloadAll').addEventListener('click', e => transferMatchArchive('download', 'all', e.currentTarget));
+document.getElementById('btnMatchArchiveUploadSelected').addEventListener('click', e => transferMatchArchive('upload', 'selected', e.currentTarget));
+document.getElementById('btnMatchArchiveUploadAll').addEventListener('click', e => transferMatchArchive('upload', 'all', e.currentTarget));
 document.getElementById('btnRestoreArchiveKhl').addEventListener('click', restoreArchivedKhlStatistics);
 document.getElementById('btnKhlMatchSelectAll').addEventListener('click', () => {
     selectedKhlMatchIds = new Set(admiralMatches.map(match => match.id));
