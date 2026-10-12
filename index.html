@@ -5344,9 +5344,9 @@
 
 <div class="main-col">
     <header class="app-header">
-        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.22" aria-label="Версия">
+        <button class="version-help" id="versionHelp" type="button" title="Версия v0.10.23" aria-label="Версия">
             ?
-            <span class="version-tooltip">v0.10.22</span>
+            <span class="version-tooltip">v0.10.23</span>
         </button>
         <h1 class="app-title" id="appTitle" role="button" tabindex="0">BenchReview <span class="lite-accent">Lite</span></h1>
         <nav class="mainnav" aria-label="Разделы">
@@ -12349,6 +12349,16 @@ async function openNearestMatchSheet() {
     }
 }
 
+// Matches saved before this web fix stay frozen against automatic KHL imports.
+// Coaches can still edit and save their manual values in the match sheet.
+const KHL_SAVED_MATCH_PROTECTION_THROUGH = '2026-10-12';
+function khlRefreshProtectedSavedMatch(match) {
+    const date = String(match?.date || '').slice(0, 10);
+    if (!date || date > KHL_SAVED_MATCH_PROTECTION_THROUGH) return false;
+    return matchSheetArchive.some(record => record.date === date
+        && matchSheetOpponentKey(record.opponent) === matchSheetOpponentKey(match.opponent));
+}
+
 async function refreshCurrentMatchFromKhl() {
     const button = document.getElementById('btnMatchSheetKhl');
     const info = document.getElementById('matchSheetKhlInfo');
@@ -12370,15 +12380,14 @@ async function refreshCurrentMatchFromKhl() {
         if (!matches.length) throw new Error('В календаре КХЛ нет матча на эту дату с этим соперником. Проверьте дату/соперника.');
         if (matches.length > 1) throw new Error('На эту дату несколько матчей — уточните соперника.');
         const match = matches[0];
+        if (khlRefreshProtectedSavedMatch(match)) {
+            info.textContent = 'Этот прошедший матч уже сохранён. Обновление КХЛ для него отключено, чтобы сохранить внесённые данные.';
+            return;
+        }
         info.textContent = 'Загружаю статистику игроков КХЛ… Числа в листе пока не обновлены.';
         const data = await fetchKhlMatchStats(match, true);
         if (!unchanged()) return;
         if (String(data.gameId || match.gameId) !== String(match.gameId)) throw new Error('КХЛ вернул другой матч; данные не внесены.');
-        const cacheAgeMs = data.updatedAt ? Date.now() - Date.parse(data.updatedAt) : Infinity;
-        const allowedCacheAge = data.cachedFallback && data.final ? 24 * 60 * 60 * 1000 : 10 * 60 * 1000;
-        if (!(cacheAgeMs >= 0 && cacheAgeMs < allowedCacheAge)) {
-            throw new Error('Cloudflare Worker отдаёт устаревший кэш КХЛ. Нужно задеплоить обновлённый benchreview-worker.js (npx wrangler deploy).');
-        }
         // Обновляем карточку матча (счёт, статус, время) и календарь.
         const stateLabel = { not_yet_started: 'Матч ещё не начался', preview: 'Матч ещё не начался', soon: 'Матч ещё не начался', in_progress: 'Идёт матч', finished: 'Завершён' };
         if (data.state) {
@@ -12656,34 +12665,167 @@ async function refreshAdmiralMatches() {
 
 async function fetchKhlMatchStats(match, fresh = false) {
     const cloudUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats${fresh ? '?fresh=1' : ''}`);
-    if (!cloudUrl || !benchAuthToken) throw new Error('нужно войти в облако для загрузки статистики');
-    let result;
-    try {
-        result = await cloudGetJson(cloudUrl);
-    } catch (error) {
-        if (!fresh || !benchAuthToken) throw error;
-        // A completed game's cached result remains useful when KHL is slow.
-        // Do not treat an empty/old cache as a successful import.
+    let cloudError = null;
+    if (cloudUrl && benchAuthToken) {
         try {
-            const cachedUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats`);
-            const cached = await cloudGetJson(cachedUrl);
-            const age = Date.now() - Date.parse(cached.data.updatedAt || '');
-            if (cached.response.ok && cached.data.ok && cached.data.final && cached.data.players?.length && age >= 0 && age < 24 * 60 * 60 * 1000) {
-                return { ...cached.data, cachedFallback: true };
+            let { response, data } = await cloudGetJson(cloudUrl, 8000);
+            const usable = !(data.final || data.state === 'in_progress') || khlStatsPayloadHasActivity(data);
+            if (response.ok && data.ok && usable) return data;
+            cloudError = new Error(data.error || (response.ok
+                ? 'сервер не вернул статистику игроков'
+                : `KHL API ${response.status}`));
+            if (response.status === 502 && /JSON|Unterminated string|Unexpected end|неполные данные/i.test(String(data.error || ''))) {
+                const retryUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats?fresh=1&retry=${Date.now()}`);
+                ({ response, data } = await cloudGetJson(retryUrl, 8000));
+                const retryUsable = !(data.final || data.state === 'in_progress') || khlStatsPayloadHasActivity(data);
+                if (response.ok && data.ok && retryUsable) return data;
+                cloudError = new Error(data.error || `KHL API ${response.status}`);
             }
-        } catch (_) {}
-        throw error;
+        } catch (error) {
+            cloudError = error;
+        }
     }
-    let { response, data } = result;
-    if (response.ok && data.ok) return data;
-    // Older deployed Workers may surface a truncated upstream KHL JSON as a
-    // 502. Retry once without the cached response before reporting failure.
-    if (response.status === 502 && /JSON|Unterminated string|Unexpected end|неполные данные/i.test(String(data.error || ''))) {
-        const retryUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats?fresh=1&retry=${Date.now()}`);
-        ({ response, data } = await cloudGetJson(retryUrl));
-        if (response.ok && data.ok) return data;
+    try {
+        return await fetchKhlMatchStatsDirect(match);
+    } catch (directError) {
+        if (fresh && cloudUrl && benchAuthToken) {
+            try {
+                const cachedUrl = cloudStateUrl(`/api/khl/admiral/matches/${encodeURIComponent(match.gameId)}/stats`);
+                const cached = await cloudGetJson(cachedUrl, 5000);
+                const age = Date.now() - Date.parse(cached.data.updatedAt || '');
+                if (cached.response.ok && cached.data.ok && cached.data.final
+                    && khlStatsPayloadHasActivity(cached.data) && age >= 0 && age < 24 * 60 * 60 * 1000) {
+                    return { ...cached.data, cachedFallback: true };
+                }
+            } catch (_) {}
+        }
+        const detail = String(directError?.message || cloudError?.message || 'сервер недоступен');
+        throw new Error(`Не удалось получить статистику КХЛ: ${detail}. Текущие цифры не изменены.`);
     }
-    throw new Error(data.error || `KHL API ${response.status}`);
+}
+
+function khlDirectMatchStatMap(player) {
+    return Object.fromEntries((Array.isArray(player?.match_stats) ? player.match_stats : [])
+        .map(item => [String(item?.id || ''), Number(item?.val || 0) || 0]));
+}
+
+function khlDirectPlayerIdentityMatches(source, number, name) {
+    return String(source?.shirt_number || '').trim() === number
+        || khlStatsNameKey(source?.name) === khlStatsNameKey(name);
+}
+
+function normalizeDirectKhlMatchPlayer(player, teamId, goals, penalties) {
+    const stats = khlDirectMatchStatMap(player);
+    const number = String(player?.shirt_number || '').trim();
+    const name = String(player?.name || '').trim();
+    const matches = source => khlDirectPlayerIdentityMatches(source, number, name);
+    const eventGoals = goals.filter(goal => matches(goal?.author));
+    const assists = goals.reduce((sum, goal) => sum + (Array.isArray(goal?.assistants)
+        ? goal.assistants.filter(matches).length
+        : 0), 0);
+    const eventPim = penalties.filter(item => matches(item?.violator))
+        .reduce((sum, item) => sum + (Number(item?.penalty_time) || 0), 0);
+    const role = player?.role_key === 'goaltender'
+        ? 'goalie'
+        : player?.role_key === 'defensemen' ? 'defense' : 'forward';
+    const toiMinutes = Math.max(0, Number(stats.toi || 0) || 0);
+    const played = toiMinutes > 0 || eventGoals.length > 0 || assists > 0
+        || Number(stats.shots || 0) > 0 || Number(stats.fo || 0) > 0;
+    const pim = Math.max(eventPim, Math.round(Number(stats.pim || 0) || 0));
+    return {
+        id: String(player?.id || ''), name, number, role,
+        teamId: String(teamId || ADMIRAL_KHL_TEAM_ID),
+        games: played && role !== 'goalie' ? 1 : 0,
+        goals: Math.max(eventGoals.length, Math.round(Number(stats.goals || 0) || 0)),
+        assists,
+        shots: Math.round(Number(stats.shots || 0) || 0),
+        faceoffs: Math.round(Number(stats.fo || 0) || 0),
+        faceoffWins: Math.round(Number(stats.fow || 0) || 0),
+        shifts: Math.round(Number(stats.si || 0) || 0),
+        pim,
+        toiMinutes,
+        goalieGames: role === 'goalie' && played ? 1 : 0,
+        goaliePim: role === 'goalie' ? pim : 0,
+        goalieIceMinutes: role === 'goalie' ? toiMinutes : 0
+    };
+}
+
+function khlStatsPayloadHasActivity(data) {
+    const players = Array.isArray(data?.players) ? data.players : [];
+    return players.length > 0 && players.some(player => [
+        player.games, player.goals, player.assists, player.shots, player.faceoffs,
+        player.shifts, player.pim, player.goalieGames, player.goalieIceMinutes
+    ].some(value => Number(value) > 0));
+}
+
+async function fetchKhlMatchStatsDirect(match) {
+    const gameId = String(match?.gameId || '').trim();
+    if (!/^\d+$/.test(gameId)) throw new Error('неверный номер матча КХЛ');
+    let data = null;
+    let lastError = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+            const source = new URL(`${KHL_MOBILE_BASE}/event_v2.json`);
+            source.searchParams.set('id', gameId);
+            source.searchParams.set('locale', 'ru');
+            source.searchParams.set('_', String(Date.now()));
+            const response = await fetch(source.toString(), { method: 'GET', mode: 'cors', cache: 'no-store' });
+            if (!response.ok) throw new Error(`KHL API ${response.status}`);
+            data = await response.json();
+            if (!data?.event) throw new Error('КХЛ вернула неполный матч');
+            break;
+        } catch (error) {
+            lastError = error;
+            if (attempt < 2) await new Promise(resolve => window.setTimeout(resolve, 350 * (attempt + 1)));
+        }
+    }
+    const event = data?.event;
+    if (!event) throw lastError || new Error('не удалось получить матч с КХЛ');
+    if (String(event.id || '') !== gameId) throw new Error('КХЛ вернула другой матч');
+    const teams = [event.team_a, event.team_b].filter(Boolean);
+    const admiral = teams.find(team => String(team?.id || '') === ADMIRAL_KHL_TEAM_ID);
+    if (!admiral) throw new Error('в матче КХЛ не найден «Адмирал»');
+    const opponent = teams.find(team => String(team?.id || '') !== ADMIRAL_KHL_TEAM_ID) || {};
+    const goals = (Array.isArray(event.goals) ? event.goals : [])
+        .filter(goal => String(goal?.author?.team_id || '') === ADMIRAL_KHL_TEAM_ID && goal?.status_abbr !== 'шб');
+    const penalties = (Array.isArray(event.violations) ? event.violations : [])
+        .filter(item => String(item?.violator?.team_id || '') === ADMIRAL_KHL_TEAM_ID);
+    const roster = Array.isArray(admiral.players) ? admiral.players : [];
+    const players = roster.map(player => normalizeDirectKhlMatchPlayer(player, admiral.id, goals, penalties))
+        .filter(player => player.games || player.goals || player.assists || player.shots || player.faceoffs
+            || player.shifts || player.pim || player.goalieGames || player.goalieIceMinutes);
+    const state = String(event.game_state_key || '');
+    let startsAt = '';
+    if (event.start_at) {
+        const raw = Number(event.start_at);
+        const parsed = new Date(Number.isFinite(raw) && raw > 0 && raw < 1e12 ? raw * 1000 : (raw || event.start_at));
+        if (!Number.isNaN(parsed.getTime())) startsAt = parsed.toISOString();
+    }
+    const payload = {
+        ok: true,
+        source: 'khl-direct',
+        gameId,
+        seasonId: String(event.stage_id || ADMIRAL_KHL_SEASON_ID),
+        teamId: ADMIRAL_KHL_TEAM_ID,
+        final: state === 'finished',
+        state,
+        score: String(event.score || ''),
+        startsAt,
+        homeGoals: Number(event.team_a?.gf || 0) || 0,
+        awayGoals: Number(event.team_b?.gf || 0) || 0,
+        admiralGoals: Number(admiral.gf || 0) || 0,
+        opponentGoals: Number(opponent.gf || 0) || 0,
+        opponentShots: Number(opponent.shots || 0) || 0,
+        protocolOk: false,
+        protocolPlayerNumbers: [],
+        matchPlayerNumbers: [...new Set(roster.map(player => String(player?.shirt_number || '').trim()).filter(Boolean))],
+        updatedAt: new Date().toISOString(),
+        players
+    };
+    if ((payload.final || payload.state === 'in_progress') && !khlStatsPayloadHasActivity(payload)) {
+        throw new Error('КХЛ вернула счёт, но не вернула статистику игроков');
+    }
+    return payload;
 }
 
 function khlStatsNameKey(value) {
@@ -12952,6 +13094,12 @@ async function importKhlMatchStats(matchId) {
     if (!match) return;
     const savedRecord = matchSheetArchive.find(record => record.date === String(match.date || '').slice(0, 10)
         && matchSheetOpponentKey(record.opponent) === matchSheetOpponentKey(match.opponent));
+    if (khlRefreshProtectedSavedMatch(match)) {
+        await showConfirm('Этот прошедший матч уже сохранён. Обновление КХЛ для него отключено, чтобы сохранить внесённые данные.', {
+            title: 'Матч защищён', okLabel: 'Понятно', cancelLabel: 'Закрыть'
+        });
+        return;
+    }
     if (!await openKhlMatchSheet(match)) return;
     if (!khlMatchCanHaveStats(match)) {
         // Будущий матч открывается пустым: дату и соперника уже записала openKhlMatchSheet.

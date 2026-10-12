@@ -53,11 +53,17 @@ const client = vm.createContext({
   benchAuthToken: 'test',
   window: { setTimeout: fn => fn() },
   cloudStateUrl: path => path,
-  authFetch: async url => {
+  cloudGetJson: async url => {
     clientRequests++;
-    if (clientRequests === 1) return { ok: false, status: 502, json: async () => ({ error: 'Unterminated string in JSON' }) };
+    if (clientRequests === 1) return {
+      response: { ok: false, status: 502 },
+      data: { error: 'Unterminated string in JSON' }
+    };
     assert.match(url, /fresh=1/);
-    return { ok: true, status: 200, json: async () => ({ ok: true, players: [] }) };
+    return {
+      response: { ok: true, status: 200 },
+      data: { ok: true, players: [] }
+    };
   }
 });
 vm.runInContext(html.slice(clientStart, clientEnd), client);

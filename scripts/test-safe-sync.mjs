@@ -16,7 +16,12 @@ function sheet({ remote = [], dirty = false, local = [], accept = false } = {}) 
   const context = vm.createContext({
     matchSheetState: { opponent: 'Ак Барс', date: '2026-09-07' },
     matchSheetArchive: local,
-    fetchRemoteCloudState: async () => remote === null ? null : { matchArchive: { value: remote } },
+    cloudStateUrl: path => path,
+    benchAuthToken: 'test-token',
+    cloudGetJson: async () => {
+      if (remote === null) throw new Error('Network unavailable');
+      return { response: { ok: true, status: 200 }, data: { ok: true, state: { value: remote } } };
+    },
     matchArchiveRestoreKey: record => (record.sheet || record).opponent,
     matchSheetHasUnsavedChanges: () => dirty,
     mergeMatchArchives: (a, b) => b.length ? b : a,
